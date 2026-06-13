@@ -30,9 +30,9 @@ export function Avatar({ size = 34, glow = false, className = "" }: { size?: num
   return <Presence size={size} glow={glow} className={className} />;
 }
 
-export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase, onScales }: {
+export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase }: {
   lang: Lang; theme: string; persona: Persona;
-  onTheme: () => void; onLang: () => void; onPersona: () => void; onCase: () => void; onScales: () => void;
+  onTheme: () => void; onLang: () => void; onPersona: () => void; onCase: () => void;
 }) {
   const t = STR[lang];
   return (
@@ -51,7 +51,6 @@ export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCas
         </div>
         <Ic.chev className="chev" />
       </button>
-      <button className="icon-btn" onClick={onScales} title={t.scales} aria-label={t.scales}><Ic.clipboard /></button>
       <button className="icon-btn" onClick={onCase} title={t.case_title}><Ic.insight /></button>
       <button className="icon-btn" onClick={onLang} title="中 / EN" aria-label="language"><Ic.lang /></button>
       <button className="icon-btn" onClick={onTheme} aria-label="theme">{theme === "dark" ? <Ic.sun /> : <Ic.moon />}</button>
@@ -118,10 +117,8 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   const t = STR[lang];
   const [val, setVal] = useState("");
   const [atts, setAtts] = useState<Media[]>([]);
-  const [menu, setMenu] = useState(false);
   const ta = useRef<HTMLTextAreaElement>(null);
   const imgInput = useRef<HTMLInputElement>(null);
-  const vidInput = useRef<HTMLInputElement>(null);
 
   const grow = () => {
     const el = ta.current; if (!el) return;
@@ -129,25 +126,17 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   };
   useEffect(grow, [val]);
 
-  useEffect(() => {
-    if (!menu) return;
-    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest(".attach-wrap")) setMenu(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [menu]);
-
-  const addFiles = async (files: FileList | null, type: "image" | "video") => {
+  // Image only — Kimi vision takes images, not video.
+  const addImages = async (files: FileList | null) => {
     if (!files) return;
-    // Images carry a base64 data URL (used for both display AND /api/vision);
-    // video uses an object URL (display only — no multimodal video).
+    // base64 data URL — used for both display AND /api/vision (Kimi).
     const next: Media[] = await Promise.all(Array.from(files).map(async (f) => ({
       id: Math.random().toString(36).slice(2),
-      type,
-      url: type === "image" ? await fileToDataUrl(f) : URL.createObjectURL(f),
+      type: "image" as const,
+      url: await fileToDataUrl(f),
       name: f.name
     })));
     if (next.length) setAtts((a) => [...a, ...next]);
-    setMenu(false);
   };
   const removeAtt = (id: string) => setAtts((a) => a.filter((x) => x.id !== id));
 
@@ -167,8 +156,7 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
         <div className="attach-previews">
           {atts.map((a) => (
             <div key={a.id} className="attach-thumb">
-              {a.type === "image" ? <img src={a.url} alt={a.name} /> : <video src={a.url} muted playsInline />}
-              {a.type === "video" && <span className="vbadge"><Ic.video /></span>}
+              <img src={a.url} alt={a.name} />
               <button className="thumb-x" onClick={() => removeAtt(a.id)} aria-label="remove"><Ic.close /></button>
             </div>
           ))}
@@ -176,15 +164,8 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
       )}
       <div className="composer">
         <div className="attach-wrap">
-          {menu && (
-            <div className="attach-menu">
-              <button onClick={() => imgInput.current?.click()}><Ic.image />{t.import_image}</button>
-              <button onClick={() => vidInput.current?.click()}><Ic.video />{t.import_video}</button>
-            </div>
-          )}
-          <button className={"tool-btn" + (menu ? " on" : "")} onClick={() => setMenu((m) => !m)} aria-label={t.import_media} title={t.import_media}><Ic.plus /></button>
-          <input ref={imgInput} type="file" accept="image/*" multiple hidden onChange={(e) => { void addFiles(e.target.files, "image"); e.target.value = ""; }} />
-          <input ref={vidInput} type="file" accept="video/*" hidden onChange={(e) => { void addFiles(e.target.files, "video"); e.target.value = ""; }} />
+          <button className="tool-btn" onClick={() => imgInput.current?.click()} aria-label={t.import_image} title={t.import_image}><Ic.plus /></button>
+          <input ref={imgInput} type="file" accept="image/*" multiple hidden onChange={(e) => { void addImages(e.target.files); e.target.value = ""; }} />
         </div>
         <textarea ref={ta} value={val} rows={1} onChange={(e) => setVal(e.target.value)} onKeyDown={onKey} placeholder={t.placeholder} aria-label={t.placeholder} />
         <button className="send-btn" onClick={submit} disabled={!canSend} aria-label={t.send}><Ic.send /></button>

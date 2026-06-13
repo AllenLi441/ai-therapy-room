@@ -708,3 +708,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .sp-name { font-size: var(--fs-md); font-weight: 600; }
 .sp-meta { font-size: var(--fs-sm); color: var(--ink-3); margin-top: 2px; }
 .sp-arrow { width: 18px; height: 18px; color: var(--ink-3); transform: rotate(-90deg); flex: 0 0 auto; }
+
+/* need-based self-check suggestion (2026-06-13) — only shown when a theme surfaces */
+.scale-suggest{display:flex;align-items:center;gap:10px;margin:0 auto 8px;max-width:760px;width:100%;
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:10px 12px;box-shadow:var(--shadow-1);font-size:var(--fs-sm,13.5px);color:var(--ink-2);}
+.scale-suggest .ss-ico{color:var(--sage);display:flex;flex:0 0 auto;}
+.scale-suggest .ss-ico svg{width:18px;height:18px;}
+.scale-suggest .ss-text{flex:1;line-height:1.55;}
+.scale-suggest .ss-cta{flex:0 0 auto;background:var(--sage);color:#0c1f1b;border:none;border-radius:999px;
+  padding:7px 14px;font-size:var(--fs-sm,13px);font-weight:600;cursor:pointer;}
+.scale-suggest .ss-cta:hover{background:var(--sage-deep,var(--sage));}
+.scale-suggest .ss-dismiss{flex:0 0 auto;background:none;border:none;color:var(--ink-3);cursor:pointer;display:flex;padding:4px;}
+.scale-suggest .ss-dismiss svg{width:16px;height:16px;}
+@media (max-width:520px){.scale-suggest{flex-wrap:wrap;}.scale-suggest .ss-text{flex-basis:100%;order:-1;}}

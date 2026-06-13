@@ -4,14 +4,15 @@
    and their description is folded into the message so the text model + server
    risk-detection can respond to them. */
 import { useEffect, useRef, useState } from "react";
-import { personaById, detectRisk, STR, type Lang, type Message, type Media } from "./data";
+import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type Lang, type Message, type Media } from "./data";
+import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome, CalmMode } from "./chat-parts";
-import { AboutSheet, ScalePicker, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer } from "./overlays";
+import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer } from "./overlays";
 
 let _mid = 0;
 const uid = () => "m" + ++_mid;
 
-type Overlay = "about" | "crisis" | "breathing" | "case" | "scales" | null;
+type Overlay = "about" | "crisis" | "breathing" | "case" | null;
 
 export function App() {
   const [lang, setLang] = useState<Lang>("zh");
@@ -23,6 +24,10 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [scaleId, setScaleId] = useState<string | null>(null);
+  // Scales are no longer a permanent UI entry — only suggested when the
+  // conversation shows a matching need, and at most once per scale per session.
+  const [suggestedScale, setSuggestedScale] = useState<string | null>(null);
+  const offeredScales = useRef<Set<string>>(new Set());
   const [crisis, setCrisis] = useState(false);
   const [calm, setCalm] = useState(false); // emotion-adaptive; driven by a server signal in future
   const messagesRef = useRef<Message[]>([]);
@@ -65,7 +70,13 @@ export function App() {
     const history = [...messagesRef.current, userMsg];
     setMessages((ms) => [...ms, userMsg, aiMsg]);
     setBusy(true);
-    if (detectRisk(text)) setCrisis(true);
+    if (detectRisk(text)) {
+      setCrisis(true);
+    } else {
+      // offer a self-check only when a theme surfaces (sleep/anxiety/low mood), once each
+      const need = detectScaleNeed(text);
+      if (need && !offeredScales.current.has(need)) { offeredScales.current.add(need); setSuggestedScale(need); }
+    }
 
     const setAi = (fn: (c: string) => string) =>
       setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: fn(m.content) } : m)));
@@ -138,7 +149,6 @@ export function App() {
         onTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         onLang={() => setLang(lang === "zh" ? "en" : "zh")}
         onPersona={() => setOverlay("about")}
-        onScales={() => setOverlay("scales")}
         onCase={() => setOverlay("case")}
       />
       <PrivacyRibbon lang={lang} onDelete={deleteAll} />
@@ -148,6 +158,16 @@ export function App() {
         {started
           ? <Stream messages={messages} persona={persona} lang={lang} />
           : <Welcome lang={lang} companion={persona} onStart={(s) => void send(s, [])} />}
+        {suggestedScale && !scaleId && !crisis && (
+          <div className="scale-suggest" role="status">
+            <span className="ss-ico"><Ic.clipboard /></span>
+            <span className="ss-text">
+              {STR[lang].scale_suggest}（{SCALES[suggestedScale].name[lang].split(" · ")[1] || SCALES[suggestedScale].name[lang]}）
+            </span>
+            <button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button>
+            <button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button>
+          </div>
+        )}
         <Composer lang={lang} pace={pace} busy={busy} tone={persona.av} onSend={(t, a) => void send(t, a)} onPace={setPace} />
       </div>
 
@@ -161,7 +181,6 @@ export function App() {
       )}
 
       {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} />}
-      {overlay === "scales" && <ScalePicker lang={lang} onClose={() => setOverlay(null)} onPick={(id) => { setOverlay(null); setScaleId(id); }} />}
       {scaleId && <ScaleModal lang={lang} scaleId={scaleId} onClose={() => setScaleId(null)} />}
       {overlay === "crisis" && <CrisisSheet lang={lang} onClose={() => setOverlay(null)} onBreathe={() => setOverlay("breathing")} />}
       {overlay === "breathing" && <BreathingSheet lang={lang} onClose={() => setOverlay(null)} />}

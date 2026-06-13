@@ -76,6 +76,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     grounding: "落地练习", grounding_d: "用五感把自己带回此时此地。",
     scales: "情绪自评", scales_d: "温和的小问卷，帮你和我看清楚一些。",
     scales_sub: "都是匿名的临床自评量表，结果只作参考，不下诊断。", scale_items_zh: "题", scale_mins: "约 1 分钟",
+    scale_suggest: "要不要花 1 分钟做个简短的自评？只是帮我们看清楚一些，不是诊断。", scale_suggest_cta: "做个自评", scale_dismiss: "暂时不用",
     crisis_tool: "我现在很危险", crisis_tool_d: "立刻看到热线和真人支持。",
     case_title: "对你的理解", case_note: "这些是我在对话里逐渐形成的理解，可能不准确，你可以随时纠正我。",
     case_main: "主诉", case_trigger: "可能的触发", case_hyp: "暂时的工作假设", case_strength: "我看到你的力量",
@@ -123,6 +124,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     grounding: "Grounding", grounding_d: "Use your senses to come back to here and now.",
     scales: "Self check-in", scales_d: "Gentle short questionnaires to see things more clearly.",
     scales_sub: "Anonymous clinical self-checks. Results are a reference, never a diagnosis.", scale_items_zh: "items", scale_mins: "~1 min",
+    scale_suggest: "Would a 1-minute self check-in help us see things more clearly? It's a reference, not a diagnosis.", scale_suggest_cta: "Take it", scale_dismiss: "Not now",
     crisis_tool: "I'm in danger now", crisis_tool_d: "See hotlines and real-person support now.",
     case_title: "What I understand", case_note: "This is the understanding I've slowly formed in our talk. It may be wrong — please correct me anytime.",
     case_main: "Main concern", case_trigger: "Possible triggers", case_hyp: "A tentative working idea", case_strength: "Strengths I see in you",
@@ -222,4 +224,17 @@ const RISK_RE =
   /(不想活|不想再活|自杀|结束生命|结束自己|活不下去|去死|想死|轻生|伤害自己|割腕|跳下去|没有意义.*活|活着.*没意义|end my life|kill myself|suicide|don'?t want to live|hurt myself|want to die)/i;
 export function detectRisk(text?: string): boolean {
   return RISK_RE.test(text || "");
+}
+
+// Surface a self-assessment scale ONLY when the conversation shows a matching
+// need (no permanent UI entry). Returns the most-specific scale id, or null.
+const SCALE_CUES: Array<{ id: ScaleId; re: RegExp }> = [
+  { id: "ISI", re: /(失眠|睡不着|睡不好|入睡困难|半夜醒|很难入睡|睡眠|insomnia|can'?t sleep|trouble sleeping|cannot sleep)/i },
+  { id: "GAD-7", re: /(焦虑|很紧张|担心|心慌|停不下来|惊恐|坐立不安|anxious|anxiety|worry|worrying|nervous|panic|on edge)/i },
+  { id: "PHQ-9", re: /(抑郁|很低落|没意思|没兴趣|提不起劲|绝望|空虚|没有价值|depress|hopeless|no interest|empty|worthless|down all the time)/i }
+];
+export function detectScaleNeed(text?: string): ScaleId | null {
+  const s = text || "";
+  for (const { id, re } of SCALE_CUES) if (re.test(s)) return id;
+  return null;
 }
