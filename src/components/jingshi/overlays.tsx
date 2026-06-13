@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Ic } from "./icons";
 import { Presence, Avatar } from "./chat-parts";
 import { STR, SCALES, SCALE_OPTS, type Lang, type Persona } from "./data";
+import { isCaseMapPopulated, type CaseMap, type ScaleResult, type ScaleId } from "@/lib/types";
 
 export function Sheet({ children, onClose, className = "" }: { children: ReactNode; onClose: () => void; className?: string }) {
   useEffect(() => {
@@ -183,7 +184,7 @@ export function ScalePicker({ lang, onPick, onClose }: { lang: Lang; onPick: (id
   );
 }
 
-export function ScaleModal({ lang, scaleId, onClose }: { lang: Lang; scaleId: string; onClose: () => void }) {
+export function ScaleModal({ lang, scaleId, onClose, onComplete }: { lang: Lang; scaleId: string; onClose: () => void; onComplete?: (r: ScaleResult) => void }) {
   const t = STR[lang];
   const S = SCALES[scaleId];
   const opts = SCALE_OPTS[S.opts][lang];
@@ -247,28 +248,22 @@ export function ScaleModal({ lang, scaleId, onClose }: { lang: Lang; scaleId: st
         <button className="btn ghost" disabled={step === 0} style={{ opacity: step === 0 ? .4 : 1 }} onClick={() => setStep(Math.max(0, step - 1))}>{t.prev}</button>
         {step < items.length - 1
           ? <button className="btn ghost" disabled={ans[step] === null} style={{ opacity: ans[step] === null ? .4 : 1 }} onClick={() => setStep(step + 1)}>{t.next}</button>
-          : <button className="btn solid" disabled={!allDone} onClick={() => setDone(true)}>{t.finish}</button>}
+          : <button className="btn solid" disabled={!allDone} onClick={() => {
+              // Emit the real result so it can shape the chat (and persist). The
+              // per-item answers carry the PHQ-9 self-harm item the safety layer reads.
+              onComplete?.({ id: scaleId as ScaleId, total, severity: band.zh, answers: ans.map((v) => v ?? 0), completedAt: new Date().toISOString() });
+              setDone(true);
+            }}>{t.finish}</button>}
       </div>
     </Sheet>
   );
 }
 
-export function CaseDrawer({ lang, onClose }: { lang: Lang; persona?: Persona; onClose: () => void }) {
+export function CaseDrawer({ lang, caseMap, loading, onClose }: { lang: Lang; caseMap?: CaseMap | null; loading?: boolean; onClose: () => void }) {
   const t = STR[lang];
-  const data = {
-    zh: {
-      main: "持续的低落与疲惫感，近期因工作压力加剧，伴随入睡困难。",
-      triggers: ["工作中的评价", "与家人的沟通", "夜晚独处时"],
-      hyp: "你似乎把「被需要」当成了自己价值的唯一来源，一旦感到没做好，就会迅速否定整个自己。我们也许可以一起，慢慢分开「这件事」和「我这个人」。",
-      strengths: ["愿意主动来这里", "能清楚描述感受", "在意身边的人"]
-    },
-    en: {
-      main: "Ongoing low mood and fatigue, recently worse with work stress, plus trouble falling asleep.",
-      triggers: ["Being evaluated at work", "Talking with family", "Alone at night"],
-      hyp: "You seem to treat 'being needed' as your only source of worth — so any sense of falling short quickly turns into rejecting your whole self. Perhaps we can slowly separate 'this event' from 'who I am.'",
-      strengths: ["Chose to come here", "Can name feelings clearly", "Cares about people around you"]
-    }
-  }[lang];
+  // Real, conversation-derived understanding (from /api/plan). When too little has
+  // been said the map is empty — show an HONEST empty state, never canned text.
+  const populated = isCaseMapPopulated(caseMap);
   return (
     <div className="scrim" onClick={onClose} style={{ justifyContent: "flex-end", alignItems: "stretch" }}>
       <aside className="case-drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -278,11 +273,19 @@ export function CaseDrawer({ lang, onClose }: { lang: Lang; persona?: Persona; o
           <button className="icon-btn case-x" onClick={onClose} aria-label="close"><Ic.close /></button>
         </div>
         <div className="case-body scroll">
-          <div className="case-note">{t.case_note}</div>
-          <div className="case-sec"><h3>{t.case_main}</h3><p>{data.main}</p></div>
-          <div className="case-sec"><h3>{t.case_trigger}</h3><div className="case-tags">{data.triggers.map((x) => <span className="case-tag" key={x}>{x}</span>)}</div></div>
-          <div className="case-sec"><h3>{t.case_hyp}</h3><p className="case-hyp">{data.hyp}</p></div>
-          <div className="case-sec"><h3>{t.case_strength}</h3><div className="case-tags">{data.strengths.map((x) => <span className="case-tag" key={x}>{x}</span>)}</div></div>
+          {loading ? (
+            <div className="case-note">{t.case_loading}</div>
+          ) : !populated ? (
+            <div className="case-note">{t.case_empty}</div>
+          ) : (
+            <>
+              <div className="case-note">{t.case_note}</div>
+              {caseMap!.presenting && <div className="case-sec"><h3>{t.case_main}</h3><p>{caseMap!.presenting}</p></div>}
+              {caseMap!.triggers.length > 0 && <div className="case-sec"><h3>{t.case_trigger}</h3><div className="case-tags">{caseMap!.triggers.map((x) => <span className="case-tag" key={x}>{x}</span>)}</div></div>}
+              {caseMap!.workingHypothesis && <div className="case-sec"><h3>{t.case_hyp}</h3><p className="case-hyp">{caseMap!.workingHypothesis}</p></div>}
+              {caseMap!.resources.length > 0 && <div className="case-sec"><h3>{t.case_strength}</h3><div className="case-tags">{caseMap!.resources.map((x) => <span className="case-tag" key={x}>{x}</span>)}</div></div>}
+            </>
+          )}
         </div>
       </aside>
     </div>

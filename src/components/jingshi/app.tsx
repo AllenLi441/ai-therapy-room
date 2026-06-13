@@ -8,6 +8,7 @@ import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type Lang, type 
 import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome, CalmMode } from "./chat-parts";
 import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer } from "./overlays";
+import type { CaseMap, ScaleResult } from "@/lib/types";
 
 let _mid = 0;
 const uid = () => "m" + ++_mid;
@@ -31,18 +32,16 @@ export function App() {
   const exitedCrisisRef = useRef(false); // user tapped "我没事了" → judge next msgs solo until new risk
   const [crisis, setCrisis] = useState(false);
   const [calm, setCalm] = useState(false); // emotion-adaptive; driven by a server signal in future
+  // P3-a: completed self-check results (sent to /api/chat so they actually shape
+  // the reply) + the accumulated case understanding (lazily fetched from /api/plan
+  // when the drawer opens). Both persist on-device and are wiped by 一键彻底删除.
+  const [scaleResults, setScaleResults] = useState<ScaleResult[]>([]);
+  const [caseMap, setCaseMap] = useState<CaseMap | null>(null);
+  const [caseLoading, setCaseLoading] = useState(false);
+  const caseForCount = useRef(-1); // #user-turns the current caseMap reflects
+  const [hydrated, setHydrated] = useState(false); // localStorage restored yet?
   const messagesRef = useRef<Message[]>([]);
   messagesRef.current = messages;
-
-  // hydrate persisted lang/theme on the client
-  useEffect(() => {
-    try {
-      const lg = localStorage.getItem("js_lang");
-      const th = localStorage.getItem("js_theme");
-      if (lg === "zh" || lg === "en") setLang(lg);
-      if (th === "light" || th === "dark") setTheme(th);
-    } catch { /* ignore */ }
-  }, []);
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); try { localStorage.setItem("js_theme", theme); } catch {} }, [theme]);
   useEffect(() => { document.documentElement.lang = lang; try { localStorage.setItem("js_lang", lang); } catch {} }, [lang]);
@@ -51,17 +50,69 @@ export function App() {
     const hi = lg === "zh" ? `你好，我是${persona.name.zh}。` : `Hi, I'm ${persona.name.en}.`;
     return hi + "\n\n" + STR[lg].today_intro;
   }
+  function freshGreeting(lg: Lang): Message {
+    return { id: uid(), role: "assistant", personaId: "linxi", content: pickGreeting(lg) };
+  }
 
-  // seed the opening greeting once
+  // Hydrate everything device-local ONCE: lang/theme, the conversation, the
+  // completed scales and the case map. Falls back to a fresh greeting only when
+  // nothing was stored. This is what makes "对话只存在你的设备" literally true.
   useEffect(() => {
-    setMessages([{ id: uid(), role: "assistant", personaId: "linxi", content: pickGreeting(lang) }]);
+    let lg: Lang = "zh";
+    try {
+      const sLg = localStorage.getItem("js_lang");
+      const sTh = localStorage.getItem("js_theme");
+      if (sLg === "zh" || sLg === "en") { lg = sLg; setLang(sLg); }
+      if (sTh === "light" || sTh === "dark") setTheme(sTh);
+      const sScales = localStorage.getItem("js_scales");
+      if (sScales) { const arr = JSON.parse(sScales); if (Array.isArray(arr)) setScaleResults(arr); }
+      const sCase = localStorage.getItem("js_case");
+      if (sCase) { const cm = JSON.parse(sCase); if (cm && typeof cm === "object") setCaseMap(cm); }
+      const sChat = localStorage.getItem("js_chat");
+      if (sChat) {
+        const arr = JSON.parse(sChat) as Message[];
+        if (Array.isArray(arr) && arr.length) {
+          let maxId = 0;
+          for (const m of arr) { const n = parseInt(String(m.id).slice(1), 10); if (Number.isFinite(n) && n > maxId) maxId = n; }
+          _mid = Math.max(_mid, maxId); // never re-mint a hydrated id
+          setMessages(arr.map((m) => ({ ...m, streaming: false })));
+          setHydrated(true);
+          return;
+        }
+      }
+    } catch { /* corrupt storage — fall through to a fresh greeting */ }
+    setMessages([freshGreeting(lg)]);
+    setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   // refresh greeting if language flips and nothing's been said yet
   useEffect(() => {
     setMessages((ms) => (ms.length === 1 && ms[0].role === "assistant" ? [{ ...ms[0], content: pickGreeting(lang) }] : ms));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
+
+  // Persist after each COMPLETED turn (never mid-stream), stripping in-memory-only
+  // flags and base64 media so we stay well under the ~5MB localStorage quota.
+  useEffect(() => {
+    if (!hydrated || busy) return;
+    try {
+      const slim = messages.slice(-120).map((m) => ({
+        ...m,
+        streaming: false,
+        media: m.media?.filter((x) => !x.url.startsWith("data:"))
+      }));
+      localStorage.setItem("js_chat", JSON.stringify(slim));
+    } catch { /* quota / serialization — skip this write */ }
+  }, [messages, busy, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    try { localStorage.setItem("js_scales", JSON.stringify(scaleResults)); } catch {}
+  }, [scaleResults, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    try { if (caseMap) localStorage.setItem("js_case", JSON.stringify(caseMap)); else localStorage.removeItem("js_case"); } catch {}
+  }, [caseMap, hydrated]);
 
   async function send(text: string, attachments: Media[]) {
     const media = attachments || [];
@@ -110,7 +161,7 @@ export function App() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current })
+        body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, scaleResults })
       });
       if (res.headers.get("X-Crisis-Triggered") === "1") setCrisis(true);
       if (!res.ok) {
@@ -141,9 +192,38 @@ export function App() {
   function deleteAll() {
     const msg = lang === "zh" ? "确定要彻底删除这次对话吗？此操作无法撤销。" : "Delete this conversation completely? This cannot be undone.";
     if (confirm(msg)) {
+      // "一键彻底删除" must clear EVERYTHING device-local, not just the chat state.
+      try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); } catch {}
+      caseForCount.current = -1;
       setBusy(false); setCrisis(false); setCalm(false);
-      setMessages([{ id: uid(), role: "assistant", personaId: "linxi", content: pickGreeting(lang) }]);
+      setScaleResults([]); setCaseMap(null);
+      setMessages([freshGreeting(lang)]);
     }
+  }
+
+  // Lazily fetch the REAL accumulated understanding from /api/plan when the drawer
+  // opens. Throttled: too little said → honest empty state (no call); already
+  // fresh for this turn count → reuse the cached map (no call).
+  async function openCase() {
+    setOverlay("case");
+    const convo = messagesRef.current;
+    const userTurns = convo.filter((m) => m.role === "user").length;
+    if (userTurns < 2) return;             // not enough to understand — empty state
+    if (caseForCount.current === userTurns) return; // already current
+    setCaseLoading(true);
+    try {
+      const payloadMsgs = convo.map((m) => ({ role: m.role, content: m.content }));
+      const r = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: payloadMsgs, personaId: "linxi", caseMap, scaleResults })
+      });
+      if (r.ok) {
+        const d = (await r.json().catch(() => null)) as { plan?: { caseMap?: CaseMap } } | null;
+        if (d?.plan?.caseMap) { setCaseMap(d.plan.caseMap); caseForCount.current = userTurns; }
+      }
+    } catch { /* keep the prior map / empty state */ }
+    finally { setCaseLoading(false); }
   }
 
   const started = messages.some((m) => m.role === "user");
@@ -155,7 +235,7 @@ export function App() {
         onTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         onLang={() => setLang(lang === "zh" ? "en" : "zh")}
         onPersona={() => setOverlay("about")}
-        onCase={() => setOverlay("case")}
+        onCase={openCase}
       />
       <PrivacyRibbon lang={lang} onDelete={deleteAll} />
       {crisis && <CrisisBanner lang={lang} onOpen={() => setOverlay("crisis")} onDismiss={() => { setCrisis(false); exitedCrisisRef.current = true; setOverlay((o) => (o === "crisis" ? null : o)); }} />}
@@ -187,10 +267,10 @@ export function App() {
       )}
 
       {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} />}
-      {scaleId && <ScaleModal lang={lang} scaleId={scaleId} onClose={() => setScaleId(null)} />}
+      {scaleId && <ScaleModal lang={lang} scaleId={scaleId} onClose={() => setScaleId(null)} onComplete={(r) => setScaleResults((prev) => [...prev, r])} />}
       {overlay === "crisis" && <CrisisSheet lang={lang} onClose={() => setOverlay(null)} onBreathe={() => setOverlay("breathing")} />}
       {overlay === "breathing" && <BreathingSheet lang={lang} onClose={() => setOverlay(null)} />}
-      {overlay === "case" && <CaseDrawer lang={lang} persona={persona} onClose={() => setOverlay(null)} />}
+      {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} onClose={() => setOverlay(null)} />}
     </div>
   );
 }
