@@ -14,6 +14,29 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+/**
+ * Waiting-for-first-token indicator. Shows the typing dots plus a REAL elapsed-
+ * seconds counter (counts up from when the request was sent — not a fake countdown
+ * or a fixed timer). Once the first token arrives the bubble switches to the live
+ * caret, so every state here is bound to a real event.
+ */
+function Thinking({ startedAt, lang }: { startedAt?: number; lang: Lang }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const secs = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
+  return (
+    <span className="thinking">
+      <span className="typing"><i /><i /><i /></span>
+      <span className="thinking-label">
+        {STR[lang].status_thinking}{secs >= 2 ? ` · ${secs}s` : ""}
+      </span>
+    </span>
+  );
+}
+
 /* the virtual presence — a soft glowing orb, no face. realized in CSS. */
 export function Presence({ size = 34, glow = false, breathe = true, className = "" }:
   { size?: number; glow?: boolean; breathe?: boolean; className?: string }) {
@@ -78,7 +101,7 @@ export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lan
       {isAI ? <Avatar size={34} /> : <div className="avatar user-av" aria-hidden="true"><Ic.user style={{ width: 18, height: 18 }} /></div>}
       <div className="msg-body">
         <div className="msg-who">{isAI ? p.name[lang] : (lang === "zh" ? "你" : "You")}</div>
-        <div className={"bubble" + (hasMedia && !hasText ? " media-only" : "")}>
+        <div className={"bubble" + (hasMedia && !hasText ? " media-only" : "") + (m.errored ? " bubble-error" : "")}>
           {hasMedia && (
             <div className="bubble-media">
               {m.media!.map((md) => md.type === "image"
@@ -87,7 +110,7 @@ export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lan
             </div>
           )}
           {hasText && <span className="bubble-text">{m.content}</span>}
-          {m.streaming && m.content === "" && <span className="typing"><i /><i /><i /></span>}
+          {m.streaming && m.content === "" && <Thinking startedAt={m.startedAt} lang={lang} />}
           {m.streaming && m.content !== "" && <span className="caret" />}
         </div>
       </div>

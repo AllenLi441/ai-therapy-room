@@ -23,6 +23,8 @@ export type Message = {
   media?: Media[];
   streaming?: boolean;
   personaId?: string;
+  startedAt?: number; // ms timestamp when the request was sent — for a REAL elapsed counter
+  errored?: boolean; // the reply failed (truthful error state, not "still generating")
 };
 
 export type ScaleId = "PHQ-9" | "GAD-7" | "ISI";
@@ -67,6 +69,8 @@ export const STR: Record<Lang, Record<string, any>> = {
     import_image: "导入图片", import_video: "导入视频", import_media: "添加图片或视频",
     placeholder_calm: "如果想说点什么，我在这里",
     send: "发送", enter_hint: "Enter 发送 · Shift+Enter 换行",
+    status_connecting: "连接中", status_thinking: "思考中", status_writing: "正在回应",
+    err_busy: "消息有点频繁，先歇一会儿再发。", err_connect: "连接出错了，请稍后再试。",
     pace_deep: "深度", pace_fast: "快速",
     disclaimer: "我是 AI 陪伴，不是医生或持证咨询师",
     switch_persona: "更换陪伴者", persona_title: "选择此刻陪你的人", persona_sub: "切换会改变陪伴的方式，随时可以换回来。",
@@ -115,6 +119,8 @@ export const STR: Record<Lang, Record<string, any>> = {
     import_image: "Import image", import_video: "Import video", import_media: "Add image or video",
     placeholder_calm: "If you'd like to say something, I'm here",
     send: "Send", enter_hint: "Enter to send · Shift+Enter for a new line",
+    status_connecting: "Connecting", status_thinking: "Thinking", status_writing: "Replying",
+    err_busy: "A bit too many messages — please wait a moment.", err_connect: "Connection error — please try again.",
     pace_deep: "Depth", pace_fast: "Quick",
     disclaimer: "I'm an AI companion — not a doctor or licensed therapist",
     switch_persona: "Change companion", persona_title: "Who's with you right now", persona_sub: "Switching changes how I support you. You can switch back anytime.",

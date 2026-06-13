@@ -731,3 +731,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .crisis-banner .crisis-dismiss:hover{ color:var(--ink); border-color:var(--ink-3); }
 @media (max-width:520px){ .crisis-banner .crisis-dismiss{ padding:6px 10px; } }
+
+/* P1: real status indicator (2026-06-13) — quiet, bound to real events only */
+.thinking{display:inline-flex;align-items:center;gap:8px;}
+.thinking .thinking-label{font-size:var(--fs-sm,12.5px);color:var(--ink-3);letter-spacing:.02em;}
+.bubble.bubble-error{color:var(--alert,#D9734E);border-color:var(--alert-line,var(--line));}

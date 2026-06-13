@@ -67,7 +67,7 @@ export function App() {
     const media = attachments || [];
     const userMsg: Message = { id: uid(), role: "user", content: text, media };
     const aiId = uid();
-    const aiMsg: Message = { id: aiId, role: "assistant", personaId: "linxi", content: "", streaming: true };
+    const aiMsg: Message = { id: aiId, role: "assistant", personaId: "linxi", content: "", streaming: true, startedAt: Date.now() };
     const history = [...messagesRef.current, userMsg];
     setMessages((ms) => [...ms, userMsg, aiMsg]);
     setBusy(true);
@@ -113,7 +113,11 @@ export function App() {
         body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current })
       });
       if (res.headers.get("X-Crisis-Triggered") === "1") setCrisis(true);
-      if (!res.body) {
+      if (!res.ok) {
+        // truthful error state — do NOT pretend we're still generating
+        const errText = res.status === 429 ? STR[lang].err_busy : STR[lang].err_connect;
+        setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: errText, errored: true } : m)));
+      } else if (!res.body) {
         const tx = (await res.text()) || (lang === "zh" ? "（没有收到回复）" : "(No reply)");
         setAi(() => tx);
       } else {
@@ -127,7 +131,7 @@ export function App() {
         }
       }
     } catch {
-      setAi(() => (lang === "zh" ? "（连接出错了，请稍后再试。）" : "(Connection error — please try again.)"));
+      setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: STR[lang].err_connect, errored: true } : m)));
     } finally {
       setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, streaming: false } : m)));
       setBusy(false);
