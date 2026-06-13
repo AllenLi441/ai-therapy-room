@@ -722,3 +722,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .scale-suggest .ss-dismiss{flex:0 0 auto;background:none;border:none;color:var(--ink-3);cursor:pointer;display:flex;padding:4px;}
 .scale-suggest .ss-dismiss svg{width:16px;height:16px;}
 @media (max-width:520px){.scale-suggest{flex-wrap:wrap;}.scale-suggest .ss-text{flex-basis:100%;order:-1;}}
+
+/* explicit one-click exit on the crisis banner (P0, 2026-06-13) */
+.crisis-banner .crisis-dismiss{
+  flex:0 0 auto; background:transparent; border:1px solid var(--alert-line, var(--line));
+  color:var(--ink-2); border-radius:999px; padding:6px 12px; font-size:var(--fs-sm,13px);
+  cursor:pointer; margin-left:6px; white-space:nowrap; transition:.18s;
+}
+.crisis-banner .crisis-dismiss:hover{ color:var(--ink); border-color:var(--ink-3); }
+@media (max-width:520px){ .crisis-banner .crisis-dismiss{ padding:6px 10px; } }

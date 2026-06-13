@@ -53,7 +53,7 @@ export function AboutSheet({ lang, companion, onClose }: { lang: Lang; companion
   );
 }
 
-export function CrisisBanner({ lang, onOpen }: { lang: Lang; onOpen: () => void }) {
+export function CrisisBanner({ lang, onOpen, onDismiss }: { lang: Lang; onOpen: () => void; onDismiss: () => void }) {
   const t = STR[lang];
   return (
     <div className="crisis-banner">
@@ -64,6 +64,8 @@ export function CrisisBanner({ lang, onOpen }: { lang: Lang; onOpen: () => void 
           <span className="hide-sm">{t.crisis_banner_s}</span>
         </div>
         <button className="open-btn" onClick={onOpen}>{t.crisis_open}</button>
+        {/* explicit one-click exit — the user can always leave safety mode */}
+        <button className="crisis-dismiss" onClick={onDismiss} title={t.crisis_exit}>{t.crisis_exit}</button>
       </div>
     </div>
   );

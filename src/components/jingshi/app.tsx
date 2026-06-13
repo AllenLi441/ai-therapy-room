@@ -152,7 +152,7 @@ export function App() {
         onCase={() => setOverlay("case")}
       />
       <PrivacyRibbon lang={lang} onDelete={deleteAll} />
-      {crisis && <CrisisBanner lang={lang} onOpen={() => setOverlay("crisis")} />}
+      {crisis && <CrisisBanner lang={lang} onOpen={() => setOverlay("crisis")} onDismiss={() => { setCrisis(false); setOverlay((o) => (o === "crisis" ? null : o)); }} />}
 
       <div className="chat-wrap">
         {started
