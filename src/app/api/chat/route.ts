@@ -183,7 +183,12 @@ export async function POST(request: Request) {
   //     suicide_concern; low-confidence non-imminent cases release.
   //   - Fail-safe: classifier error + lexicon=none → release;
   //     error + lexicon=low → conservative suicide_concern.
-  const implicitOutcome = await assessImplicitRiskWithLLM(messages);
+  // After an explicit exit, the implicit (LLM) gate must also judge THIS message
+  // alone — otherwise it still sees the earlier crisis context in the history and
+  // intercepts the first post-exit message with a safety template (the off-by-one
+  // "still in safety mode for one more turn"). A genuinely risky current message is
+  // still caught because it's the one being classified.
+  const implicitOutcome = await assessImplicitRiskWithLLM(body.exitedCrisis ? [latestUserMessage] : messages);
   const implicitDecision = decideImplicitIntercept(implicitOutcome, risk);
   const mergedRisk = mergeImplicitWithLexicon(risk, implicitOutcome);
 
