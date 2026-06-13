@@ -39,9 +39,16 @@ export function getPipelineMode(pace: unknown): ModelPipelineMode {
 // label, so DEEPSEEK_MODEL=deepseek-chat (or deepseek-reasoner) reaches the API as-is.
 export const DEFAULT_DEEPSEEK_API_MODEL = "deepseek-chat";
 
+// The real DeepSeek chat-completions API only accepts "deepseek-chat" (fast) and
+// "deepseek-reasoner" (slow, reasoning). Any other value — including the UI labels
+// our .env.example used to suggest ("deepseek-v4-pro" …) — would 400 and make the
+// chat fall back, which reads as being slow/broken. So coerce anything unknown to
+// the fast default instead of trusting a stale env value.
+const VALID_API_MODELS = new Set(["deepseek-chat", "deepseek-reasoner"]);
+
 export function resolveApiModel(): string {
   const fromEnv = process.env.DEEPSEEK_MODEL?.trim();
-  return fromEnv ? fromEnv : DEFAULT_DEEPSEEK_API_MODEL;
+  return fromEnv && VALID_API_MODELS.has(fromEnv) ? fromEnv : DEFAULT_DEEPSEEK_API_MODEL;
 }
 
 // ── RECOVERY RECONCILIATION (2026-06-13) ──────────────────────────────────────
