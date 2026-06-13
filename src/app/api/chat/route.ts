@@ -90,7 +90,10 @@ export async function POST(request: Request) {
   // De-escalation (user signalled safety) overrides the frontend's sticky flag so
   // the session can leave safety mode without clearing the whole conversation.
   const crisisModeActive = (Boolean(body.crisisModeActive) || inferredCrisis.active) && !inferredCrisis.deescalated;
-  const risk = crisisModeActive ? activateCrisisSessionRisk(baseRisk) : baseRisk;
+  // Branch on THIS turn's own signal: the full crisis template fires only on a real
+  // new risk, not on every follow-up (which made it repeat verbatim and never exit).
+  // crisisModeActive instead keeps the model in safety mode via the system prompt.
+  const risk = baseRisk;
 
   // Stubs used by the lexicon-only exit branches (LLM not invoked there).
   const stubImplicit: ImplicitOutcome = { kind: "not_configured" };
@@ -221,9 +224,13 @@ export async function POST(request: Request) {
     4
   );
 
+  // Stay in safety mode during a recent-crisis window WITHOUT re-sending the
+  // template: the model gets danger-level guidance, but the reply stays natural.
+  const promptRisk = crisisModeActive ? activateCrisisSessionRisk(mergedRisk) : mergedRisk;
+
   const systemPrompt = buildCounselorSystemPrompt({
     profile: body.profile,
-    risk: mergedRisk,
+    risk: promptRisk,
     knowledge,
     caseMap,
     turnPlan: plan,

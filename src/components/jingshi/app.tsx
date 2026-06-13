@@ -70,9 +70,9 @@ export function App() {
     const history = [...messagesRef.current, userMsg];
     setMessages((ms) => [...ms, userMsg, aiMsg]);
     setBusy(true);
-    if (detectRisk(text)) {
-      setCrisis(true);
-    } else {
+    const risky = detectRisk(text);
+    setCrisis(risky); // track the current turn — banner can clear, no longer sticky
+    if (!risky) {
       // offer a self-check only when a theme surfaces (sleep/anxiety/low mood), once each
       const need = detectScaleNeed(text);
       if (need && !offeredScales.current.has(need)) { offeredScales.current.add(need); setSuggestedScale(need); }

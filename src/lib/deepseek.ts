@@ -82,7 +82,10 @@ export function buildDeepSeekPayload(input: {
   stream?: boolean;
   maxTokens?: number;
 }) {
-  const model = resolveDeepSeekModel(input.model ?? getDeepSeekConfig().model);
+  // Send the REAL DeepSeek API model (env DEEPSEEK_MODEL, default "deepseek-chat").
+  // The UI-label ids ("deepseek-v5.5-pro" …) are NOT valid API model names — passing
+  // them made the provider 400 and fall back, which read as slowness.
+  const model = getDeepSeekConfig().model;
 
   return {
     model,
@@ -90,7 +93,7 @@ export function buildDeepSeekPayload(input: {
       { role: "system", content: input.systemPrompt },
       ...normalizeConversationForProvider(input.messages)
     ],
-    temperature: model === "deepseek-v4-flash" ? 0.55 : 0.50,
+    temperature: 0.5,
     max_tokens: input.maxTokens ?? 900,
     stream: input.stream ?? true,
     thinking: { type: "disabled" }

@@ -374,7 +374,7 @@ export type ImplicitOutcome =
 
 export async function assessImplicitRiskWithLLM(
   messages: ChatMessage[],
-  timeoutMs = 8_000
+  timeoutMs = 5_000
 ): Promise<ImplicitOutcome> {
   if (!isKimiConfigured()) {
     return { kind: "not_configured" };
@@ -398,20 +398,18 @@ export async function assessImplicitRiskWithLLM(
       }
     ],
     temperature: 0.1,
-    maxTokens: 480,
+    maxTokens: 320,
     jsonMode: true
   });
 
-  // Retry once on a transient Kimi failure (blip / parse miss) before falling to
-  // the fail-safe ladder. This layer catches the dialect/poetic/coded/disguised
-  // self-harm the lexicon can't, so a silent miss here is high-cost. The retry uses
-  // a shorter timeout so a hard outage still bounds total latency.
+  // Single bounded attempt — this gate blocks the user's first token, so latency
+  // matters. On any failure we drop to the fail-safe ladder (lexicon-none → release,
+  // lexicon-low → conservative suicide_concern). (Previously retried once, which
+  // doubled worst-case wait before the reply started.)
   let lastReason = "unknown error";
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 200));
-    const attemptTimeout = attempt === 0 ? timeoutMs : Math.min(timeoutMs, 4_000);
+  {
     try {
-      const raw = await generateKimiText(payload, attemptTimeout);
+      const raw = await generateKimiText(payload, timeoutMs);
       const parsed = parseImplicitOutput(raw);
       if (parsed) return { kind: "ok", result: parsed };
       lastReason = "parse failed";

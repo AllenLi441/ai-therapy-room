@@ -863,12 +863,12 @@ const CRISIS_RESPONSE_MARKERS = [
   "这句话我会认真对待",
   "1=我已经移开危险物品",
   "1=我现在安全但很痛苦",
-  "12356",
-  "010-82951332",
-  "400-161-9995",
   "moved dangerous items away",
   "If you have a plan, a method nearby"
 ];
+// NOTE: bare hotline numbers (12356 / 010-… / 400-…) were removed from the markers
+// on purpose — a normal safety-toned reply that mentions a hotline must NOT count as
+// "we just sent the full crisis template", or crisis mode could never exit.
 
 // Clear, first-person "I'm safe / I've calmed down" affirmations (normalized form:
 // lowercased, whitespace + apostrophes stripped — see normalizeText). A bare "1"
