@@ -37,6 +37,10 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "_recovered_frontend_reference",
+    "design_handoff_jingshi",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

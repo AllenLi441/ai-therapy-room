@@ -1,5 +1,5 @@
-import { ChatApp } from "@/components/chat-app";
+import { App } from "@/components/jingshi/app";
 
 export default function Home() {
-  return <ChatApp />;
+  return <App />;
 }

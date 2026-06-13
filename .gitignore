@@ -33,3 +33,6 @@ _recovered_frontend_reference/
 # CI workflow needs the gh "workflow" token scope to push.
 # Re-enable later with: gh auth refresh -s workflow  (then un-ignore + git add)
 /.github/workflows/
+
+# design handoff (prototype) — integrated into src/, kept locally as reference
+/design_handoff_jingshi/

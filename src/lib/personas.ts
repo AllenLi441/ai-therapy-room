@@ -25,7 +25,7 @@ export const DEFAULT_PERSONA_ID: PersonaId = "companion";
 export const THERAPY_PERSONAS: TherapyPersona[] = [
   {
     id: "companion",
-    name: "林溪",
+    name: "安屿",
     role: "心理陪伴者",
     shortRole: "倾听、梳理、温和的方法",
     description: "先认真听你说，再陪你慢慢梳理。需要时也会一起看想法循环、做一个小练习或整理想表达的话。",
@@ -47,7 +47,7 @@ type PersonaDisplay = Pick<TherapyPersona, "name" | "role" | "shortRole" | "desc
 
 const PERSONA_DISPLAY_EN: Record<PersonaId, PersonaDisplay> = {
   companion: {
-    name: "Linxi",
+    name: "Anyu",
     role: "Companion",
     shortRole: "Listening, sense-making, gentle methods",
     description:

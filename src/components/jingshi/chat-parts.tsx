@@ -1,0 +1,236 @@
+"use client";
+/* chat-parts.tsx — Presence, TopBar, Privacy, Stream, Bubble, Composer, Welcome, CalmMode
+   (ported from the design handoff; window-globals → ES modules + types) */
+import { useEffect, useRef, useState } from "react";
+import { Ic } from "./icons";
+import { STR, personaById, type Lang, type Media, type Message, type Persona } from "./data";
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+/* the virtual presence — a soft glowing orb, no face. realized in CSS. */
+export function Presence({ size = 34, glow = false, breathe = true, className = "" }:
+  { size?: number; glow?: boolean; breathe?: boolean; className?: string }) {
+  return (
+    <span className={"presence " + (breathe ? "breathe " : "") + className} style={{ width: size, height: size }} aria-hidden="true">
+      {glow && <span className="glow" />}
+      <span className="halo" />
+      <span className="core" />
+    </span>
+  );
+}
+
+export function Avatar({ size = 34, glow = false, className = "" }: { size?: number; glow?: boolean; className?: string }) {
+  return <Presence size={size} glow={glow} className={className} />;
+}
+
+export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase, onScales }: {
+  lang: Lang; theme: string; persona: Persona;
+  onTheme: () => void; onLang: () => void; onPersona: () => void; onCase: () => void; onScales: () => void;
+}) {
+  const t = STR[lang];
+  return (
+    <header className="topbar">
+      <div className="brand">
+        <div className="brand-mark" />
+        <div><div className="brand-name">静室</div></div>
+        <div className="brand-sub hide-sm">{t.sub}</div>
+      </div>
+      <div className="topbar-spacer" />
+      <button className="persona-chip" onClick={onPersona} aria-label={t.about_title}>
+        <Avatar size={32} />
+        <div className="persona-chip-text hide-sm">
+          <div className="persona-chip-name">{persona.name[lang]}</div>
+          <div className="persona-chip-role">{persona.role[lang]}</div>
+        </div>
+        <Ic.chev className="chev" />
+      </button>
+      <button className="icon-btn" onClick={onScales} title={t.scales} aria-label={t.scales}><Ic.clipboard /></button>
+      <button className="icon-btn" onClick={onCase} title={t.case_title}><Ic.insight /></button>
+      <button className="icon-btn" onClick={onLang} title="中 / EN" aria-label="language"><Ic.lang /></button>
+      <button className="icon-btn" onClick={onTheme} aria-label="theme">{theme === "dark" ? <Ic.sun /> : <Ic.moon />}</button>
+    </header>
+  );
+}
+
+export function PrivacyRibbon({ lang, onDelete }: { lang: Lang; onDelete: () => void }) {
+  const t = STR[lang];
+  return (
+    <div className="privacy">
+      <Ic.lock />
+      <span><b>{t.privacy_a}</b> · {t.privacy_b} <span className="del" onClick={onDelete}>{t.privacy_del}</span></span>
+    </div>
+  );
+}
+
+export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lang: Lang }) {
+  const isAI = m.role === "assistant";
+  const p = m.personaId ? personaById(m.personaId) : persona;
+  const hasText = !!m.content && m.content.length > 0;
+  const hasMedia = !!m.media && m.media.length > 0;
+  return (
+    <div className={"msg " + (isAI ? "ai" : "user")}>
+      {isAI ? <Avatar size={34} /> : <div className="avatar user-av" aria-hidden="true"><Ic.user style={{ width: 18, height: 18 }} /></div>}
+      <div className="msg-body">
+        <div className="msg-who">{isAI ? p.name[lang] : (lang === "zh" ? "你" : "You")}</div>
+        <div className={"bubble" + (hasMedia && !hasText ? " media-only" : "")}>
+          {hasMedia && (
+            <div className="bubble-media">
+              {m.media!.map((md) => md.type === "image"
+                ? <img key={md.id} src={md.url} alt={md.name || ""} />
+                : <video key={md.id} src={md.url} controls playsInline />)}
+            </div>
+          )}
+          {hasText && <span className="bubble-text">{m.content}</span>}
+          {m.streaming && m.content === "" && <span className="typing"><i /><i /><i /></span>}
+          {m.streaming && m.content !== "" && <span className="caret" />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Stream({ messages, persona, lang }: { messages: Message[]; persona: Persona; lang: Lang }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+  return (
+    <div className="stream scroll" ref={ref}>
+      <div className="stream-inner">
+        {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} />)}
+      </div>
+    </div>
+  );
+}
+
+export function Composer({ lang, pace, busy, onSend, onPace }: {
+  lang: Lang; pace: "deep" | "fast"; busy: boolean; tone?: string;
+  onSend: (text: string, atts: Media[]) => void; onPace: (p: "deep" | "fast") => void;
+}) {
+  const t = STR[lang];
+  const [val, setVal] = useState("");
+  const [atts, setAtts] = useState<Media[]>([]);
+  const [menu, setMenu] = useState(false);
+  const ta = useRef<HTMLTextAreaElement>(null);
+  const imgInput = useRef<HTMLInputElement>(null);
+  const vidInput = useRef<HTMLInputElement>(null);
+
+  const grow = () => {
+    const el = ta.current; if (!el) return;
+    el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 168) + "px";
+  };
+  useEffect(grow, [val]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest(".attach-wrap")) setMenu(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [menu]);
+
+  const addFiles = async (files: FileList | null, type: "image" | "video") => {
+    if (!files) return;
+    // Images carry a base64 data URL (used for both display AND /api/vision);
+    // video uses an object URL (display only — no multimodal video).
+    const next: Media[] = await Promise.all(Array.from(files).map(async (f) => ({
+      id: Math.random().toString(36).slice(2),
+      type,
+      url: type === "image" ? await fileToDataUrl(f) : URL.createObjectURL(f),
+      name: f.name
+    })));
+    if (next.length) setAtts((a) => [...a, ...next]);
+    setMenu(false);
+  };
+  const removeAtt = (id: string) => setAtts((a) => a.filter((x) => x.id !== id));
+
+  const canSend = (val.trim() || atts.length > 0) && !busy;
+  const submit = () => {
+    if (!canSend) return;
+    onSend(val.trim(), atts);
+    setVal(""); setAtts([]);
+    requestAnimationFrame(() => { if (ta.current) ta.current.style.height = "auto"; });
+  };
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+  };
+  return (
+    <div className="composer-zone">
+      {atts.length > 0 && (
+        <div className="attach-previews">
+          {atts.map((a) => (
+            <div key={a.id} className="attach-thumb">
+              {a.type === "image" ? <img src={a.url} alt={a.name} /> : <video src={a.url} muted playsInline />}
+              {a.type === "video" && <span className="vbadge"><Ic.video /></span>}
+              <button className="thumb-x" onClick={() => removeAtt(a.id)} aria-label="remove"><Ic.close /></button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="composer">
+        <div className="attach-wrap">
+          {menu && (
+            <div className="attach-menu">
+              <button onClick={() => imgInput.current?.click()}><Ic.image />{t.import_image}</button>
+              <button onClick={() => vidInput.current?.click()}><Ic.video />{t.import_video}</button>
+            </div>
+          )}
+          <button className={"tool-btn" + (menu ? " on" : "")} onClick={() => setMenu((m) => !m)} aria-label={t.import_media} title={t.import_media}><Ic.plus /></button>
+          <input ref={imgInput} type="file" accept="image/*" multiple hidden onChange={(e) => { void addFiles(e.target.files, "image"); e.target.value = ""; }} />
+          <input ref={vidInput} type="file" accept="video/*" hidden onChange={(e) => { void addFiles(e.target.files, "video"); e.target.value = ""; }} />
+        </div>
+        <textarea ref={ta} value={val} rows={1} onChange={(e) => setVal(e.target.value)} onKeyDown={onKey} placeholder={t.placeholder} aria-label={t.placeholder} />
+        <button className="send-btn" onClick={submit} disabled={!canSend} aria-label={t.send}><Ic.send /></button>
+      </div>
+      <div className="composer-meta">
+        <span className="disclaimer"><Ic.heart style={{ color: "var(--ink-3)" }} />{t.disclaimer}</span>
+        <div className="pace-toggle" role="group" aria-label="pace">
+          <button className={pace === "deep" ? "on" : ""} onClick={() => onPace("deep")}>{t.pace_deep}</button>
+          <button className={pace === "fast" ? "on" : ""} onClick={() => onPace("fast")}>{t.pace_fast}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Welcome({ lang, companion, onStart }: { lang: Lang; companion: Persona; onStart: (s: string) => void }) {
+  const t = STR[lang];
+  return (
+    <div className="welcome scroll">
+      <div className="welcome-orb"><Presence size={134} glow breathe /></div>
+      <h1>{companion.name[lang]}</h1>
+      <div className="w-role">{companion.role[lang]}</div>
+      <p className="w-line">{t.welcome_line}</p>
+      <div className="starters">
+        {(t.starters as string[]).map((s, i) => <button key={i} className="starter" onClick={() => onStart(s)}>{s}</button>)}
+      </div>
+      <span className="w-priv"><Ic.lock />{t.privacy_a}</span>
+    </div>
+  );
+}
+
+export function CalmMode({ lang, onBreathe, onHotline, onContact, onBack }: {
+  lang: Lang; onBreathe: () => void; onHotline: () => void; onContact: () => void; onBack: () => void;
+}) {
+  const t = STR[lang];
+  return (
+    <div className="calm">
+      <div className="welcome-orb"><Presence size={150} glow breathe /></div>
+      <h2>{t.calm_title}</h2>
+      <p>{t.calm_sub}</p>
+      <div className="calm-actions">
+        <button className="calm-btn" onClick={onBreathe}>{t.calm_breathe}</button>
+        <button className="calm-btn alert" onClick={onHotline}>{t.calm_hotline}</button>
+        <button className="calm-btn" onClick={onContact}>{t.calm_contact}</button>
+      </div>
+      <button className="calm-back" onClick={onBack}>{t.calm_back}</button>
+    </div>
+  );
+}
