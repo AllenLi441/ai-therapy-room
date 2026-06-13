@@ -249,15 +249,9 @@ export async function POST(request: Request) {
 
   try {
     return streamTextResponse(createAssistantTextStream(await createDeepSeekTextStream(payload)));
-  } catch (err) {
-    // TEMP DIAGNOSTIC (2026-06-13): surface the real provider error so we can tell
-    // a bad key from a bad model from a network issue. Remove once diagnosed.
+  } catch {
     return new Response(createProviderErrorFallback(), {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-store",
-        "X-Chat-Provider-Error": (err instanceof Error ? err.message : String(err)).replace(/[\r\n]+/g, " ").slice(0, 220)
-      }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
 }
