@@ -5,7 +5,7 @@ import {
   type ImplicitOutcome
 } from "./implicit-risk";
 import { assessRisk } from "./safety";
-import type { ImplicitRiskAssessment } from "./types";
+import type { ImplicitRiskAssessment, RiskAssessment } from "./types";
 
 function build(overrides: Partial<ImplicitRiskAssessment> = {}): ImplicitRiskAssessment {
   return {
@@ -108,9 +108,30 @@ describe("decideImplicitIntercept — over-triage policy", () => {
     expect(decision.intercept).toBe(false);
   });
 
-  it("error + lexicon=low → conservative suicide_concern (fail-safe)", () => {
+  // Crisis false-positive fix: on a Kimi error, a GENERIC low hit from everyday
+  // distress (压力/焦虑/失眠) must NOT auto-escalate to the suicide template. The
+  // old fail-safe did, so any anxious message during a Kimi hiccup got a suicide
+  // intervention — "cry wolf". We now defer to the deterministic lexicon's call.
+  it("error + GENERIC lexicon=low (anxiety/stress/insomnia) → release, NOT a suicide template", () => {
     const lex = assessRisk("最近压力很大，焦虑得睡不着");
     expect(lex.level).toBe("low");
+    expect(lex.flags).not.toContain("suicide_concern");
+    const decision = decideImplicitIntercept({ kind: "error", reason: "timeout" }, lex);
+    expect(decision.intercept).toBe(false);
+    expect(decision.source).toBe("fail_safe_release");
+  });
+
+  // …but the floor still holds: if the deterministic lexicon itself marked the low
+  // message as suicide-adjacent, a Kimi error still conservatively escalates.
+  it("error + lexicon=low but SUICIDE-ADJACENT → still escalates (floor preserved)", () => {
+    const lex: RiskAssessment = {
+      level: "low",
+      categories: ["self_harm"],
+      matchedTerms: [],
+      flags: ["suicide_concern"],
+      shouldEscalate: false,
+      rationale: "synthetic low-but-suicide-adjacent"
+    };
     const decision = decideImplicitIntercept({ kind: "error", reason: "timeout" }, lex);
     expect(decision.intercept).toBe(true);
     if (decision.intercept) {

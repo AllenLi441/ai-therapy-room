@@ -198,6 +198,16 @@ const CLASSIFIER_SYSTEM = [
   "   → severity=suicidal_ideation, pragmatic=self, modifiers=[isolation,entrapment,burdensomeness], suggested_flags=[suicide_concern]。'没人接受真实的我/这个世界没有我的位置/做自己就活不下去' 映射为风险。benign 对照:「出柜后轻松多了朋友都支持」→none(protective_factor);「在纠结要不要出柜」(无意念)→low。",
   "",
   "═══════════════════════════════════════════════════════════════",
+  "**中文 benign 锚点（日常困扰，无死亡/手段/告别/退场框架 → severity=none，禁止触发 suicide_concern）：**",
+  "═══════════════════════════════════════════════════════════════",
+  "",
+  "CN-I1 「最近工作压力特别大，老是睡不好，心里一直很焦虑。」 → none, self（压力+失眠+焦虑的日常主诉，没有任何死亡/伤害/手段/告别/'活着没意义'线索；这是来访常态，按支持性对话处理，绝不要升级为 suicide_concern）。",
+  "CN-I2 「太累了，感觉快扛不住了，想请几天假好好休息。」 → none, self（疲惫+想休息＝自我照顾意图，不是退场；此处'扛不住'是劳累，无死亡框架）。",
+  "CN-I3 「这周忙到崩溃，只想找个没人的地方躺平两天。」 → none, self（'崩溃/躺平'＝压力宣泄+短暂逃离，不是死亡委婉；对照 EN-I2）。",
+  "CN-I4 「心情很低落，提不起劲，对什么都没兴趣。」 → none/low, self（快感缺失/抑郁情绪本身不等于被动死亡愿望；只有出现明确'活着没意义/不如消失/不想醒来'等死亡框架时才升到 passive_death_wish。不要因为'低落/没兴趣'就报 suicide_concern，交支持流程与量表）。",
+  "CN-I5 「焦虑到心跳很快、手发麻，感觉要出事，但我知道当下没有真实危险。」 → none, self（惊恐/躯体化，不是自杀意念；对照 EN-I5）。",
+  "",
+  "═══════════════════════════════════════════════════════════════",
   "**ENGLISH COVERAGE — apply the SAME schema / severity / pragmatic logic to English input.**",
   "═══════════════════════════════════════════════════════════════",
   "",
@@ -523,10 +533,18 @@ export function decideImplicitIntercept(
     };
   }
 
-  // ERROR — fail-safe:
-  //   - lexicon level >= medium  → already at risk; do nothing extra (lexicon flow handles it)
-  //   - lexicon level == low     → soft escalation to suicide_concern (conservative)
-  //   - lexicon level == none    → release (avoid DoS during Kimi outage)
+  // ERROR — fail-safe. The deterministic lexicon is the safety FLOOR; a flaky LLM
+  // call must not be what decides escalation. So on a Kimi error we DEFER to the
+  // lexicon's own judgment rather than blanket-escalating:
+  //   - lexicon level >= medium        → lexicon flow already owns it; nothing extra.
+  //   - lexicon == low AND suicide-adjacent (suicide_concern flag, or a
+  //       self_harm/suicide category) → conservative escalation to suicide_concern.
+  //   - lexicon == low but GENERIC (焦虑/压力/失眠 with no suicide-adjacent signal)
+  //       → release. Auto-firing the suicide template on everyday distress every
+  //       time Kimi is slow is a false-positive by construction; it desensitizes
+  //       users to real safety cues ("cry wolf") and erodes trust in a product
+  //       where these words are the norm.
+  //   - lexicon == none                → release (avoid DoS during a Kimi outage).
   if (LEVEL_SCORE[lexicon.level] >= LEVEL_SCORE.medium) {
     return {
       intercept: false,
@@ -534,18 +552,23 @@ export function decideImplicitIntercept(
       rationale: `LLM 错误但 lexicon 已 ${lexicon.level}，由 lexicon 流程处理：${outcome.reason}`
     };
   }
-  if (lexicon.level === "low") {
+  const suicideAdjacentLow =
+    lexicon.level === "low" &&
+    (lexicon.flags.includes("suicide_concern") ||
+      lexicon.categories.includes("self_harm") ||
+      lexicon.categories.includes("suicide"));
+  if (suicideAdjacentLow) {
     return {
       intercept: true,
       mode: "suicide_concern",
       source: "fail_safe",
-      rationale: `LLM 错误 + lexicon=low，保守升级到 suicide_concern：${outcome.reason}`
+      rationale: `LLM 错误 + lexicon=low 且挨近自杀信号，保守升级到 suicide_concern：${outcome.reason}`
     };
   }
   return {
     intercept: false,
     source: "fail_safe_release",
-    rationale: `LLM 错误但 lexicon 干净，放行：${outcome.reason}`
+    rationale: `LLM 错误但 lexicon 无自杀相邻信号（${lexicon.level}），放行：${outcome.reason}`
   };
 }
 
