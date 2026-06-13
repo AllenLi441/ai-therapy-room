@@ -1,0 +1,253 @@
+{
+  "denialGuardFixes": [
+    {
+      "miss": "FIX #1 — Reflexive denial erases a real MEDIUM passive-death-wish. In assessRisk (safety.ts:1622-1631), when isClearSelfDirectedRiskDenial(text) is true the matches array is filtered to keep ONLY suicide/self_harm terms whose label ends in [OD]/[LD]/[means] (regex /\\[(OD|LD|means)\\]$/). Every MEDIUM passive-death-wish term from MEDIUM_RISK_RULES (e.g. '不想醒来','如果我不在了','我是负担','想睡过去别醒','看着药盒','睡过去就好了') carries the suicide_concern flag but NOT an [OD]/[LD]/[means] label suffix, so it is dropped. Result: '我没有自杀想法，只是有时候希望自己不要醒来' collapses to level none — a genuine passive death wish is erased by a reflexive screening-style denial in the same turn.",
+      "fixLogic": "Stop letting a verbal denial erase MEDIUM-and-up signals. Replace the keep-predicate so the denial filter only erases LOW-severity / soft items and never erases a match that itself carries an active-risk flag or is medium+. Concretely, build the carve-out around three retained classes instead of one: (1) any non-suicide/non-self_harm category (unchanged); (2) any term whose label matches /\\[(OD|LD|means|imminent|dose-exit|bequest)\\]$/ (objective preparation/method — unchanged behaviour, just broaden the suffix set to the other HIGH/MEDIUM labels that exist in HIGH_RISK_REGEX_RULES); (3) NEW: any match where match.level === 'medium' || match.level === 'high', OR (match.flags ?? []).includes('suicide_concern'). Pseudologic for the predicate: `const keep = (m) => (m.category !== 'suicide' && m.category !== 'self_harm') || /\\[(OD|LD|means|imminent|dose-exit|bequest)\\]$/.test(m.term) || LEVEL_SCORE[m.level] >= LEVEL_SCORE['medium'] || (m.flags ?? []).includes('suicide_concern');`. Net effect: a bare denial can still suppress an isolated LOW lexical artifact (e.g. a quoted song lyric that only tripped a low rule), but it can NEVER pull a medium/high or suicide_concern-flagged signal down to none. A denial co-occurring with a real passive death wish is treated as ambivalence (keep medium suicide_concern → safety-check template), which is the clinically correct read of '我没有自杀想法但希望自己别醒来'. Clinician-tunable knob: if false-positive load on pure screening interviews is a concern, gate class (3) to medium-only (drop the high OR-clause) since high is already covered by class (2)'s label suffixes — but recommend keeping medium retained.",
+      "testCase": "MUST now stay MEDIUM (regression-add to safety.test.ts): '我没有自杀想法，只是有时候希望自己不要醒来' → level medium, flags include suicide_concern. '我不想自杀，但我真的觉得大家没有我会更轻松' → medium suicide_concern (burden passive wish survives denial). '我保证不会再割自己，可还是觉得活着好累、撑不住了' → medium suicide_concern. MUST still RELEASE (benign, denial wins): pure screening denial with no other signal '医生问我，我没有自杀或自伤想法' → none; '我不想伤害自己，今天就是来做个常规心理测评' → none."
+    },
+    {
+      "miss": "FIX #2 — Stale denial in the 4-turn concat poisons fresh later ideation. assessConversationRisk (safety.ts:2598-2600) joins the last 4 user turns into one combinedText and runs assessRisk on the blob. Because isClearSelfDirectedRiskDenial scans that whole blob, a denial uttered in turn N-3 ('我没有自杀想法') is seen in the SAME concatenated string as a fresh turn-N ideation ('其实这两天又开始想了，药还在抽屉'). The denial sets isClearSelfDirectedRiskDenial=true for the blob and the filter strips the later medium/non-[OD] suicide signals, so a clearly escalating gradient gets suppressed by an out-of-date reassurance. Order is lost: an EARLIER denial wrongly cancels a LATER signal.",
+      "fixLogic": "Make the denial carve-out position-aware so a denial only suppresses signals at-or-before it, never after it. Two-part fix: (A) Primary — once FIX #1 lands, a later medium/high/suicide_concern signal already survives the filter, which neutralizes most of this case. (B) Belt-and-suspenders for the concat path: do not let isClearSelfDirectedRiskDenial be evaluated on the joined blob at all when a later turn carries fresh risk. In assessConversationRisk, before computing `cumulative`, split recent turns into earlier vs latest: compute `latestRisk = assessRisk(lastUser.content)` (already have singleTurn) and `denialIsStale = isClearSelfDirectedRiskDenial(combinedText) && !isClearSelfDirectedRiskDenial(lastUser.content)`. If denialIsStale AND the latest turn alone OR any turn strictly AFTER the denial turn produces a suicide/self_harm match at medium+, bypass the denial suppression for the cumulative pass. Cleanest implementation: add an internal `assessRisk(text, opts?: { ignoreSelfDenial?: boolean })` param; assessConversationRisk calls `assessRisk(combinedText, { ignoreSelfDenial: denialIsStale })`. When ignoreSelfDenial is true, line 1622 short-circuits to `sixiangFiltered` (no denial filtering). The denial is only honoured when it is the LATEST turn or no later-turn risk exists. This guarantees a denial can suppress only its own turn and earlier context, never a subsequent disclosure.",
+      "testCase": "MUST now escalate (add to safety.test.ts conversation tests): turns = ['我没有自杀想法，就是最近压力大','谢谢','其实这两天又开始想了，安眠药还在床头柜里攒着'] → assessConversationRisk → high (means + reawakened ideation; denial is stale). turns = ['我跟医生说过我没有自伤想法','嗯','今晚一个人在家，刀就放在桌上，我不太确定自己能不能忍住'] → high. MUST still respect a CURRENT denial: turns = ['前两天我状态很差，想过很多','现在我安全了','我现在真的没有任何自杀或自伤的想法了'] where the LATEST turn is the denial and no later risk → may de-escalate / not force high (denial is fresh, honoured)."
+    },
+    {
+      "miss": "FIX #3 — De-escalation phrase + means-on-hand in the same turn releases crisis. detectActiveCrisisFromHistory (safety.ts:2811-2814) computes explicitlySafe = !safetyAck && !hasHardSelfHarmOrSuicideCore(lastNormalized) && CRISIS_DEESCALATION_PHRASES.some(...). hasHardSelfHarmOrSuicideCore (safety.ts:963-994) only lists hard ideation cores ('想死','自杀','活不下去',…) and a few coded euphemisms — it contains NO means/access/imminence terms. So '我好多了，药还在床边' matches a de-escalation phrase ('我好多了') AND passes the !hasHardSelfHarmOrSuicideCore check (means terms aren't in that list), so explicitlySafe=true and crisis mode is released while the lethal means is still at the bedside. A reassuring tone is being trusted over a stated active means.",
+      "fixLogic": "Add a means/imminence/access awareness guard to the de-escalation gate so a calm affirmation cannot release crisis mode while the same turn states means-on-hand or imminent access. Introduce `hasActiveMeansOrAccessCore(normalized)` and require its ABSENCE for explicitlySafe. New gate: `const explicitlySafe = !safetyAck && !hasHardSelfHarmOrSuicideCore(lastNormalized) && !hasActiveMeansOrAccessCore(lastNormalized) && CRISIS_DEESCALATION_PHRASES.some(...)`. hasActiveMeansOrAccessCore should match present-tense means/access/imminence (NOT past-tense disposal): include 药还在 / 药在床边 / 药在身边 / 药在旁边 / 药就在 / 刀还在 / 刀在身边 / 刀在床边 / 刀就在 / 绳还在 / 绳子还挂 / 还留着药 / 还攒着 / 没扔 / 没丢 / 没处理掉 / 在床头 / 在床边 / 在手边 / 楼顶 / 天台 / 在桥上 / pills are still / still have the pills / knife is still / still by my bed / next to me / haven't thrown / didn't get rid of / on the roof / on the bridge. CRITICAL negative carve-out so genuine all-clears still release: explicitly EXCLUDE disposal/removal phrasing — if the turn ALSO contains 移开 / 扔了 / 丢了 / 倒掉了 / 处理掉了 / 交给 / 拿走了 / 锁起来了 / 给了 / threw away / got rid of / removed / locked away / gave (them) to, treat means as NEUTRALIZED (do not block release). Implement as: means present AND not(disposal present) → block release. Because '1=我已经移开危险物品' is the intended safety-step ack, the disposal carve-out keeps that path releasing normally on the next genuine affirmation.",
+      "testCase": "MUST now STAY in crisis (add to safety-crisis-deescalation.test.ts): afterCrisis('我好多了，药还在床边') → active true, deescalated false. afterCrisis('我冷静下来了，但刀我还留在桌上没扔') → active true. afterCrisis('I feel better now, the pills are still next to me') → active true. MUST still RELEASE: afterCrisis('我好多了，药我已经移开了，交给我室友保管') → deescalated true (disposal carve-out). afterCrisis('我安全了，谢谢你陪我') → deescalated true (no means mentioned). afterCrisis('我现在好多了，把刀扔了，房间收拾好了') → deescalated true (扔了 = disposal)."
+    }
+  ],
+  "cueLists": [
+    {
+      "group": "rehearsal_aborted_attempt",
+      "tier": "accumulator-only (means/imminence-weighted; 2+ accumulator cues → MEDIUM suicide_concern, with-means/with-isolation → HIGH); do NOT add to hard-HIGH lexicon",
+      "lang": "zh",
+      "terms": [
+        "预演了一下",
+        "彩排了一下",
+        "排练了一下",
+        "试了一下",
+        "试着割了",
+        "刀架在手腕上",
+        "刀放在脖子上",
+        "绳子套上了",
+        "站到了窗边",
+        "爬上了天台",
+        "走到桥边",
+        "药拿在手里",
+        "药含在嘴里",
+        "数好了药片",
+        "把药倒出来又放回去",
+        "到了最后一刻",
+        "最后还是没敢",
+        "手一直在抖",
+        "中途停下来",
+        "中途放弃了",
+        "被人拦下来",
+        "被家人拦住",
+        "被室友拉住",
+        "差一点就",
+        "就差一步",
+        "已经站上去了又下来"
+      ],
+      "negativeGuards": [
+        "游戏/演出排练语境：彩排/排练 + 话剧/演出/晚会/节目/舞台/比赛 → benign release",
+        "职业/急救训练：演练/试了一下 + 急救/护理/CPR/演习/培训/教学 → benign release",
+        "烹饪/工具语境：刀/绳 + 切菜/做饭/搬家/晾衣服/装修 → benign release",
+        "纯回顾且已闭合且否认复发：'去年试过一次但现在完全没有这种念头了' 且无 means/imminence → 不单独升 HIGH（仍记为 post_attempt history，走 medium 关怀）"
+      ]
+    },
+    {
+      "group": "rehearsal_aborted_attempt",
+      "tier": "accumulator-only; severity hint = plan_preparation when paired with named means",
+      "lang": "en",
+      "terms": [
+        "did a practice run",
+        "rehearsed it",
+        "held the knife to my wrist",
+        "put the rope around my neck",
+        "stood at the window",
+        "climbed onto the roof",
+        "walked to the bridge",
+        "held the pills in my hand",
+        "counted out the pills",
+        "got right to the edge",
+        "chickened out at the last second",
+        "my hands were shaking too much",
+        "stopped halfway",
+        "someone pulled me back",
+        "almost went through with it",
+        "came this close",
+        "stepped up and then stepped down"
+      ],
+      "negativeGuards": [
+        "acting/rehearsal: rehearsed/practice run + play/show/performance/audition/lines → benign",
+        "first-aid/training: practice run + CPR/first aid/drill/class → benign",
+        "past-and-closed with denial of current ideation and no means/imminence → medium care, not auto-HIGH"
+      ]
+    },
+    {
+      "group": "post_attempt_recurrence",
+      "tier": "accumulator-only but HEAVILY weighted: severity = post_attempt_disclosure; a post-attempt disclosure + ANY recurrence/return-of-ideation cue → HIGH; bare historical disclosure alone → MEDIUM (post_attempt history)",
+      "lang": "zh",
+      "terms": [
+        "上次没成功",
+        "上次被救回来",
+        "洗胃之后",
+        "抢救过来之后",
+        "出院以后又开始想",
+        "出院没多久又",
+        "那次之后念头又回来了",
+        "又开始想那件事",
+        "熬过那次以后还是",
+        "上次吞药之后",
+        "割完那次以后",
+        "跳下去没死",
+        "醒来发现还活着",
+        "救回来其实我有点失望",
+        "没死成",
+        "这次想做得更彻底",
+        "上次没做对",
+        "下次不会再失手"
+      ],
+      "negativeGuards": [
+        "第三方/新闻/科普：报道/新闻/患者/数据/统计/研究 + 没成功/抢救 → benign release",
+        "纯医疗叙述无复发且明确否认：'三年前抢救过，现在早就好了，没有任何念头' → medium history, not HIGH",
+        "影视/小说：剧情/角色/小说/电影 + 救回来/没死成 → benign release"
+      ]
+    },
+    {
+      "group": "post_attempt_recurrence",
+      "tier": "accumulator-only; post_attempt_disclosure severity; recurrence → HIGH",
+      "lang": "en",
+      "terms": [
+        "last time it didn't work",
+        "they brought me back",
+        "after they pumped my stomach",
+        "after i got out of the hospital it started again",
+        "the thoughts came back after",
+        "i survived the last time",
+        "i woke up and was still alive",
+        "kind of disappointed i survived",
+        "didn't manage to die",
+        "this time i want to make sure",
+        "i won't mess it up next time",
+        "do it properly this time"
+      ],
+      "negativeGuards": [
+        "third-party/news/research: report/study/patient/statistics → benign",
+        "closed medical history with explicit current denial and no recurrence → medium history, not HIGH",
+        "fiction/film: character/movie/novel + survived/brought back → benign"
+      ]
+    },
+    {
+      "group": "means_method_extended",
+      "tier": "accumulator-only, group=means; alone = no escalation, +1 other implicit cue → MEDIUM, +isolation/imminence/farewell → HIGH. Do NOT hard-HIGH on the bare noun (a method NAME alone is often informational/news)",
+      "lang": "zh",
+      "terms": [
+        "卧轨",
+        "躺到铁轨上",
+        "等火车",
+        "等地铁进站",
+        "触电",
+        "摸电门",
+        "抓电线",
+        "咬电线",
+        "高空一跃",
+        "从高处跳下",
+        "跳下天桥",
+        "跳立交桥",
+        "液氮",
+        "干冰闷",
+        "氦气球",
+        "氮气袋",
+        "退出袋",
+        "百草枯",
+        "敌敌畏",
+        "农药喝",
+        "老鼠药",
+        "耗子药",
+        "汽车尾气",
+        "车里烧炭",
+        "煤气开着不点火",
+        "氯硝西泮",
+        "劳拉西泮整瓶",
+        "阿普唑仑攒",
+        "硝苯地平大量",
+        "胰岛素打多",
+        "跳黄浦江",
+        "跳珠江",
+        "南京长江大桥",
+        "跳护城河"
+      ],
+      "negativeGuards": [
+        "新闻/案件/科普：新闻/报道/案件/警方/数据/研究/纪录片 + 卧轨/百草枯/敌敌畏 → benign release",
+        "农业/工业/化学用途：百草枯/敌敌畏/液氮/氦气 + 喷洒/除草/实验/储存/工厂/养殖/气球派对/婚礼 → benign release",
+        "地名做行程：黄浦江/珠江/长江大桥 + 旅游/拍照/路过/打车/通勤 → benign release",
+        "糖尿病管理：胰岛素 + 血糖/复查/医嘱/三餐 (无 '打多/过量/一次全打') → benign release",
+        "医嘱服药：氯硝西泮/劳拉西泮/阿普唑仑 + 医生开的/每天一片/按医嘱 (无 攒/囤/整瓶/一次吃) → benign release"
+      ]
+    },
+    {
+      "group": "means_method_extended",
+      "tier": "accumulator-only, group=means; named method alone informational; +1 cue → MEDIUM, +isolation/imminence → HIGH",
+      "lang": "en",
+      "terms": [
+        "lie on the train tracks",
+        "wait for the train",
+        "jump in front of the subway",
+        "electrocute myself",
+        "grab the live wire",
+        "jump from a height",
+        "jump off the overpass",
+        "liquid nitrogen",
+        "helium hood",
+        "nitrogen bag",
+        "exit bag",
+        "paraquat",
+        "pesticide to drink",
+        "rat poison",
+        "car exhaust",
+        "carbon monoxide in the garage",
+        "insulin overdose",
+        "clonazepam whole bottle",
+        "alprazolam stockpile",
+        "jump off the golden gate",
+        "jump off the bridge downtown"
+      ],
+      "negativeGuards": [
+        "news/case/research: news/report/police/study/documentary + paraquat/train tracks → benign",
+        "occupational/lab: liquid nitrogen/nitrogen/helium + experiment/lab/factory/party balloons → benign",
+        "place as travel: named bridge + sightseeing/photo/commute/drive → benign",
+        "prescribed use: clonazepam/alprazolam + prescribed/daily/as directed (no stockpile/whole bottle/all at once) → benign",
+        "diabetes care: insulin + blood sugar/checkup/meals (no 'too much/all at once') → benign"
+      ]
+    }
+  ],
+  "demographicFewShots": [
+    {
+      "severity": "HIGH if paired with means/imminence; else MEDIUM passive_death_wish + burden",
+      "example": "ELDERLY-BURDEN (zh): '我老了，眼睛也不行了，天天要儿女伺候，我走了他们就轻松了，省得拖累一家人' — map to burden(group) + passive_death_wish. Cue patterns: 拖累儿女/拖累子女/拖累一家/省得伺候/我走了他们就轻松/不想花儿女的钱/活着就是个累赘/早点走对大家都好. Few-shot note: elderly burdensomeness is the single strongest demographic risk amplifier (highest completed-suicide demographic in CN); treat burden-framing as suicide_concern even WITHOUT an ideation core, and escalate to HIGH on any means (攒的药/楼顶/绳). NEGATIVE/benign: '我老了帮不上忙，让孩子们多操心了' (mild guilt, no exit framing) → low, no escalation; '退休后想去帮女儿带孩子' → none.",
+      "note": "Accumulator group=burden; do not require '我是负担' literal — colloquial '拖累/省得伺候/早点走对大家好' must map in. Source basis: NIMH/SAMHSA burdensomeness warning sign + CN elderly-suicide epidemiology."
+    },
+    {
+      "severity": "HIGH — dyadic risk to infant is a hard escalation, never accumulator-soft",
+      "example": "PERINATAL-DYADIC (zh): '生完孩子后我每天都很绝望，有时候觉得带着宝宝一起走可能对他更好' / '我配不上当妈妈，他跟着我只会受苦，不如我们一起解脱'. Cue patterns: 带着(宝宝|孩子|他|她)一起走/一起解脱/我们一起离开/带他一起/孩子跟着我受苦/没有我这个妈/产后+不想活/产后+绝望. Few-shot note: ANY infanticide-suicide dyadic framing ('带孩子一起') is HIGH and routes to crisis immediately — this overrides the normal 'accumulator-only' soft handling; harm extends to a non-consenting dependent. NEGATIVE/benign: '产后情绪低落，常常哭，但抱着宝宝又觉得有盼头' → medium care (perinatal-depression check), NOT crisis; '坐月子太累了想喘口气' → low.",
+      "note": "Add dyadic '带X一起走/一起解脱' as a HARD pattern (not pure accumulator) under category suicide with harm_to_others co-flag for the infant. Source: perinatal mortality / maternal mental health guidance."
+    },
+    {
+      "severity": "MEDIUM baseline; HIGH if entrapment + means/imminence",
+      "example": "CHRONIC-ILLNESS / TERMINAL framing (zh): '查出癌症之后我撑不下去了，治不好了，与其拖累家里花钱受罪，不如自己了断' — entrapment + burden + ideation. Cue patterns: 查出(癌|绝症)+不想治/治不好不如/与其拖累家里/省下治疗费/不想拖着病体/这病好不了我也活够了/慢性病熬不下去. Few-shot note: distinguish genuine ideation ('不如自己了断/活够了') from rational treatment-decision talk; the former is suicide_concern, escalate to HIGH if means present. NEGATIVE/benign: '癌症治疗太痛苦了，但我还是想试试新方案' → low; 询问临终关怀/安宁疗护/DNR政策 (palliative/hospice/advance-directive) without self-cessation intent → none (already in BENIGN_IMPLICIT_CONTEXT strong-frame: DNR/预立医疗指示/安宁疗护).",
+      "note": "Group=hopelessness/entrapment+burden. Guard against confusing legitimate palliative/hospice/advance-directive discussion (benign) with active self-termination. Source: SAFE-T entrapment + chronic-illness risk literature."
+    },
+    {
+      "severity": "MEDIUM baseline; HIGH with means/imminence/farewell — teens escalate fast",
+      "example": "TEEN / SCHOOL framing (zh): '被全班孤立、天天被霸凌，我不想去上学了也不想活了，反正没人会想念我' — bullying + isolation + ideation. Cue patterns: 被霸凌/被孤立/同学都针对我/考砸了爸妈会骂死我/没人会想念我/活着上学没意义/再也不用去学校(coded exit)/家长群+我走了. Few-shot note: adolescent ideation co-occurs with acute interpersonal triggers (bullying, exam/relationship rupture) and is highly impulsive — keep the accumulator threshold sensitive (treat isolation+ideation as MEDIUM minimum). NEGATIVE/benign: '今天被同学气死了不想上学' (transient venting, no ideation/exit) → low; '考砸了好烦' → none.",
+      "note": "Group=isolation+hopelessness. Note impulsivity → lower escalation threshold; '再也不用去学校' can be coded-exit, verify with surrounding cues. Source: youth suicide warning signs (NIMH/SAMHSA)."
+    },
+    {
+      "severity": "MEDIUM baseline; HIGH with means/imminence; minority-stress amplifier",
+      "example": "LGBTQ minority-stress framing (zh): '出柜以后家里跟我断绝关系，我撑不住了，这个世界没有我的位置' / '做了真实的自己反而活不下去，没人接受我'. Cue patterns: 出柜+断绝关系/家里不接受我/没人接受真实的我/这个世界没有我的位置/做自己就活不下去/同性/跨性别+撑不住/转换治疗(被强迫). Few-shot note: minority stress (family rejection, non-acceptance, forced conversion) is an independent risk amplifier — entrapment+isolation framing here should be treated as suicide_concern even when soft, and affirming/non-judgmental crisis copy matters. NEGATIVE/benign: '出柜以后轻松多了，朋友们都支持我' → none (protective_factor); '在纠结要不要跟父母出柜' (decision-seeking, no ideation) → low.",
+      "note": "Group=isolation+entrapment+burden. Map rejection/non-acceptance phrasing to risk even without ideation core; ensure copy is identity-affirming. Source: minority-stress model + LGBTQ youth suicide-risk literature."
+    }
+  ]
+}

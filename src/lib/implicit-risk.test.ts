@@ -1,0 +1,201 @@
+import { describe, expect, it } from "vitest";
+import {
+  decideImplicitIntercept,
+  mergeImplicitWithLexicon,
+  type ImplicitOutcome
+} from "./implicit-risk";
+import { assessRisk } from "./safety";
+import type { ImplicitRiskAssessment } from "./types";
+
+function build(overrides: Partial<ImplicitRiskAssessment> = {}): ImplicitRiskAssessment {
+  return {
+    severity: "none",
+    pragmatic: "self",
+    modifiers: [],
+    evidence: [],
+    confidence: 0,
+    suggestedFlags: [],
+    rationale: "",
+    ...overrides
+  };
+}
+
+function ok(result: ImplicitRiskAssessment): ImplicitOutcome {
+  return { kind: "ok", result };
+}
+
+describe("decideImplicitIntercept — over-triage policy", () => {
+  it("imminent_acute always fires CRISIS, even at low confidence", () => {
+    const lex = assessRisk("最近压力很大");
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "imminent_acute", confidence: 0.2, pragmatic: "self" })),
+      lex
+    );
+    expect(decision.intercept).toBe(true);
+    if (decision.intercept) {
+      expect(decision.mode).toBe("crisis");
+      expect(decision.source).toBe("llm");
+    }
+  });
+
+  it("plan_preparation at conf >= 0.4 fires CRISIS", () => {
+    const lex = assessRisk("最近压力很大");
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "plan_preparation", confidence: 0.6, pragmatic: "self" })),
+      lex
+    );
+    expect(decision.intercept).toBe(true);
+    if (decision.intercept) expect(decision.mode).toBe("crisis");
+  });
+
+  it("passive_death_wish at conf >= 0.4 fires SUICIDE_CONCERN", () => {
+    const lex = assessRisk("最近压力很大");
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "passive_death_wish", confidence: 0.7, pragmatic: "self" })),
+      lex
+    );
+    expect(decision.intercept).toBe(true);
+    if (decision.intercept) expect(decision.mode).toBe("suicide_concern");
+  });
+
+  it("suicidal_ideation at conf >= 0.4 fires SUICIDE_CONCERN", () => {
+    const lex = assessRisk("最近很难");
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "suicidal_ideation", confidence: 0.5, pragmatic: "self" })),
+      lex
+    );
+    expect(decision.intercept).toBe(true);
+    if (decision.intercept) expect(decision.mode).toBe("suicide_concern");
+  });
+
+  it("pragmatic=other never intercepts on implicit alone (lexicon may still escalate)", () => {
+    const lex = assessRisk("最近压力很大"); // lexicon-low
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "plan_preparation", confidence: 0.9, pragmatic: "other" })),
+      lex
+    );
+    expect(decision.intercept).toBe(false);
+  });
+
+  it("pragmatic=sarcasm_hyperbole releases", () => {
+    const lex = assessRisk("最近压力很大");
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "suicidal_ideation", confidence: 0.9, pragmatic: "sarcasm_hyperbole" })),
+      lex
+    );
+    expect(decision.intercept).toBe(false);
+  });
+
+  it("low confidence (< 0.4) for non-imminent severity releases", () => {
+    const lex = assessRisk("最近压力很大");
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "passive_death_wish", confidence: 0.2, pragmatic: "self" })),
+      lex
+    );
+    expect(decision.intercept).toBe(false);
+  });
+
+  it("not_configured releases (dev mode)", () => {
+    const lex = assessRisk("最近压力很大");
+    const decision = decideImplicitIntercept({ kind: "not_configured" }, lex);
+    expect(decision.intercept).toBe(false);
+  });
+
+  it("error + lexicon=none releases (avoid Kimi-outage DoS)", () => {
+    const lex = assessRisk("今天吃了披萨");
+    expect(lex.level).toBe("none");
+    const decision = decideImplicitIntercept({ kind: "error", reason: "timeout" }, lex);
+    expect(decision.intercept).toBe(false);
+  });
+
+  it("error + lexicon=low → conservative suicide_concern (fail-safe)", () => {
+    const lex = assessRisk("最近压力很大，焦虑得睡不着");
+    expect(lex.level).toBe("low");
+    const decision = decideImplicitIntercept({ kind: "error", reason: "timeout" }, lex);
+    expect(decision.intercept).toBe(true);
+    if (decision.intercept) {
+      expect(decision.mode).toBe("suicide_concern");
+      expect(decision.source).toBe("fail_safe");
+    }
+  });
+
+  it("error + lexicon already medium → release (lexicon's flow handles it)", () => {
+    const lex = assessRisk("如果我不在了，大家应该会轻松一点吧");
+    expect(lex.level).toBe("medium");
+    const decision = decideImplicitIntercept({ kind: "error", reason: "timeout" }, lex);
+    expect(decision.intercept).toBe(false);
+  });
+});
+
+describe("mergeImplicitWithLexicon — severity-monotone", () => {
+  it("LLM cannot downgrade the lexicon's level", () => {
+    const lex = assessRisk("我想跳楼"); // lexicon: high
+    const merged = mergeImplicitWithLexicon(
+      lex,
+      ok(build({ severity: "none", pragmatic: "sarcasm_hyperbole" }))
+    );
+    expect(merged.level).toBe("high");
+    expect(merged.shouldEscalate).toBe(true);
+  });
+
+  it("LLM bumps level when implicit severity is higher", () => {
+    const lex = assessRisk("今天压力大"); // lexicon-low
+    const merged = mergeImplicitWithLexicon(
+      lex,
+      ok(build({ severity: "plan_preparation", pragmatic: "self", confidence: 0.7 }))
+    );
+    expect(merged.level).toBe("high");
+    expect(merged.shouldEscalate).toBe(true);
+  });
+
+  it("pragmatic=other does NOT raise level (the user isn't the at-risk person)", () => {
+    const lex = assessRisk("今天压力大");
+    const merged = mergeImplicitWithLexicon(
+      lex,
+      ok(build({ severity: "plan_preparation", pragmatic: "other", confidence: 0.9 }))
+    );
+    expect(merged.level).toBe("low"); // unchanged
+  });
+
+  it("attaches the implicit assessment for downstream prompt context", () => {
+    const lex = assessRisk("今天压力大");
+    const implicit = build({
+      severity: "passive_death_wish",
+      pragmatic: "self",
+      modifiers: ["hopelessness", "burdensomeness"],
+      evidence: ["现在感觉一切都没什么意义了"],
+      confidence: 0.8,
+      suggestedFlags: ["suicide_concern"],
+      rationale: "强烈的被动死亡愿望"
+    });
+    const merged = mergeImplicitWithLexicon(lex, ok(implicit));
+    expect(merged.implicit).toBeDefined();
+    expect(merged.implicit?.modifiers).toContain("burdensomeness");
+    expect(merged.flags).toContain("suicide_concern");
+    expect(merged.rationale).toContain("现在感觉一切都没什么意义了");
+  });
+
+  it("returns lexicon unchanged when LLM is not_configured or error", () => {
+    const lex = assessRisk("今天压力大");
+    const noConfig = mergeImplicitWithLexicon(lex, { kind: "not_configured" });
+    const errored = mergeImplicitWithLexicon(lex, { kind: "error", reason: "boom" });
+    expect(noConfig).toEqual(lex);
+    expect(errored).toEqual(lex);
+  });
+
+  it("never adds flags when pragmatic !== self", () => {
+    const lex = assessRisk("今天压力大");
+    const merged = mergeImplicitWithLexicon(
+      lex,
+      ok(
+        build({
+          severity: "suicidal_ideation",
+          pragmatic: "other",
+          confidence: 0.9,
+          suggestedFlags: ["suicide_concern"]
+        })
+      )
+    );
+    expect(merged.flags).not.toContain("suicide_concern");
+  });
+});

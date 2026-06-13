@@ -1,0 +1,1022 @@
+{
+  "recoveredAt": "2026-06-13",
+  "app": "/Users/allenli/Desktop/OH-WorkSpace/心理医生/",
+  "transcriptsScanned": 30,
+  "counts": {
+    "total": 112,
+    "clean": 89,
+    "approx": 19,
+    "engineFallback": 1,
+    "empty": 3
+  },
+  "files": [
+    {
+      "rel": ".env.example",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-12T08:10:49.276Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 415
+    },
+    {
+      "rel": ".env.local",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T13:01:59.150Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 373
+    },
+    {
+      "rel": ".github/workflows/ci.yml",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T11:28:50.514Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 712
+    },
+    {
+      "rel": "DEMO.md",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T14:37:26.054Z",
+      "applied": 3,
+      "failed": 2,
+      "bytes": 2012
+    },
+    {
+      "rel": "README.md",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-12T08:11:14.305Z",
+      "applied": 0,
+      "failed": 1,
+      "bytes": 1780
+    },
+    {
+      "rel": "UPGRADE_PLAN.md",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-13T01:22:59.367Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 9140
+    },
+    {
+      "rel": "_DEPLOY_LINE_PATCHES/APPLY.md",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:35:45.425Z",
+      "applied": 6,
+      "failed": 2,
+      "bytes": 3202
+    },
+    {
+      "rel": "_DETECTION_UPGRADE/CLINICAL-REVIEW-BUNDLE.md",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T11:10:06.606Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 3967
+    },
+    {
+      "rel": "_DETECTION_UPGRADE/DEPLOY-SUMMARY.md",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T11:10:50.623Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 3783
+    },
+    {
+      "rel": "_DETECTION_UPGRADE/P4-guards-cues.json",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T11:01:13.045Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 19220
+    },
+    {
+      "rel": "_DETECTION_UPGRADE/P5-english.json",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T11:01:00.073Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 16815
+    },
+    {
+      "rel": "_DETECTION_UPGRADE/PLAN.md",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T01:50:38.397Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 3511
+    },
+    {
+      "rel": "docs/model-quality-evaluation-2026-05-14.md",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T13:39:42.488Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 4821
+    },
+    {
+      "rel": "evals/therapy-cases.json",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T13:43:36.222Z",
+      "applied": 4,
+      "failed": 0,
+      "bytes": 11309
+    },
+    {
+      "rel": "next.config.mjs",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-06T02:18:05.962Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 730
+    },
+    {
+      "rel": "package.json",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:22:22.963Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1119
+    },
+    {
+      "rel": "scripts/append-w1-seeds.mjs",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-21T03:34:38.419Z",
+      "applied": 3,
+      "failed": 0,
+      "bytes": 6278
+    },
+    {
+      "rel": "scripts/eval-therapy.mjs",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T13:45:01.282Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 5098
+    },
+    {
+      "rel": "scripts/find-fp-fn.mjs",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T05:25:23.831Z",
+      "applied": 5,
+      "failed": 5,
+      "bytes": 9228
+    },
+    {
+      "rel": "scripts/harvest-decision-logs.mjs",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-21T03:35:27.348Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 5760
+    },
+    {
+      "rel": "scripts/preannotate-w1.mjs",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-21T03:33:52.124Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 6232
+    },
+    {
+      "rel": "src/app/admin/risk-events/page.tsx",
+      "status": "EMPTY",
+      "src": "none",
+      "baseTs": "(none)",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 0
+    },
+    {
+      "rel": "src/app/api/chat/route.test.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T11:49:38.909Z",
+      "applied": 0,
+      "failed": 9,
+      "bytes": 2917
+    },
+    {
+      "rel": "src/app/api/chat/route.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:17:07.368Z",
+      "applied": 10,
+      "failed": 29,
+      "bytes": 9430
+    },
+    {
+      "rel": "src/app/api/health/route.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T13:08:05.625Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 2089
+    },
+    {
+      "rel": "src/app/api/plan/route.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:36:26.974Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 1794
+    },
+    {
+      "rel": "src/app/api/review/route.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T01:23:44.932Z",
+      "applied": 3,
+      "failed": 0,
+      "bytes": 3240
+    },
+    {
+      "rel": "src/app/api/safety-check/route.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:15:56.250Z",
+      "applied": 0,
+      "failed": 2,
+      "bytes": 1622
+    },
+    {
+      "rel": "src/app/api/summary/route.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:39:33.217Z",
+      "applied": 3,
+      "failed": 5,
+      "bytes": 2522
+    },
+    {
+      "rel": "src/app/globals.css",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-19T10:54:26.942Z",
+      "applied": 6,
+      "failed": 11,
+      "bytes": 48298
+    },
+    {
+      "rel": "src/app/icon.svg",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-17T05:36:33.375Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 350
+    },
+    {
+      "rel": "src/app/layout.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-06T15:14:51.863Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 2455
+    },
+    {
+      "rel": "src/app/page.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-06T15:18:38.368Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 110
+    },
+    {
+      "rel": "src/app/robots.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T01:30:16.103Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 505
+    },
+    {
+      "rel": "src/components/breathing-exercise.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-19T13:22:38.143Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 2373
+    },
+    {
+      "rel": "src/components/breathing-mark.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-19T10:54:48.238Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1334
+    },
+    {
+      "rel": "src/components/case-panel.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-18T12:20:42.390Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 5052
+    },
+    {
+      "rel": "src/components/chat-room.tsx",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-18T12:22:51.521Z",
+      "applied": 54,
+      "failed": 109,
+      "bytes": 33836
+    },
+    {
+      "rel": "src/components/exercise-panel.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T05:23:58.790Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 3868
+    },
+    {
+      "rel": "src/components/persona-card.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T01:29:36.241Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1098
+    },
+    {
+      "rel": "src/components/pipeline-bar.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T14:41:10.508Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2582
+    },
+    {
+      "rel": "src/components/safe-markdown.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T01:44:04.026Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 3503
+    },
+    {
+      "rel": "src/components/safety-ui.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-18T12:20:02.021Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 7196
+    },
+    {
+      "rel": "src/components/scale-modal.tsx",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T01:23:44.167Z",
+      "applied": 8,
+      "failed": 0,
+      "bytes": 6291
+    },
+    {
+      "rel": "src/lib/_concurrent-p3-compat.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T11:20:35.993Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 2249
+    },
+    {
+      "rel": "src/lib/_corpus_probe.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-06T02:25:56.349Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 1761
+    },
+    {
+      "rel": "src/lib/_llm_validate.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-06T11:16:40.397Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1930
+    },
+    {
+      "rel": "src/lib/_probe.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T16:33:58.444Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 984
+    },
+    {
+      "rel": "src/lib/_probe_en.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T00:25:35.242Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1352
+    },
+    {
+      "rel": "src/lib/_probe_neg.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T00:08:43.356Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 998
+    },
+    {
+      "rel": "src/lib/_probe_zh.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T07:42:17.602Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1213
+    },
+    {
+      "rel": "src/lib/case-formulation.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-12T08:07:32.428Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 979
+    },
+    {
+      "rel": "src/lib/case-formulation.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T11:19:13.801Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 8306
+    },
+    {
+      "rel": "src/lib/chat-monitoring.ts",
+      "status": "EMPTY",
+      "src": "none",
+      "baseTs": "(none)",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 0
+    },
+    {
+      "rel": "src/lib/chat-summary.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-11T06:43:35.890Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1136
+    },
+    {
+      "rel": "src/lib/chat-summary.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-11T06:43:25.267Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2417
+    },
+    {
+      "rel": "src/lib/chat-window.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-10T11:50:53.206Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2171
+    },
+    {
+      "rel": "src/lib/chat-window.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-10T11:50:39.285Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 3516
+    },
+    {
+      "rel": "src/lib/conversation-window.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:57:32.059Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2440
+    },
+    {
+      "rel": "src/lib/conversation-window.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:56:30.460Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2812
+    },
+    {
+      "rel": "src/lib/crisis-corpus.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-06T03:12:01.169Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2868
+    },
+    {
+      "rel": "src/lib/crisis-llm.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T12:45:20.623Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 5830
+    },
+    {
+      "rel": "src/lib/crisis-llm.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T12:41:59.349Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 13926
+    },
+    {
+      "rel": "src/lib/decision-log.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T05:33:48.415Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 3892
+    },
+    {
+      "rel": "src/lib/decision-log.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T05:25:24.342Z",
+      "applied": 6,
+      "failed": 4,
+      "bytes": 6458
+    },
+    {
+      "rel": "src/lib/deepseek.test.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:39:33.779Z",
+      "applied": 3,
+      "failed": 3,
+      "bytes": 3752
+    },
+    {
+      "rel": "src/lib/deepseek.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:33:28.439Z",
+      "applied": 3,
+      "failed": 16,
+      "bytes": 6808
+    },
+    {
+      "rel": "src/lib/detection-corpus-baseline.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T11:04:53.661Z",
+      "applied": 4,
+      "failed": 0,
+      "bytes": 6789
+    },
+    {
+      "rel": "src/lib/exercises.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T05:27:08.598Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 1243
+    },
+    {
+      "rel": "src/lib/exercises.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T13:40:43.319Z",
+      "applied": 3,
+      "failed": 0,
+      "bytes": 6392
+    },
+    {
+      "rel": "src/lib/gentle-check.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T08:04:40.161Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2761
+    },
+    {
+      "rel": "src/lib/http.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:33:28.440Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 464
+    },
+    {
+      "rel": "src/lib/implicit-risk.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T14:23:23.638Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 7042
+    },
+    {
+      "rel": "src/lib/implicit-risk.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T14:10:32.634Z",
+      "applied": 8,
+      "failed": 5,
+      "bytes": 29438
+    },
+    {
+      "rel": "src/lib/kimi.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T11:18:09.694Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2960
+    },
+    {
+      "rel": "src/lib/model-api-mapping.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T14:19:03.085Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1358
+    },
+    {
+      "rel": "src/lib/model-options.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T14:09:54.517Z",
+      "applied": 0,
+      "failed": 1,
+      "bytes": 1612
+    },
+    {
+      "rel": "src/lib/monitoring-log.test.ts",
+      "status": "EMPTY",
+      "src": "none",
+      "baseTs": "(none)",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 0
+    },
+    {
+      "rel": "src/lib/mood-memory.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T00:33:36.082Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 4735
+    },
+    {
+      "rel": "src/lib/output-style.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:33:28.908Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2991
+    },
+    {
+      "rel": "src/lib/personas.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-21T13:40:45.619Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 813
+    },
+    {
+      "rel": "src/lib/personas.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-20T13:41:15.108Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 5051
+    },
+    {
+      "rel": "src/lib/preface.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T13:06:32.659Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1198
+    },
+    {
+      "rel": "src/lib/preface.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T13:06:21.001Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1668
+    },
+    {
+      "rel": "src/lib/prompts.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:18:45.466Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 3258
+    },
+    {
+      "rel": "src/lib/prompts.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T11:17:53.730Z",
+      "applied": 13,
+      "failed": 2,
+      "bytes": 11455
+    },
+    {
+      "rel": "src/lib/rate-limit-boundary.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T02:23:19.772Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1561
+    },
+    {
+      "rel": "src/lib/rate-limit.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T02:22:48.294Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1675
+    },
+    {
+      "rel": "src/lib/rate-limit.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T02:22:25.376Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 3734
+    },
+    {
+      "rel": "src/lib/review.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-18T12:13:39.909Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 3377
+    },
+    {
+      "rel": "src/lib/safety-audit-gaps-2.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T01:53:51.140Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1320
+    },
+    {
+      "rel": "src/lib/safety-audit-gaps.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T01:32:04.395Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1572
+    },
+    {
+      "rel": "src/lib/safety-crisis-deescalation.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:31:08.451Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2102
+    },
+    {
+      "rel": "src/lib/safety-crisis-reply.test.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T08:25:00.157Z",
+      "applied": 1,
+      "failed": 1,
+      "bytes": 5162
+    },
+    {
+      "rel": "src/lib/safety-danger-regression.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T16:49:51.553Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1961
+    },
+    {
+      "rel": "src/lib/safety-en-negation.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T00:27:11.439Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1714
+    },
+    {
+      "rel": "src/lib/safety-guard-fixes.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T10:36:44.569Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 2087
+    },
+    {
+      "rel": "src/lib/safety-minor-context.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T12:37:42.028Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1910
+    },
+    {
+      "rel": "src/lib/safety-normalization-reconcile.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-09T11:27:07.965Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 2900
+    },
+    {
+      "rel": "src/lib/safety-sixiang-negation.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T07:48:29.458Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1547
+    },
+    {
+      "rel": "src/lib/safety.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T11:10:35.582Z",
+      "applied": 2,
+      "failed": 0,
+      "bytes": 20434
+    },
+    {
+      "rel": "src/lib/safety.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:16:25.735Z",
+      "applied": 2,
+      "failed": 12,
+      "bytes": 29162
+    },
+    {
+      "rel": "src/lib/scales-bands.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-07T01:45:27.996Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 1415
+    },
+    {
+      "rel": "src/lib/scales-routing-priority.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:24:13.729Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 1559
+    },
+    {
+      "rel": "src/lib/scales.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:18:46.111Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 416
+    },
+    {
+      "rel": "src/lib/scales.ts",
+      "status": "approx(edit-drift)",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:10:01.312Z",
+      "applied": 0,
+      "failed": 4,
+      "bytes": 3391
+    },
+    {
+      "rel": "src/lib/session-plan.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-05-18T12:13:39.197Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 998
+    },
+    {
+      "rel": "src/lib/state-tags.test.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:22:18.053Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 4891
+    },
+    {
+      "rel": "src/lib/state-tags.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:21:05.340Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 6434
+    },
+    {
+      "rel": "src/lib/types.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-08T12:15:55.855Z",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 4908
+    },
+    {
+      "rel": "tsconfig.json",
+      "status": "engine-fallback",
+      "src": "ENGINE-FALLBACK",
+      "baseTs": "(none)",
+      "applied": 0,
+      "failed": 0,
+      "bytes": 426
+    },
+    {
+      "rel": "vitest.config.ts",
+      "status": "clean",
+      "src": "snapshot/write",
+      "baseTs": "2026-06-05T11:49:51.478Z",
+      "applied": 1,
+      "failed": 0,
+      "bytes": 370
+    }
+  ]
+}
