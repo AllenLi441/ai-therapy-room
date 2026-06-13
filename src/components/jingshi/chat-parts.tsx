@@ -120,16 +120,51 @@ export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lan
 
 export function Stream({ messages, persona, lang }: { messages: Message[]; persona: Persona; lang: Lang }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  const endRef = useRef<HTMLDivElement>(null);
+  const stick = useRef(true);            // are we pinned to the bottom?
+  const [showJump, setShowJump] = useState(false);
+
+  const nearBottom = () => {
     const el = ref.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
+  const onScroll = () => {
+    const nb = nearBottom();
+    stick.current = nb;
+    setShowJump((s) => (s === !nb ? s : !nb));
+  };
+
+  // Keep the latest turn in view, but ONLY when the user is already at the bottom —
+  // never yank someone who scrolled up to re-read. scrollIntoView on a bottom
+  // sentinel inside rAF lands reliably AFTER the new bubble's layout is committed,
+  // which the old `scrollTop = scrollHeight` (read too early) did not guarantee.
+  useEffect(() => {
+    if (!stick.current) return;
+    const id = requestAnimationFrame(() => endRef.current?.scrollIntoView({ block: "end" }));
+    return () => cancelAnimationFrame(id);
   }, [messages]);
+
+  const jump = () => {
+    stick.current = true;
+    setShowJump(false);
+    endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+  };
+
   return (
-    <div className="stream scroll" ref={ref}>
-      <div className="stream-inner">
-        {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} />)}
+    <>
+      <div className="stream scroll" ref={ref} onScroll={onScroll}>
+        <div className="stream-inner">
+          {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} />)}
+          <div ref={endRef} className="stream-end" aria-hidden="true" />
+        </div>
       </div>
-    </div>
+      {showJump && (
+        <button className="jump-latest" onClick={jump} aria-label={STR[lang].jump_latest}>
+          <Ic.chev className="jump-arrow" /> {STR[lang].jump_latest}
+        </button>
+      )}
+    </>
   );
 }
 
