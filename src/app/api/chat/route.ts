@@ -19,6 +19,7 @@ import { summarizeOlderConversation } from "@/lib/chat-summary";
 import {
   activateCrisisSessionRisk,
   assessConversationRisk,
+  assessRisk,
   createCrisisResponse,
   createDiagnosisBoundaryResponse,
   createGentleCheckResponse,
@@ -55,6 +56,10 @@ type ChatRequest = {
   crisisModeActive?: boolean;
   moodMemory?: string;
   language?: AppLanguage;
+  // Set by the frontend when the user taps "我没事了" to leave safety mode. When
+  // true, judge risk on THIS message only (not the multi-turn aggregate, which
+  // would keep re-detecting the earlier crisis line and trap the user).
+  exitedCrisis?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -89,11 +94,17 @@ export async function POST(request: Request) {
   const inferredCrisis = detectActiveCrisisFromHistory(messages);
   // De-escalation (user signalled safety) overrides the frontend's sticky flag so
   // the session can leave safety mode without clearing the whole conversation.
-  const crisisModeActive = (Boolean(body.crisisModeActive) || inferredCrisis.active) && !inferredCrisis.deescalated;
+  // exitedCrisis (user tapped "我没事了") forces us out of safety mode this turn.
+  const crisisModeActive =
+    (Boolean(body.crisisModeActive) || inferredCrisis.active) && !inferredCrisis.deescalated && !body.exitedCrisis;
   // Branch on THIS turn's own signal: the full crisis template fires only on a real
   // new risk, not on every follow-up (which made it repeat verbatim and never exit).
-  // crisisModeActive instead keeps the model in safety mode via the system prompt.
-  const risk = baseRisk;
+  // After an explicit exit, judge THIS message alone (assessRisk) so the lingering
+  // earlier crisis line in the multi-turn window can't re-trigger and trap the user;
+  // a genuinely risky current message still re-escalates. Otherwise use the
+  // multi-turn aggregate (catches gradual escalation). crisisModeActive keeps the
+  // model in safety tone via the system prompt without re-dumping the template.
+  const risk = body.exitedCrisis ? assessRisk(latestUserMessage.content) : baseRisk;
 
   // Stubs used by the lexicon-only exit branches (LLM not invoked there).
   const stubImplicit: ImplicitOutcome = { kind: "not_configured" };

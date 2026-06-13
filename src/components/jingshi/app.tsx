@@ -28,6 +28,7 @@ export function App() {
   // conversation shows a matching need, and at most once per scale per session.
   const [suggestedScale, setSuggestedScale] = useState<string | null>(null);
   const offeredScales = useRef<Set<string>>(new Set());
+  const exitedCrisisRef = useRef(false); // user tapped "我没事了" → judge next msgs solo until new risk
   const [crisis, setCrisis] = useState(false);
   const [calm, setCalm] = useState(false); // emotion-adaptive; driven by a server signal in future
   const messagesRef = useRef<Message[]>([]);
@@ -72,6 +73,7 @@ export function App() {
     setBusy(true);
     const risky = detectRisk(text);
     setCrisis(risky); // track the current turn — banner can clear, no longer sticky
+    if (risky) exitedCrisisRef.current = false; // a genuinely risky message re-enters safety mode
     if (!risky) {
       // offer a self-check only when a theme surfaces (sleep/anxiety/low mood), once each
       const need = detectScaleNeed(text);
@@ -108,7 +110,7 @@ export function App() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang })
+        body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current })
       });
       if (res.headers.get("X-Crisis-Triggered") === "1") setCrisis(true);
       if (!res.body) {
@@ -152,7 +154,7 @@ export function App() {
         onCase={() => setOverlay("case")}
       />
       <PrivacyRibbon lang={lang} onDelete={deleteAll} />
-      {crisis && <CrisisBanner lang={lang} onOpen={() => setOverlay("crisis")} onDismiss={() => { setCrisis(false); setOverlay((o) => (o === "crisis" ? null : o)); }} />}
+      {crisis && <CrisisBanner lang={lang} onOpen={() => setOverlay("crisis")} onDismiss={() => { setCrisis(false); exitedCrisisRef.current = true; setOverlay((o) => (o === "crisis" ? null : o)); }} />}
 
       <div className="chat-wrap">
         {started

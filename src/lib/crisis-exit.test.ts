@@ -57,4 +57,19 @@ describe("P0 — crisis state machine: enter → linger → exit", () => {
     const inferred = detectActiveCrisisFromHistory(history);
     expect(inferred.active).toBe(false);
   });
+
+  // The regression you found: after exiting, the next message wouldn't get a normal
+  // reply because the multi-turn AGGREGATE still saw the earlier "我不想活了".
+  it("the multi-turn aggregate re-detects an earlier crisis line (why exit must judge the latest msg)", () => {
+    const benignFollowUp: ChatMessage[] = [u("我最近真的不想活了"), u("谢谢你，我们聊点别的吧")];
+    expect(assessConversationRisk(benignFollowUp).shouldEscalate).toBe(true); // would re-trap
+  });
+
+  it("after exit, judging the LATEST message alone does NOT re-escalate → normal reply (the fix)", () => {
+    expect(assessRisk("谢谢你，我们聊点别的吧").shouldEscalate).toBe(false);
+  });
+
+  it("…but a genuinely risky CURRENT message still escalates even after exit (safety preserved)", () => {
+    expect(assessRisk("其实我又开始想死了").shouldEscalate).toBe(true);
+  });
 });
