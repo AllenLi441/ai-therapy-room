@@ -52,13 +52,15 @@
 
   /* --- type --- */
   --font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
-  --fs-xs: 13px;
-  --fs-sm: 14.5px;
-  --fs-base: 16.5px;
-  --fs-md: 18px;
-  --fs-lg: 22px;
-  --fs-xl: 28px;
-  --fs-2xl: 36px;
+  /* rem so text honors the browser font-size setting (WCAG 1.4.4). Values are the
+     old px ÷ 16 → pixel-identical at the default 16px base, scalable above it. */
+  --fs-xs: 0.8125rem;     /* 13px */
+  --fs-sm: 0.90625rem;    /* 14.5px */
+  --fs-base: 1.03125rem;  /* 16.5px */
+  --fs-md: 1.125rem;      /* 18px */
+  --fs-lg: 1.375rem;      /* 22px */
+  --fs-xl: 1.75rem;       /* 28px */
+  --fs-2xl: 2.25rem;      /* 36px */
   --lh: 1.68;
 
   /* --- shape --- */
@@ -86,7 +88,7 @@
 
   --ink:          #E9E7E1;
   --ink-2:        #A8ACA5;
-  --ink-3:        #74786F;
+  --ink-3:        #8E928A;   /* lightened to meet WCAG AA 4.5:1 across dark surfaces */
   --ink-on-accent:#06100E;
 
   --sage:         #7FC2B0;
@@ -195,7 +197,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .persona-chip .avatar { width: 30px; height: 30px; font-size: 15px; }
 .persona-chip-text { text-align: left; line-height: 1.2; }
 .persona-chip-name { font-size: var(--fs-sm); font-weight: 600; }
-.persona-chip-role { font-size: 11.5px; color: var(--ink-3); }
+.persona-chip-role { font-size: 0.71875rem; color: var(--ink-3); } /* 11.5px */
 .persona-chip .chev { width: 14px; height: 14px; color: var(--ink-3); margin-left: 2px; }
 
 /* ---- avatars ---- */
@@ -392,7 +394,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .persona-card .pc-name { font-size: var(--fs-md); font-weight: 600; }
 .persona-card .pc-name span { font-size: var(--fs-xs); color: var(--ink-3); font-weight: 500; margin-left: 8px; }
 .persona-card .pc-desc { font-size: var(--fs-sm); color: var(--ink-2); margin-top: 3px; line-height: 1.5; }
-.persona-card .pc-tag { font-size: 11.5px; color: var(--pc); font-weight: 600; margin-top: 6px; letter-spacing: .04em; }
+.persona-card .pc-tag { font-size: 0.71875rem; color: var(--pc); font-weight: 600; margin-top: 6px; letter-spacing: .04em; } /* 11.5px */
 .persona-card .pc-check { width: 22px; height: 22px; color: var(--pc); flex: 0 0 auto; opacity: 0; }
 .persona-card.on .pc-check { opacity: 1; }
 .persona-card.crisis { border-style: dashed; }
@@ -552,7 +554,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .result-ring { width: 150px; height: 150px; margin: 8px auto 18px; position: relative; }
 .result-ring svg { transform: rotate(-90deg); }
 .result-num { position: absolute; inset: 0; display: grid; place-items: center; flex-direction: column; }
-.result-num b { font-size: 42px; font-weight: 700; line-height: 1; }
+.result-num b { font-size: 2.625rem; font-weight: 700; line-height: 1; } /* 42px */
 .result-num span { font-size: var(--fs-xs); color: var(--ink-3); }
 .result-band { font-size: var(--fs-lg); font-weight: 600; margin: 4px 0; }
 .result-desc { font-size: var(--fs-base); color: var(--ink-2); line-height: 1.6; max-width: 38ch; margin: 8px auto 0; }
@@ -576,7 +578,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* small phones */
 @media (max-width: 380px) {
-  :root { --fs-base: 16px; --fs-md: 17px; }
+  :root { --fs-base: 1rem; --fs-md: 1.0625rem; } /* 16px / 17px */
   .brand-sub { display: none; }
 }
 
@@ -727,7 +729,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--surface); border: 1.5px solid var(--line); transition: all .2s var(--ease);
 }
 .scale-pick:hover { border-color: var(--sage); transform: translateX(2px); }
-.sp-tag { font-size: 13px; font-weight: 700; letter-spacing: .03em; color: var(--sage-deep); background: var(--sage-tint); padding: 9px 11px; border-radius: 10px; min-width: 64px; text-align: center; flex: 0 0 auto; }
+.sp-tag { font-size: 0.8125rem; font-weight: 700; letter-spacing: .03em; color: var(--sage-deep); background: var(--sage-tint); padding: 9px 11px; border-radius: 10px; min-width: 64px; text-align: center; flex: 0 0 auto; } /* 13px */
 .sp-text { flex: 1; display: flex; flex-direction: column; }
 .sp-name { font-size: var(--fs-md); font-weight: 600; }
 .sp-meta { font-size: var(--fs-sm); color: var(--ink-3); margin-top: 2px; }
