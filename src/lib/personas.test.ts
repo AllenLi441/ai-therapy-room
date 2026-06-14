@@ -7,7 +7,8 @@ describe("therapy personas", () => {
   });
 
   it("defines visible avatars and prompt-safe professional boundaries", () => {
-    expect(THERAPY_PERSONAS).toHaveLength(4);
+    // 2026-06-13: collapsed from 4 personas to ONE integrative companion (安屿).
+    expect(THERAPY_PERSONAS).toHaveLength(1);
 
     for (const persona of THERAPY_PERSONAS) {
       expect(persona.image).toMatch(/^\/personas\/.+\.(png|webp|jpg|jpeg)$/);

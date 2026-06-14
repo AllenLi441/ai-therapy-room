@@ -25,6 +25,7 @@ export type Message = {
   personaId?: string;
   startedAt?: number; // ms timestamp when the request was sent — for a REAL elapsed counter
   errored?: boolean; // the reply failed (truthful error state, not "still generating")
+  visionPending?: boolean; // image(s) are being read by /api/vision (transient)
 };
 
 export type ScaleId = "PHQ-9" | "GAD-7" | "ISI";
@@ -65,12 +66,14 @@ export const STR: Record<Lang, Record<string, any>> = {
   zh: {
     sub: "JÌNGSHÌ",
     privacy_a: "对话只存在你的设备", privacy_b: "随时可", privacy_del: "一键彻底删除",
+    delete_title: "彻底删除这次对话？", delete_body: "对话、量表结果和「对你的理解」都会被清空，无法撤销。", delete_confirm: "删除", delete_cancel: "取消",
     placeholder: "把现在心里的话，慢慢写下来…",
     import_image: "导入图片", import_video: "导入视频", import_media: "添加图片或视频",
+    att_too_many: "最多只能添加 {n} 张图片", att_not_image: "只能添加图片", att_too_big: "图片太大了（上限 {mb}MB）",
     placeholder_calm: "如果想说点什么，我在这里",
-    send: "发送", enter_hint: "Enter 发送 · Shift+Enter 换行",
+    send: "发送", enter_hint: "Enter 发送 · Shift+Enter 换行", jump_latest: "回到最新",
     status_connecting: "连接中", status_thinking: "思考中", status_writing: "正在回应",
-    err_busy: "消息有点频繁，先歇一会儿再发。", err_connect: "连接出错了，请稍后再试。",
+    err_busy: "消息有点频繁，先歇一会儿再发。", err_connect: "连接出错了，请稍后再试。", retry: "重试", vision_loading: "正在看图…",
     pace_deep: "深度", pace_fast: "快速",
     disclaimer: "我是 AI 陪伴，不是医生或持证咨询师",
     switch_persona: "更换陪伴者", persona_title: "选择此刻陪你的人", persona_sub: "切换会改变陪伴的方式，随时可以换回来。",
@@ -97,8 +100,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     safety_2: "如果可以，到一个有人的地方，或让一个人过来陪你。",
     safety_3: "喝一口水，把脚踩在地上，感受地面在支撑你。",
     safety_4: "拨打上面任意一个号码，告诉对方你现在的感受。",
-    calm_title: "我们先慢下来", calm_sub: "复杂的东西先放一边。此刻，只做你能做的一件事就好。",
-    calm_breathe: "先一起呼吸", calm_hotline: "联系热线", calm_contact: "联系紧急联系人", calm_back: "我好一些了，回到对话",
+    calm_breathe: "先一起呼吸",
     breathe_in: "吸气", breathe_hold: "停一下", breathe_out: "呼气", breathe_done: "练习完成 · 做得很好",
     next: "下一题", prev: "上一题", finish: "看看结果", retake: "重新测", done: "好的",
     result_foot: "这只是一个自评参考，不是诊断。真正的评估需要专业人员面对面进行。如果分数让你担心，可以带着它去找现实中的咨询师或医生。",
@@ -117,12 +119,14 @@ export const STR: Record<Lang, Record<string, any>> = {
   en: {
     sub: "QUIET ROOM",
     privacy_a: "Chats stay only on your device", privacy_b: "Always", privacy_del: "delete everything",
+    delete_title: "Delete this conversation?", delete_body: "Your conversation, self-check results and “what I understand” will all be cleared. This can’t be undone.", delete_confirm: "Delete", delete_cancel: "Cancel",
     placeholder: "Take your time — write what's on your mind…",
     import_image: "Import image", import_video: "Import video", import_media: "Add image or video",
+    att_too_many: "Up to {n} images", att_not_image: "Images only", att_too_big: "Image too large (max {mb}MB)",
     placeholder_calm: "If you'd like to say something, I'm here",
-    send: "Send", enter_hint: "Enter to send · Shift+Enter for a new line",
+    send: "Send", enter_hint: "Enter to send · Shift+Enter for a new line", jump_latest: "Jump to latest",
     status_connecting: "Connecting", status_thinking: "Thinking", status_writing: "Replying",
-    err_busy: "A bit too many messages — please wait a moment.", err_connect: "Connection error — please try again.",
+    err_busy: "A bit too many messages — please wait a moment.", err_connect: "Connection error — please try again.", retry: "Retry", vision_loading: "Looking at the image…",
     pace_deep: "Depth", pace_fast: "Quick",
     disclaimer: "I'm an AI companion — not a doctor or licensed therapist",
     switch_persona: "Change companion", persona_title: "Who's with you right now", persona_sub: "Switching changes how I support you. You can switch back anytime.",
@@ -149,8 +153,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     safety_2: "If you can, go where other people are, or ask someone to come.",
     safety_3: "Sip some water. Put your feet on the floor and feel it hold you.",
     safety_4: "Call any number above and tell them how you feel right now.",
-    calm_title: "Let's slow down first", calm_sub: "Set the complicated things aside. Right now, just one thing you can do.",
-    calm_breathe: "Breathe together", calm_hotline: "Call a hotline", calm_contact: "Reach my contact", calm_back: "I feel a bit better — back to the chat",
+    calm_breathe: "Breathe together",
     breathe_in: "Breathe in", breathe_hold: "Hold", breathe_out: "Breathe out", breathe_done: "Done · you did well",
     next: "Next", prev: "Back", finish: "See result", retake: "Retake", done: "Done",
     result_foot: "This is a self-check reference, not a diagnosis. A real assessment needs a professional, in person. If the score worries you, bring it to a real counselor or doctor.",

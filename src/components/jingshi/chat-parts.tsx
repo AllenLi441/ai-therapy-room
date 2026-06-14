@@ -1,5 +1,5 @@
 "use client";
-/* chat-parts.tsx — Presence, TopBar, Privacy, Stream, Bubble, Composer, Welcome, CalmMode
+/* chat-parts.tsx — Presence, TopBar, Privacy, Stream, Bubble, Composer, Welcome
    (ported from the design handoff; window-globals → ES modules + types) */
 import { useEffect, useRef, useState } from "react";
 import { Ic } from "./icons";
@@ -91,7 +91,7 @@ export function PrivacyRibbon({ lang, onDelete }: { lang: Lang; onDelete: () => 
   );
 }
 
-export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lang: Lang }) {
+export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Persona; lang: Lang; onRetry?: (id: string) => void }) {
   const isAI = m.role === "assistant";
   const p = m.personaId ? personaById(m.personaId) : persona;
   const hasText = !!m.content && m.content.length > 0;
@@ -109,27 +109,76 @@ export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lan
                 : <video key={md.id} src={md.url} controls playsInline />)}
             </div>
           )}
+          {m.visionPending && <span className="vision-pending">{STR[lang].vision_loading}</span>}
           {hasText && <span className="bubble-text">{m.content}</span>}
           {m.streaming && m.content === "" && <Thinking startedAt={m.startedAt} lang={lang} />}
           {m.streaming && m.content !== "" && <span className="caret" />}
         </div>
+        {m.errored && onRetry && (
+          <button className="retry-btn" onClick={() => onRetry(m.id)}>
+            <Ic.refresh className="retry-ico" /> {STR[lang].retry}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-export function Stream({ messages, persona, lang }: { messages: Message[]; persona: Persona; lang: Lang }) {
+export function Stream({ messages, persona, lang, onRetry }: { messages: Message[]; persona: Persona; lang: Lang; onRetry?: (id: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const stick = useRef(true);            // are we pinned to the bottom?
+  const [showJump, setShowJump] = useState(false);
+
+  const nearBottom = () => {
+    const el = ref.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
+  const onScroll = () => {
+    const nb = nearBottom();
+    stick.current = nb;
+    setShowJump((s) => (s === !nb ? s : !nb));
+  };
+
+  // Keep the latest turn in view, but ONLY when the user is already at the bottom —
+  // never yank someone who scrolled up to re-read. scrollIntoView on a bottom
+  // sentinel inside rAF lands reliably AFTER the new bubble's layout is committed,
+  // which the old `scrollTop = scrollHeight` (read too early) did not guarantee.
   useEffect(() => {
+    if (!stick.current) return;
+    const id = requestAnimationFrame(() => endRef.current?.scrollIntoView({ block: "end" }));
+    return () => cancelAnimationFrame(id);
+  }, [messages]);
+
+  const jump = () => {
+    stick.current = true;
+    setShowJump(false);
+    // Jump in ONE reliable step: setting scrollTop directly lands at the true
+    // bottom immediately. (Smooth scrollIntoView raced the scroll listener, so
+    // the button could linger / not reach the very bottom.)
     const el = ref.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  };
+
+  // Announce to screen readers that a reply is arriving — once per state change
+  // (not per token, which would be unbearably chatty).
+  const replying = messages.some((m) => m.streaming);
   return (
-    <div className="stream scroll" ref={ref}>
-      <div className="stream-inner">
-        {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} />)}
+    <>
+      <div className="sr-only" role="status" aria-live="polite">{replying ? STR[lang].status_thinking : ""}</div>
+      <div className="stream scroll" ref={ref} onScroll={onScroll}>
+        <div className="stream-inner">
+          {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} onRetry={onRetry} />)}
+          <div ref={endRef} className="stream-end" aria-hidden="true" />
+        </div>
       </div>
-    </div>
+      {showJump && (
+        <button className="jump-latest" onClick={jump} aria-label={STR[lang].jump_latest}>
+          <Ic.chev className="jump-arrow" /> {STR[lang].jump_latest}
+        </button>
+      )}
+    </>
   );
 }
 
@@ -140,6 +189,7 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   const t = STR[lang];
   const [val, setVal] = useState("");
   const [atts, setAtts] = useState<Media[]>([]);
+  const [attErr, setAttErr] = useState("");
   const ta = useRef<HTMLTextAreaElement>(null);
   const imgInput = useRef<HTMLInputElement>(null);
 
@@ -149,17 +199,38 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   };
   useEffect(grow, [val]);
 
-  // Image only — Kimi vision takes images, not video.
+  // auto-dismiss the attach error after a few seconds
+  useEffect(() => {
+    if (!attErr) return;
+    const id = setTimeout(() => setAttErr(""), 4000);
+    return () => clearTimeout(id);
+  }, [attErr]);
+
+  // Image only — Kimi vision takes images, not video. Guard count, size and type,
+  // and tell the user when something is rejected (silently dropping files is worse).
   const addImages = async (files: FileList | null) => {
     if (!files) return;
+    const MAX_IMAGES = 6;
+    const MAX_MB = 8;
+    const room = MAX_IMAGES - atts.length;
+    const accepted: File[] = [];
+    let err = "";
+    for (const f of Array.from(files)) {
+      if (accepted.length >= room) { err = t.att_too_many.replace("{n}", String(MAX_IMAGES)); break; }
+      if (!f.type.startsWith("image/")) { err = t.att_not_image; continue; }
+      if (f.size > MAX_MB * 1024 * 1024) { err = t.att_too_big.replace("{mb}", String(MAX_MB)); continue; }
+      accepted.push(f);
+    }
+    setAttErr(err);
+    if (!accepted.length) return;
     // base64 data URL — used for both display AND /api/vision (Kimi).
-    const next: Media[] = await Promise.all(Array.from(files).map(async (f) => ({
+    const next: Media[] = await Promise.all(accepted.map(async (f) => ({
       id: Math.random().toString(36).slice(2),
       type: "image" as const,
       url: await fileToDataUrl(f),
       name: f.name
     })));
-    if (next.length) setAtts((a) => [...a, ...next]);
+    setAtts((a) => [...a, ...next]);
   };
   const removeAtt = (id: string) => setAtts((a) => a.filter((x) => x.id !== id));
 
@@ -175,6 +246,7 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   };
   return (
     <div className="composer-zone">
+      {attErr && <div className="attach-err" role="status">{attErr}</div>}
       {atts.length > 0 && (
         <div className="attach-previews">
           {atts.map((a) => (
@@ -216,25 +288,6 @@ export function Welcome({ lang, companion, onStart }: { lang: Lang; companion: P
         {(t.starters as string[]).map((s, i) => <button key={i} className="starter" onClick={() => onStart(s)}>{s}</button>)}
       </div>
       <span className="w-priv"><Ic.lock />{t.privacy_a}</span>
-    </div>
-  );
-}
-
-export function CalmMode({ lang, onBreathe, onHotline, onContact, onBack }: {
-  lang: Lang; onBreathe: () => void; onHotline: () => void; onContact: () => void; onBack: () => void;
-}) {
-  const t = STR[lang];
-  return (
-    <div className="calm">
-      <div className="welcome-orb"><Presence size={150} glow breathe /></div>
-      <h2>{t.calm_title}</h2>
-      <p>{t.calm_sub}</p>
-      <div className="calm-actions">
-        <button className="calm-btn" onClick={onBreathe}>{t.calm_breathe}</button>
-        <button className="calm-btn alert" onClick={onHotline}>{t.calm_hotline}</button>
-        <button className="calm-btn" onClick={onContact}>{t.calm_contact}</button>
-      </div>
-      <button className="calm-back" onClick={onBack}>{t.calm_back}</button>
     </div>
   );
 }

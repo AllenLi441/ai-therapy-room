@@ -26,12 +26,12 @@ describe("buildCounselorSystemPrompt", () => {
       scaleResults: [
         { id: "GAD-7", total: 12, severity: "中度焦虑", answers: [], completedAt: "" }
       ],
-      persona: resolvePersona("mingyuan")
+      persona: resolvePersona("companion")
     });
 
     expect(prompt).toContain("不能诊断");
-    expect(prompt).toContain("明远");
-    expect(prompt).toContain("认知分析师");
+    expect(prompt).toContain("安屿");
+    expect(prompt).toContain("心理陪伴者");
     expect(prompt).toContain("不要声称自己是医生");
     expect(prompt).toContain("督导给本轮的工作要点");
     expect(prompt).toContain("当前个案概念化");
@@ -40,7 +40,7 @@ describe("buildCounselorSystemPrompt", () => {
     expect(prompt).toContain("GAD-7");
     expect(prompt).toContain("小林");
     expect(prompt).toContain("当前情绪强度：7/10");
-    expect(prompt).toContain("焦虑与当下锚定");
+    expect(prompt).toContain("情绪命名与共情");
   });
 
   it("injects an internal scale safety directive when PHQ-9 item 9 is endorsed", () => {

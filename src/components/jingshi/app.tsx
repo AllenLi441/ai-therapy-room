@@ -6,8 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type Lang, type Message, type Media } from "./data";
 import { Ic } from "./icons";
-import { TopBar, PrivacyRibbon, Stream, Composer, Welcome, CalmMode } from "./chat-parts";
-import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer } from "./overlays";
+import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
+import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet } from "./overlays";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 
 let _mid = 0;
@@ -25,13 +25,13 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [scaleId, setScaleId] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Scales are no longer a permanent UI entry — only suggested when the
   // conversation shows a matching need, and at most once per scale per session.
   const [suggestedScale, setSuggestedScale] = useState<string | null>(null);
   const offeredScales = useRef<Set<string>>(new Set());
   const exitedCrisisRef = useRef(false); // user tapped "我没事了" → judge next msgs solo until new risk
   const [crisis, setCrisis] = useState(false);
-  const [calm, setCalm] = useState(false); // emotion-adaptive; driven by a server signal in future
   // P3-a: completed self-check results (sent to /api/chat so they actually shape
   // the reply) + the accumulated case understanding (lazily fetched from /api/plan
   // when the drawer opens). Both persist on-device and are wiped by 一键彻底删除.
@@ -42,6 +42,9 @@ export function App() {
   const [hydrated, setHydrated] = useState(false); // localStorage restored yet?
   const messagesRef = useRef<Message[]>([]);
   messagesRef.current = messages;
+  // Keep each turn's request payload so an errored reply can be retried without
+  // re-sending the user message (keyed by the AI bubble's id).
+  const retryPayloads = useRef<Map<string, { role: string; content: string }[]>>(new Map());
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); try { localStorage.setItem("js_theme", theme); } catch {} }, [theme]);
   useEffect(() => { document.documentElement.lang = lang; try { localStorage.setItem("js_lang", lang); } catch {} }, [lang]);
@@ -116,7 +119,9 @@ export function App() {
 
   async function send(text: string, attachments: Media[]) {
     const media = attachments || [];
-    const userMsg: Message = { id: uid(), role: "user", content: text, media };
+    const hasImages = media.some((m) => m.type === "image");
+    const userMsg: Message = { id: uid(), role: "user", content: text, media, visionPending: hasImages };
+    const userId = userMsg.id;
     const aiId = uid();
     const aiMsg: Message = { id: aiId, role: "assistant", personaId: "linxi", content: "", streaming: true, startedAt: Date.now() };
     const history = [...messagesRef.current, userMsg];
@@ -130,9 +135,6 @@ export function App() {
       const need = detectScaleNeed(text);
       if (need && !offeredScales.current.has(need)) { offeredScales.current.add(need); setSuggestedScale(need); }
     }
-
-    const setAi = (fn: (c: string) => string) =>
-      setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: fn(m.content) } : m)));
 
     // images → /api/vision (Kimi) → fold description into the text the model sees
     let visionNote = "";
@@ -149,6 +151,8 @@ export function App() {
         const joined = descs.filter(Boolean).join("；");
         if (joined) visionNote = lang === "zh" ? `\n\n[我发了图片，内容大致是：${joined}]` : `\n\n[I sent image(s); roughly: ${joined}]`;
       } catch { /* vision failed — continue with text only */ }
+      // vision finished (ok or failed) — clear the "looking at the image…" caption
+      setMessages((ms) => ms.map((m) => (m.id === userId ? { ...m, visionPending: false } : m)));
     }
 
     const fallbackText = text || (media.length ? (lang === "zh" ? "（我发了一张图片）" : "(I sent an image)") : "");
@@ -156,7 +160,16 @@ export function App() {
     const payloadMsgs = history.map((m, i) =>
       i === history.length - 1 ? { role: "user", content: backendContent } : { role: m.role, content: m.content }
     );
+    retryPayloads.current.set(aiId, payloadMsgs);
+    await streamReply(aiId, payloadMsgs);
+  }
 
+  // Send the request and stream it into the AI bubble `aiId`. Shared by the first
+  // send and by retry, so the truthful error state always has a way back.
+  async function streamReply(aiId: string, payloadMsgs: { role: string; content: string }[]) {
+    setBusy(true);
+    const setAi = (fn: (c: string) => string) =>
+      setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: fn(m.content) } : m)));
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -189,16 +202,31 @@ export function App() {
     }
   }
 
-  function deleteAll() {
-    const msg = lang === "zh" ? "确定要彻底删除这次对话吗？此操作无法撤销。" : "Delete this conversation completely? This cannot be undone.";
-    if (confirm(msg)) {
-      // "一键彻底删除" must clear EVERYTHING device-local, not just the chat state.
-      try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); } catch {}
-      caseForCount.current = -1;
-      setBusy(false); setCrisis(false); setCalm(false);
-      setScaleResults([]); setCaseMap(null);
-      setMessages([freshGreeting(lang)]);
+  // Retry a failed turn: reset the errored bubble and re-run the SAME request, so
+  // the user never has to retype. Falls back to rebuilding the payload from history
+  // (e.g. an errored bubble restored from localStorage after a refresh).
+  function onRetry(aiId: string) {
+    if (busy) return;
+    let payload = retryPayloads.current.get(aiId);
+    if (!payload) {
+      const idx = messagesRef.current.findIndex((m) => m.id === aiId);
+      if (idx <= 0) return;
+      payload = messagesRef.current.slice(0, idx).map((m) => ({ role: m.role, content: m.content }));
+      retryPayloads.current.set(aiId, payload);
     }
+    setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: "", errored: false, streaming: true, startedAt: Date.now() } : m)));
+    void streamReply(aiId, payload);
+  }
+
+  function doDeleteAll() {
+    // "一键彻底删除" must clear EVERYTHING device-local, not just the chat state.
+    try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); } catch {}
+    caseForCount.current = -1;
+    retryPayloads.current.clear();
+    setBusy(false); setCrisis(false);
+    setScaleResults([]); setCaseMap(null);
+    setMessages([freshGreeting(lang)]);
+    setConfirmingDelete(false);
   }
 
   // Lazily fetch the REAL accumulated understanding from /api/plan when the drawer
@@ -237,12 +265,12 @@ export function App() {
         onPersona={() => setOverlay("about")}
         onCase={openCase}
       />
-      <PrivacyRibbon lang={lang} onDelete={deleteAll} />
+      <PrivacyRibbon lang={lang} onDelete={() => setConfirmingDelete(true)} />
       {crisis && <CrisisBanner lang={lang} onOpen={() => setOverlay("crisis")} onDismiss={() => { setCrisis(false); exitedCrisisRef.current = true; setOverlay((o) => (o === "crisis" ? null : o)); }} />}
 
       <div className="chat-wrap">
         {started
-          ? <Stream messages={messages} persona={persona} lang={lang} />
+          ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} />
           : <Welcome lang={lang} companion={persona} onStart={(s) => void send(s, [])} />}
         {suggestedScale && !scaleId && !crisis && (
           <div className="scale-suggest" role="status">
@@ -257,20 +285,12 @@ export function App() {
         <Composer lang={lang} pace={pace} busy={busy} tone={persona.av} onSend={(t, a) => void send(t, a)} onPace={setPace} />
       </div>
 
-      {calm && (
-        <CalmMode lang={lang}
-          onBreathe={() => setOverlay("breathing")}
-          onHotline={() => setOverlay("crisis")}
-          onContact={() => setOverlay("crisis")}
-          onBack={() => setCalm(false)}
-        />
-      )}
-
       {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} />}
       {scaleId && <ScaleModal lang={lang} scaleId={scaleId} onClose={() => setScaleId(null)} onComplete={(r) => setScaleResults((prev) => [...prev, r])} />}
       {overlay === "crisis" && <CrisisSheet lang={lang} onClose={() => setOverlay(null)} onBreathe={() => setOverlay("breathing")} />}
       {overlay === "breathing" && <BreathingSheet lang={lang} onClose={() => setOverlay(null)} />}
       {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} onClose={() => setOverlay(null)} />}
+      {confirmingDelete && <ConfirmSheet lang={lang} onConfirm={doDeleteAll} onClose={() => setConfirmingDelete(false)} />}
     </div>
   );
 }
