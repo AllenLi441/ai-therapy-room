@@ -161,8 +161,12 @@ export function Stream({ messages, persona, lang, onRetry }: { messages: Message
     if (el) el.scrollTop = el.scrollHeight;
   };
 
+  // Announce to screen readers that a reply is arriving — once per state change
+  // (not per token, which would be unbearably chatty).
+  const replying = messages.some((m) => m.streaming);
   return (
     <>
+      <div className="sr-only" role="status" aria-live="polite">{replying ? STR[lang].status_thinking : ""}</div>
       <div className="stream scroll" ref={ref} onScroll={onScroll}>
         <div className="stream-inner">
           {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} onRetry={onRetry} />)}
