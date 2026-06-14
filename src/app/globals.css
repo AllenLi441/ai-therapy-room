@@ -690,6 +690,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .about-point.warn .ap-ico { background: var(--alert-soft); color: var(--alert-deep); }
 .about-point h4 { margin: 1px 0 3px; font-size: var(--fs-base); font-weight: 600; }
 .about-point p { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); line-height: 1.55; }
+.about-voice { padding: 6px 18px 8px; }
+.about-voice h4 { margin: 0 0 6px; font-size: var(--fs-base); font-weight: 600; }
+.about-voice > p { margin: 0 0 12px; font-size: var(--fs-sm); color: var(--ink-2); line-height: 1.6; }
+.about-voice-samples { display: flex; flex-direction: column; gap: 8px; }
+.about-voice-samples .voice-sample { font-size: var(--fs-sm); color: var(--ink-2); font-style: italic; padding-left: 11px; border-left: 2px solid var(--sage); line-height: 1.5; }
 
 /* user avatar + presence alignment in messages */
 .avatar.user-av { background: var(--surface-3); color: var(--ink-3); }

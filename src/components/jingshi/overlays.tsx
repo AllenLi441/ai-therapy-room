@@ -69,6 +69,15 @@ export function AboutSheet({ lang, companion, onClose }: { lang: Lang; companion
             </div>
           ))}
         </div>
+        <div className="about-voice">
+          <h4>{t.about_voice_t}</h4>
+          <p>{t.about_voice}</p>
+          <div className="about-voice-samples">
+            {(t.about_voice_samples as string[]).map((s, i) => (
+              <span key={i} className="voice-sample">{`「${s}」`}</span>
+            ))}
+          </div>
+        </div>
       </div>
     </Sheet>
   );
