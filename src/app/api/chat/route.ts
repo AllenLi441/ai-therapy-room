@@ -30,7 +30,7 @@ import {
   createSuicideConcernResponse,
   detectActiveCrisisFromHistory
 } from "@/lib/safety";
-import { resolveDeepSeekModel, type DeepSeekModelId, type SessionPaceId } from "@/lib/model-options";
+import { resolveDeepSeekModel, resolveSessionPace, type DeepSeekModelId, type SessionPaceId } from "@/lib/model-options";
 import type {
   CaseMap,
   ChatMessage,
@@ -252,6 +252,7 @@ export async function POST(request: Request) {
     turnPlan: plan,
     scaleResults: body.scaleResults,
     persona,
+    pace: resolveSessionPace(body.pace),
     language
   });
 

@@ -10,6 +10,7 @@ import type {
 } from "./types";
 import type { TherapyPersona } from "./personas";
 import { formatPersonaForPrompt } from "./personas";
+import type { SessionPaceId } from "./model-options";
 import { getRiskInstruction } from "./safety";
 import { deriveStateTag, latestResultsPerScale, scaleSafetySignal } from "./state-tags";
 
@@ -172,6 +173,7 @@ export function buildCounselorSystemPrompt(input: {
   turnPlan: TurnPlan;
   scaleResults?: ScaleResult[];
   persona?: TherapyPersona | null;
+  pace?: SessionPaceId;
   language?: AppLanguage;
   earlierUserContext?: string;
   moodMemory?: string;
@@ -181,7 +183,7 @@ export function buildCounselorSystemPrompt(input: {
     PROFESSIONAL_BOUNDARY,
     "",
     "【前台虚拟陪伴者风格】",
-    formatPersonaForPrompt(input.persona),
+    formatPersonaForPrompt(input.persona, input.pace),
     "",
     "【督导给本轮的工作要点（来自后台个案概念化系统，必须遵循）】",
     formatTurnPlan(input.turnPlan),
