@@ -5,6 +5,7 @@ import { Ic } from "./icons";
 import { Presence, Avatar } from "./chat-parts";
 import { STR, SCALES, SCALE_OPTS, type Lang, type Persona } from "./data";
 import { isCaseMapPopulated, type CaseMap, type ScaleResult, type ScaleId } from "@/lib/types";
+import { scoreScale } from "@/lib/scales";
 
 export function Sheet({ children, onClose, className = "" }: { children: ReactNode; onClose: () => void; className?: string }) {
   useEffect(() => {
@@ -268,9 +269,11 @@ export function ScaleModal({ lang, scaleId, onClose, onComplete }: { lang: Lang;
         {step < items.length - 1
           ? <button className="btn ghost" disabled={ans[step] === null} style={{ opacity: ans[step] === null ? .4 : 1 }} onClick={() => setStep(step + 1)}>{t.next}</button>
           : <button className="btn solid" disabled={!allDone} onClick={() => {
-              // Emit the real result so it can shape the chat (and persist). The
-              // per-item answers carry the PHQ-9 self-harm item the safety layer reads.
-              onComplete?.({ id: scaleId as ScaleId, total, severity: band.zh, answers: ans.map((v) => v ?? 0), completedAt: new Date().toISOString() });
+              // Score via the canonical lib/scales.ts scoreScale (single source of
+              // truth — no duplicate inline cutoffs). answers carry the PHQ-9
+              // self-harm item the safety layer reads.
+              const result = scoreScale(scaleId as ScaleId, ans.map((v) => v ?? 0));
+              if (result) onComplete?.(result);
               setDone(true);
             }}>{t.finish}</button>}
       </div>
