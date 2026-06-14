@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type Lang, type Message, type Media } from "./data";
 import { Ic } from "./icons";
-import { TopBar, PrivacyRibbon, Stream, Composer, Welcome, CalmMode } from "./chat-parts";
+import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
 import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet } from "./overlays";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 
@@ -32,7 +32,6 @@ export function App() {
   const offeredScales = useRef<Set<string>>(new Set());
   const exitedCrisisRef = useRef(false); // user tapped "我没事了" → judge next msgs solo until new risk
   const [crisis, setCrisis] = useState(false);
-  const [calm, setCalm] = useState(false); // emotion-adaptive; driven by a server signal in future
   // P3-a: completed self-check results (sent to /api/chat so they actually shape
   // the reply) + the accumulated case understanding (lazily fetched from /api/plan
   // when the drawer opens). Both persist on-device and are wiped by 一键彻底删除.
@@ -224,7 +223,7 @@ export function App() {
     try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); } catch {}
     caseForCount.current = -1;
     retryPayloads.current.clear();
-    setBusy(false); setCrisis(false); setCalm(false);
+    setBusy(false); setCrisis(false);
     setScaleResults([]); setCaseMap(null);
     setMessages([freshGreeting(lang)]);
     setConfirmingDelete(false);
@@ -285,15 +284,6 @@ export function App() {
         )}
         <Composer lang={lang} pace={pace} busy={busy} tone={persona.av} onSend={(t, a) => void send(t, a)} onPace={setPace} />
       </div>
-
-      {calm && (
-        <CalmMode lang={lang}
-          onBreathe={() => setOverlay("breathing")}
-          onHotline={() => setOverlay("crisis")}
-          onContact={() => setOverlay("crisis")}
-          onBack={() => setCalm(false)}
-        />
-      )}
 
       {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} />}
       {scaleId && <ScaleModal lang={lang} scaleId={scaleId} onClose={() => setScaleId(null)} onComplete={(r) => setScaleResults((prev) => [...prev, r])} />}

@@ -1,5 +1,5 @@
 "use client";
-/* chat-parts.tsx — Presence, TopBar, Privacy, Stream, Bubble, Composer, Welcome, CalmMode
+/* chat-parts.tsx — Presence, TopBar, Privacy, Stream, Bubble, Composer, Welcome
    (ported from the design handoff; window-globals → ES modules + types) */
 import { useEffect, useRef, useState } from "react";
 import { Ic } from "./icons";
@@ -288,25 +288,6 @@ export function Welcome({ lang, companion, onStart }: { lang: Lang; companion: P
         {(t.starters as string[]).map((s, i) => <button key={i} className="starter" onClick={() => onStart(s)}>{s}</button>)}
       </div>
       <span className="w-priv"><Ic.lock />{t.privacy_a}</span>
-    </div>
-  );
-}
-
-export function CalmMode({ lang, onBreathe, onHotline, onContact, onBack }: {
-  lang: Lang; onBreathe: () => void; onHotline: () => void; onContact: () => void; onBack: () => void;
-}) {
-  const t = STR[lang];
-  return (
-    <div className="calm">
-      <div className="welcome-orb"><Presence size={150} glow breathe /></div>
-      <h2>{t.calm_title}</h2>
-      <p>{t.calm_sub}</p>
-      <div className="calm-actions">
-        <button className="calm-btn" onClick={onBreathe}>{t.calm_breathe}</button>
-        <button className="calm-btn alert" onClick={onHotline}>{t.calm_hotline}</button>
-        <button className="calm-btn" onClick={onContact}>{t.calm_contact}</button>
-      </div>
-      <button className="calm-back" onClick={onBack}>{t.calm_back}</button>
     </div>
   );
 }

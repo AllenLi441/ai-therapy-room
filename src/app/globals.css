@@ -461,31 +461,6 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .safety-step:last-child { border-bottom: none; }
 .safety-step .s-n { width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); color: var(--ink-2); font-size: var(--fs-xs); display: grid; place-items: center; flex: 0 0 auto; margin-top: 2px; font-weight: 600; }
 
-/* ============================================================ emotion-adaptive calm mode */
-.calm {
-  position: absolute; inset: 0; z-index: 40;
-  background: var(--paper);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 26px; padding: 30px; text-align: center;
-}
-.calm-orb {
-  width: 180px; height: 180px; border-radius: 50%;
-  background: radial-gradient(circle at 42% 38%, var(--sage-soft), var(--sage));
-  display: grid; place-items: center; color: var(--ink-on-accent);
-  font-size: var(--fs-md); position: relative;
-  animation: orbBreath 11s var(--ease) infinite;
-}
-@keyframes orbBreath { 0%,100%{ transform: scale(.84) } 45%,55%{ transform: scale(1.12) } }
-@media (prefers-reduced-motion: reduce){ .calm-orb{ animation: none } }
-.calm-orb::after { content:""; position:absolute; inset:-22px; border-radius:50%; border:1.5px solid var(--sage); opacity:.4; animation: orbBreath 11s var(--ease) infinite; }
-.calm h2 { font-size: var(--fs-xl); font-weight: 600; margin: 0; }
-.calm p { font-size: var(--fs-md); color: var(--ink-2); margin: 0; max-width: 30ch; }
-.calm-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
-.calm-btn { padding: 16px; border-radius: var(--r-md); font-size: var(--fs-md); font-weight: 600; border: 1.5px solid var(--line); background: var(--surface); transition: all .2s; }
-.calm-btn:hover { border-color: var(--sage); }
-.calm-btn.alert { background: var(--alert); color: #fff; border-color: var(--alert); }
-.calm-back { font-size: var(--fs-sm); color: var(--ink-3); text-decoration: underline; text-underline-offset: 3px; }
-
 /* breathing exercise sheet */
 .breath-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 18px 18px 30px; }
 .breath-orb {
