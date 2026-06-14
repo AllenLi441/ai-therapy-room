@@ -42,6 +42,9 @@ export function App() {
   const [hydrated, setHydrated] = useState(false); // localStorage restored yet?
   const messagesRef = useRef<Message[]>([]);
   messagesRef.current = messages;
+  // Keep each turn's request payload so an errored reply can be retried without
+  // re-sending the user message (keyed by the AI bubble's id).
+  const retryPayloads = useRef<Map<string, { role: string; content: string }[]>>(new Map());
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); try { localStorage.setItem("js_theme", theme); } catch {} }, [theme]);
   useEffect(() => { document.documentElement.lang = lang; try { localStorage.setItem("js_lang", lang); } catch {} }, [lang]);
@@ -131,9 +134,6 @@ export function App() {
       if (need && !offeredScales.current.has(need)) { offeredScales.current.add(need); setSuggestedScale(need); }
     }
 
-    const setAi = (fn: (c: string) => string) =>
-      setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: fn(m.content) } : m)));
-
     // images → /api/vision (Kimi) → fold description into the text the model sees
     let visionNote = "";
     const images = media.filter((m) => m.type === "image");
@@ -156,7 +156,16 @@ export function App() {
     const payloadMsgs = history.map((m, i) =>
       i === history.length - 1 ? { role: "user", content: backendContent } : { role: m.role, content: m.content }
     );
+    retryPayloads.current.set(aiId, payloadMsgs);
+    await streamReply(aiId, payloadMsgs);
+  }
 
+  // Send the request and stream it into the AI bubble `aiId`. Shared by the first
+  // send and by retry, so the truthful error state always has a way back.
+  async function streamReply(aiId: string, payloadMsgs: { role: string; content: string }[]) {
+    setBusy(true);
+    const setAi = (fn: (c: string) => string) =>
+      setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: fn(m.content) } : m)));
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -187,6 +196,22 @@ export function App() {
       setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, streaming: false } : m)));
       setBusy(false);
     }
+  }
+
+  // Retry a failed turn: reset the errored bubble and re-run the SAME request, so
+  // the user never has to retype. Falls back to rebuilding the payload from history
+  // (e.g. an errored bubble restored from localStorage after a refresh).
+  function onRetry(aiId: string) {
+    if (busy) return;
+    let payload = retryPayloads.current.get(aiId);
+    if (!payload) {
+      const idx = messagesRef.current.findIndex((m) => m.id === aiId);
+      if (idx <= 0) return;
+      payload = messagesRef.current.slice(0, idx).map((m) => ({ role: m.role, content: m.content }));
+      retryPayloads.current.set(aiId, payload);
+    }
+    setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: "", errored: false, streaming: true, startedAt: Date.now() } : m)));
+    void streamReply(aiId, payload);
   }
 
   function deleteAll() {
@@ -242,7 +267,7 @@ export function App() {
 
       <div className="chat-wrap">
         {started
-          ? <Stream messages={messages} persona={persona} lang={lang} />
+          ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} />
           : <Welcome lang={lang} companion={persona} onStart={(s) => void send(s, [])} />}
         {suggestedScale && !scaleId && !crisis && (
           <div className="scale-suggest" role="status">

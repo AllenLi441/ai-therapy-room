@@ -91,7 +91,7 @@ export function PrivacyRibbon({ lang, onDelete }: { lang: Lang; onDelete: () => 
   );
 }
 
-export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lang: Lang }) {
+export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Persona; lang: Lang; onRetry?: (id: string) => void }) {
   const isAI = m.role === "assistant";
   const p = m.personaId ? personaById(m.personaId) : persona;
   const hasText = !!m.content && m.content.length > 0;
@@ -109,16 +109,22 @@ export function Bubble({ m, persona, lang }: { m: Message; persona: Persona; lan
                 : <video key={md.id} src={md.url} controls playsInline />)}
             </div>
           )}
+          {m.visionPending && <span className="vision-pending">{STR[lang].vision_loading}</span>}
           {hasText && <span className="bubble-text">{m.content}</span>}
           {m.streaming && m.content === "" && <Thinking startedAt={m.startedAt} lang={lang} />}
           {m.streaming && m.content !== "" && <span className="caret" />}
         </div>
+        {m.errored && onRetry && (
+          <button className="retry-btn" onClick={() => onRetry(m.id)}>
+            <Ic.refresh className="retry-ico" /> {STR[lang].retry}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-export function Stream({ messages, persona, lang }: { messages: Message[]; persona: Persona; lang: Lang }) {
+export function Stream({ messages, persona, lang, onRetry }: { messages: Message[]; persona: Persona; lang: Lang; onRetry?: (id: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);            // are we pinned to the bottom?
@@ -148,14 +154,18 @@ export function Stream({ messages, persona, lang }: { messages: Message[]; perso
   const jump = () => {
     stick.current = true;
     setShowJump(false);
-    endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    // Jump in ONE reliable step: setting scrollTop directly lands at the true
+    // bottom immediately. (Smooth scrollIntoView raced the scroll listener, so
+    // the button could linger / not reach the very bottom.)
+    const el = ref.current;
+    if (el) el.scrollTop = el.scrollHeight;
   };
 
   return (
     <>
       <div className="stream scroll" ref={ref} onScroll={onScroll}>
         <div className="stream-inner">
-          {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} />)}
+          {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} onRetry={onRetry} />)}
           <div ref={endRef} className="stream-end" aria-hidden="true" />
         </div>
       </div>
