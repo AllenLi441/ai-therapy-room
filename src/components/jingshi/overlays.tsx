@@ -22,6 +22,25 @@ export function Sheet({ children, onClose, className = "" }: { children: ReactNo
   );
 }
 
+// A calm confirm dialog reusing the Sheet system — replaces native confirm() so
+// the delete flow keeps the design language (and is reachable/testable in-app).
+export function ConfirmSheet({ lang, onConfirm, onClose }: { lang: Lang; onConfirm: () => void; onClose: () => void }) {
+  const t = STR[lang];
+  return (
+    <Sheet onClose={onClose} className="confirm-sheet">
+      <div className="sheet-head"><div><h2>{t.delete_title}</h2></div>
+        <button className="icon-btn sheet-x" onClick={onClose} aria-label="close"><Ic.close /></button></div>
+      <div className="sheet-body">
+        <p className="confirm-body">{t.delete_body}</p>
+        <div className="confirm-actions">
+          <button className="btn ghost" onClick={onClose}>{t.delete_cancel}</button>
+          <button className="btn danger" onClick={onConfirm}>{t.delete_confirm}</button>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 export function AboutSheet({ lang, companion, onClose }: { lang: Lang; companion: Persona; onClose: () => void }) {
   const t = STR[lang];
   const points = [

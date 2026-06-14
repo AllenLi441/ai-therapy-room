@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type Lang, type Message, type Media } from "./data";
 import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome, CalmMode } from "./chat-parts";
-import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer } from "./overlays";
+import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet } from "./overlays";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 
 let _mid = 0;
@@ -25,6 +25,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [scaleId, setScaleId] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Scales are no longer a permanent UI entry — only suggested when the
   // conversation shows a matching need, and at most once per scale per session.
   const [suggestedScale, setSuggestedScale] = useState<string | null>(null);
@@ -218,16 +219,15 @@ export function App() {
     void streamReply(aiId, payload);
   }
 
-  function deleteAll() {
-    const msg = lang === "zh" ? "确定要彻底删除这次对话吗？此操作无法撤销。" : "Delete this conversation completely? This cannot be undone.";
-    if (confirm(msg)) {
-      // "一键彻底删除" must clear EVERYTHING device-local, not just the chat state.
-      try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); } catch {}
-      caseForCount.current = -1;
-      setBusy(false); setCrisis(false); setCalm(false);
-      setScaleResults([]); setCaseMap(null);
-      setMessages([freshGreeting(lang)]);
-    }
+  function doDeleteAll() {
+    // "一键彻底删除" must clear EVERYTHING device-local, not just the chat state.
+    try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); } catch {}
+    caseForCount.current = -1;
+    retryPayloads.current.clear();
+    setBusy(false); setCrisis(false); setCalm(false);
+    setScaleResults([]); setCaseMap(null);
+    setMessages([freshGreeting(lang)]);
+    setConfirmingDelete(false);
   }
 
   // Lazily fetch the REAL accumulated understanding from /api/plan when the drawer
@@ -266,7 +266,7 @@ export function App() {
         onPersona={() => setOverlay("about")}
         onCase={openCase}
       />
-      <PrivacyRibbon lang={lang} onDelete={deleteAll} />
+      <PrivacyRibbon lang={lang} onDelete={() => setConfirmingDelete(true)} />
       {crisis && <CrisisBanner lang={lang} onOpen={() => setOverlay("crisis")} onDismiss={() => { setCrisis(false); exitedCrisisRef.current = true; setOverlay((o) => (o === "crisis" ? null : o)); }} />}
 
       <div className="chat-wrap">
@@ -300,6 +300,7 @@ export function App() {
       {overlay === "crisis" && <CrisisSheet lang={lang} onClose={() => setOverlay(null)} onBreathe={() => setOverlay("breathing")} />}
       {overlay === "breathing" && <BreathingSheet lang={lang} onClose={() => setOverlay(null)} />}
       {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} onClose={() => setOverlay(null)} />}
+      {confirmingDelete && <ConfirmSheet lang={lang} onConfirm={doDeleteAll} onClose={() => setConfirmingDelete(false)} />}
     </div>
   );
 }

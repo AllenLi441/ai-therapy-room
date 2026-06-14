@@ -538,6 +538,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .btn.ghost:hover { background: var(--surface-2); }
 .btn.solid { background: var(--sage); color: var(--ink-on-accent); }
 .btn.solid:disabled { opacity: .4; }
+.btn.danger { background: var(--alert); color: #fff; }
+.btn.danger:hover { filter: brightness(.95); }
+.confirm-body { color: var(--ink-2); font-size: var(--fs-md); line-height: var(--lh); margin: 2px 0 20px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
 /* scale result */
 .scale-result { padding: 8px 24px 24px; text-align: center; }

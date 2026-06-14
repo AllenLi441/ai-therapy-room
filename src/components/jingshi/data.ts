@@ -66,6 +66,7 @@ export const STR: Record<Lang, Record<string, any>> = {
   zh: {
     sub: "JÌNGSHÌ",
     privacy_a: "对话只存在你的设备", privacy_b: "随时可", privacy_del: "一键彻底删除",
+    delete_title: "彻底删除这次对话？", delete_body: "对话、量表结果和「对你的理解」都会被清空，无法撤销。", delete_confirm: "删除", delete_cancel: "取消",
     placeholder: "把现在心里的话，慢慢写下来…",
     import_image: "导入图片", import_video: "导入视频", import_media: "添加图片或视频",
     att_too_many: "最多只能添加 {n} 张图片", att_not_image: "只能添加图片", att_too_big: "图片太大了（上限 {mb}MB）",
@@ -119,6 +120,7 @@ export const STR: Record<Lang, Record<string, any>> = {
   en: {
     sub: "QUIET ROOM",
     privacy_a: "Chats stay only on your device", privacy_b: "Always", privacy_del: "delete everything",
+    delete_title: "Delete this conversation?", delete_body: "Your conversation, self-check results and “what I understand” will all be cleared. This can’t be undone.", delete_confirm: "Delete", delete_cancel: "Cancel",
     placeholder: "Take your time — write what's on your mind…",
     import_image: "Import image", import_video: "Import video", import_media: "Add image or video",
     att_too_many: "Up to {n} images", att_not_image: "Images only", att_too_big: "Image too large (max {mb}MB)",
