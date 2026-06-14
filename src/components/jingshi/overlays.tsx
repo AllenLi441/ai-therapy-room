@@ -42,6 +42,37 @@ export function ConfirmSheet({ lang, onConfirm, onClose }: { lang: Lang; onConfi
   );
 }
 
+// Entry disclaimer + consent. Full-screen, no dismiss — tapping 进入 = agree.
+// Reuses the same boundary points as AboutSheet so the copy is identical.
+export function ConsentGate({ lang, onAccept }: { lang: Lang; onAccept: () => void }) {
+  const t = STR[lang];
+  const points = [
+    { ico: <Ic.heart />, t: t.about_honest_t, d: t.about_honest },
+    { ico: <Ic.lock />, t: t.about_privacy_t, d: t.about_privacy },
+    { ico: <Ic.shield />, t: t.about_safety_t, d: t.about_safety, warn: true }
+  ];
+  return (
+    <div className="consent-gate" role="dialog" aria-modal="true" aria-label={t.consent_title}>
+      <div className="consent-card scroll">
+        <div className="consent-hero">
+          <Presence size={64} glow breathe />
+          <h2>{t.consent_title}</h2>
+        </div>
+        <div className="about-points">
+          {points.map((p, i) => (
+            <div key={i} className={"about-point" + (p.warn ? " warn" : "")}>
+              <span className="ap-ico">{p.ico}</span>
+              <div><h4>{p.t}</h4><p>{p.d}</p></div>
+            </div>
+          ))}
+        </div>
+        <p className="consent-agree">{t.consent_agree}</p>
+        <button className="btn solid consent-enter" onClick={onAccept}>{t.consent_enter}</button>
+      </div>
+    </div>
+  );
+}
+
 export function AboutSheet({ lang, companion, onClose }: { lang: Lang; companion: Persona; onClose: () => void }) {
   const t = STR[lang];
   const points = [

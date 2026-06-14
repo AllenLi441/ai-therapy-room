@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type Lang, type Message, type Media } from "./data";
 import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
-import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet } from "./overlays";
+import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet, ConsentGate } from "./overlays";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 
 let _mid = 0;
@@ -40,6 +40,7 @@ export function App() {
   const [caseLoading, setCaseLoading] = useState(false);
   const caseForCount = useRef(-1); // #user-turns the current caseMap reflects
   const [hydrated, setHydrated] = useState(false); // localStorage restored yet?
+  const [consented, setConsented] = useState(false); // entry disclaimer accepted?
   const messagesRef = useRef<Message[]>([]);
   messagesRef.current = messages;
   // Keep each turn's request payload so an errored reply can be retried without
@@ -67,6 +68,7 @@ export function App() {
       const sTh = localStorage.getItem("js_theme");
       if (sLg === "zh" || sLg === "en") { lg = sLg; setLang(sLg); }
       if (sTh === "light" || sTh === "dark") setTheme(sTh);
+      if (localStorage.getItem("js_consent") === "1") setConsented(true); // before the chat early-return
       const sScales = localStorage.getItem("js_scales");
       if (sScales) { const arr = JSON.parse(sScales); if (Array.isArray(arr)) setScaleResults(arr); }
       const sCase = localStorage.getItem("js_case");
@@ -219,11 +221,12 @@ export function App() {
   }
 
   function doDeleteAll() {
-    // "一键彻底删除" must clear EVERYTHING device-local, not just the chat state.
-    try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); } catch {}
+    // "一键彻底删除" must clear EVERYTHING device-local, not just the chat state —
+    // including consent, so a fresh start re-asks for it.
+    try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); localStorage.removeItem("js_consent"); } catch {}
     caseForCount.current = -1;
     retryPayloads.current.clear();
-    setBusy(false); setCrisis(false);
+    setBusy(false); setCrisis(false); setConsented(false);
     setScaleResults([]); setCaseMap(null);
     setMessages([freshGreeting(lang)]);
     setConfirmingDelete(false);
@@ -291,6 +294,9 @@ export function App() {
       {overlay === "breathing" && <BreathingSheet lang={lang} onClose={() => setOverlay(null)} />}
       {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} onClose={() => setOverlay(null)} />}
       {confirmingDelete && <ConfirmSheet lang={lang} onConfirm={doDeleteAll} onClose={() => setConfirmingDelete(false)} />}
+      {hydrated && !consented && (
+        <ConsentGate lang={lang} onAccept={() => { try { localStorage.setItem("js_consent", "1"); } catch {} setConsented(true); }} />
+      )}
     </div>
   );
 }
