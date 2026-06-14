@@ -593,6 +593,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .attach-menu button svg { width: 20px; height: 20px; color: var(--tone); }
 .tool-btn.on { background: var(--surface-2); color: var(--ink); }
 
+.attach-err {
+  max-width: var(--maxw); margin: 0 auto 8px; padding: 0 2px;
+  font-size: var(--fs-sm); color: var(--alert, #D9734E);
+}
 .attach-previews {
   max-width: var(--maxw); margin: 0 auto 9px; padding: 0 2px;
   display: flex; flex-wrap: wrap; gap: 9px;

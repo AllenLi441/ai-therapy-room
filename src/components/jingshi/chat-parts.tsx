@@ -185,6 +185,7 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   const t = STR[lang];
   const [val, setVal] = useState("");
   const [atts, setAtts] = useState<Media[]>([]);
+  const [attErr, setAttErr] = useState("");
   const ta = useRef<HTMLTextAreaElement>(null);
   const imgInput = useRef<HTMLInputElement>(null);
 
@@ -194,17 +195,38 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   };
   useEffect(grow, [val]);
 
-  // Image only — Kimi vision takes images, not video.
+  // auto-dismiss the attach error after a few seconds
+  useEffect(() => {
+    if (!attErr) return;
+    const id = setTimeout(() => setAttErr(""), 4000);
+    return () => clearTimeout(id);
+  }, [attErr]);
+
+  // Image only — Kimi vision takes images, not video. Guard count, size and type,
+  // and tell the user when something is rejected (silently dropping files is worse).
   const addImages = async (files: FileList | null) => {
     if (!files) return;
+    const MAX_IMAGES = 6;
+    const MAX_MB = 8;
+    const room = MAX_IMAGES - atts.length;
+    const accepted: File[] = [];
+    let err = "";
+    for (const f of Array.from(files)) {
+      if (accepted.length >= room) { err = t.att_too_many.replace("{n}", String(MAX_IMAGES)); break; }
+      if (!f.type.startsWith("image/")) { err = t.att_not_image; continue; }
+      if (f.size > MAX_MB * 1024 * 1024) { err = t.att_too_big.replace("{mb}", String(MAX_MB)); continue; }
+      accepted.push(f);
+    }
+    setAttErr(err);
+    if (!accepted.length) return;
     // base64 data URL — used for both display AND /api/vision (Kimi).
-    const next: Media[] = await Promise.all(Array.from(files).map(async (f) => ({
+    const next: Media[] = await Promise.all(accepted.map(async (f) => ({
       id: Math.random().toString(36).slice(2),
       type: "image" as const,
       url: await fileToDataUrl(f),
       name: f.name
     })));
-    if (next.length) setAtts((a) => [...a, ...next]);
+    setAtts((a) => [...a, ...next]);
   };
   const removeAtt = (id: string) => setAtts((a) => a.filter((x) => x.id !== id));
 
@@ -220,6 +242,7 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   };
   return (
     <div className="composer-zone">
+      {attErr && <div className="attach-err" role="status">{attErr}</div>}
       {atts.length > 0 && (
         <div className="attach-previews">
           {atts.map((a) => (

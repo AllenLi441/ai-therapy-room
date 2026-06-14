@@ -119,7 +119,9 @@ export function App() {
 
   async function send(text: string, attachments: Media[]) {
     const media = attachments || [];
-    const userMsg: Message = { id: uid(), role: "user", content: text, media };
+    const hasImages = media.some((m) => m.type === "image");
+    const userMsg: Message = { id: uid(), role: "user", content: text, media, visionPending: hasImages };
+    const userId = userMsg.id;
     const aiId = uid();
     const aiMsg: Message = { id: aiId, role: "assistant", personaId: "linxi", content: "", streaming: true, startedAt: Date.now() };
     const history = [...messagesRef.current, userMsg];
@@ -149,6 +151,8 @@ export function App() {
         const joined = descs.filter(Boolean).join("；");
         if (joined) visionNote = lang === "zh" ? `\n\n[我发了图片，内容大致是：${joined}]` : `\n\n[I sent image(s); roughly: ${joined}]`;
       } catch { /* vision failed — continue with text only */ }
+      // vision finished (ok or failed) — clear the "looking at the image…" caption
+      setMessages((ms) => ms.map((m) => (m.id === userId ? { ...m, visionPending: false } : m)));
     }
 
     const fallbackText = text || (media.length ? (lang === "zh" ? "（我发了一张图片）" : "(I sent an image)") : "");
