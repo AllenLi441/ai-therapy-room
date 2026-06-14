@@ -89,4 +89,23 @@ describe("buildCounselorSystemPrompt", () => {
     expect(prompt).toContain("首次接触，概念化尚未形成");
     expect(prompt).toContain("没有命中特定知识卡");
   });
+
+  // P3-c: pace shapes the output. 快速 drops the 4-step structure for a short
+  // reply; 深度 (and the default) keeps the full structure.
+  it("fast pace gives a short reply shape; deep keeps the 4-step structure", () => {
+    const base = {
+      risk: assessRisk("还行"),
+      knowledge: [],
+      caseMap: null,
+      turnPlan: defaultTurnPlan()
+    };
+    const deep = buildCounselorSystemPrompt({ ...base, pace: "deep" as const });
+    const fast = buildCounselorSystemPrompt({ ...base, pace: "fast" as const });
+    const dflt = buildCounselorSystemPrompt(base);
+
+    expect(deep).toContain("结构必须是");
+    expect(dflt).toContain("结构必须是");   // default (no pace) stays deep
+    expect(fast).not.toContain("结构必须是");
+    expect(fast).toContain("用 1-2 句");
+  });
 });
