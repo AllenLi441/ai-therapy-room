@@ -51,6 +51,17 @@ export function resolveApiModel(): string {
   return fromEnv && VALID_API_MODELS.has(fromEnv) ? fromEnv : DEFAULT_DEEPSEEK_API_MODEL;
 }
 
+export function isValidApiModel(value: unknown): value is string {
+  return typeof value === "string" && VALID_API_MODELS.has(value);
+}
+
+// The deep/fast toggle now selects a REAL model: deep = the reasoning model
+// (deeper, slower), fast = the standard chat model (quicker). Both are valid
+// DeepSeek API model names (unlike the stale "deepseek-v4-*" UI labels).
+export function resolveApiModelForPace(pace: unknown): string {
+  return resolveSessionPace(pace) === "fast" ? "deepseek-chat" : "deepseek-reasoner";
+}
+
 // ── RECOVERY RECONCILIATION (2026-06-13) ──────────────────────────────────────
 // Older callers (src/app/api/chat, src/app/api/summary, src/lib/deepseek.ts)
 // still import the model-picker API that predates the session-pace refactor

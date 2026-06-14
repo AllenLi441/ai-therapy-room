@@ -30,7 +30,7 @@ import {
   createSuicideConcernResponse,
   detectActiveCrisisFromHistory
 } from "@/lib/safety";
-import { resolveDeepSeekModel, resolveSessionPace, type DeepSeekModelId, type SessionPaceId } from "@/lib/model-options";
+import { resolveApiModelForPace, resolveDeepSeekModel, resolveSessionPace, type DeepSeekModelId, type SessionPaceId } from "@/lib/model-options";
 import type {
   CaseMap,
   ChatMessage,
@@ -260,8 +260,8 @@ export async function POST(request: Request) {
     systemPrompt,
     messages,
     model,
-    stream: true,
-    maxTokens: 900
+    apiModel: resolveApiModelForPace(body.pace), // deep→reasoner, fast→chat
+    stream: true
   });
 
   try {

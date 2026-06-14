@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildDeepSeekPayload, getDeepSeekConfig, normalizeConversationForProvider } from "./deepseek";
+import { resolveApiModelForPace } from "./model-options";
 import type { ChatMessage } from "./types";
 
 const u = (content: string): ChatMessage => ({ role: "user", content });
@@ -15,8 +16,8 @@ describe("deepseek config and payload", () => {
     expect(config.baseUrl).toBe("https://api.deepseek.com");
   });
 
-  it("builds an OpenAI-compatible chat payload", () => {
-    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-v5.5-flash");
+  it("builds an OpenAI-compatible chat payload (valid env model passes through)", () => {
+    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-reasoner");
 
     const payload = buildDeepSeekPayload({
       systemPrompt: "system",
@@ -24,10 +25,36 @@ describe("deepseek config and payload", () => {
       stream: true
     });
 
-    expect(payload.model).toBe("deepseek-v5.5-flash");
+    expect(payload.model).toBe("deepseek-reasoner");
     expect(payload.messages[0]).toEqual({ role: "system", content: "system" });
     expect(payload.messages[1]).toEqual({ role: "user", content: "你好" });
     expect(payload.stream).toBe(true);
+  });
+});
+
+describe("deep/fast → real model switch (A)", () => {
+  it("maps pace to a VALID API model: deep→reasoner, fast→chat, default→deep", () => {
+    expect(resolveApiModelForPace("deep")).toBe("deepseek-reasoner");
+    expect(resolveApiModelForPace("fast")).toBe("deepseek-chat");
+    expect(resolveApiModelForPace(undefined)).toBe("deepseek-reasoner");
+  });
+
+  it("payload honors a valid apiModel; reasoner omits thinking + gets more tokens", () => {
+    vi.stubEnv("DEEPSEEK_MODEL", "");
+    const reasoner = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-reasoner" });
+    expect(reasoner.model).toBe("deepseek-reasoner");
+    expect(reasoner.thinking).toBeUndefined();
+    expect(reasoner.max_tokens).toBeGreaterThan(900);
+
+    const chat = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-chat" });
+    expect(chat.model).toBe("deepseek-chat");
+    expect(chat.thinking).toEqual({ type: "disabled" });
+  });
+
+  it("a bogus apiModel falls back to the safe default — never sent to the API", () => {
+    vi.stubEnv("DEEPSEEK_MODEL", "");
+    const payload = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-v4-pro" });
+    expect(payload.model).toBe("deepseek-chat");
   });
 });
 
