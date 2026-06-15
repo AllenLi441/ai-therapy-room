@@ -5,6 +5,7 @@ import { Ic } from "./icons";
 import { Presence, Avatar } from "./chat-parts";
 import { STR, SCALES, SCALE_OPTS, type Lang, type Persona } from "./data";
 import { isCaseMapPopulated, type CaseMap, type ScaleResult, type ScaleId } from "@/lib/types";
+import { CN_PRIMARY_HOTLINES, type CrisisHotline } from "@/lib/crisis-resources";
 import { scoreScale } from "@/lib/scales";
 
 export function Sheet({ children, onClose, className = "" }: { children: ReactNode; onClose: () => void; className?: string }) {
@@ -103,11 +104,14 @@ export function CrisisBanner({ lang, onOpen, onDismiss }: { lang: Lang; onOpen: 
 
 export function CrisisSheet({ lang, onClose, onBreathe }: { lang: Lang; onClose: () => void; onBreathe: () => void }) {
   const t = STR[lang];
-  const lines = [
-    { num: "12356", label: t.h_psy, ico: <Ic.heart />, primary: true, tel: "12356" },
-    { num: "110", label: t.h_police, ico: <Ic.shield />, tel: "110" },
-    { num: "120", label: t.h_med, ico: <Ic.phone />, tel: "120" }
-  ];
+  // Numbers come from the single source of truth (crisis-resources.ts) so the UI
+  // can never drift from the server-side safety templates. Labels stay in i18n.
+  const HOTLINE_UI: Record<CrisisHotline["id"], { label: string; ico: ReactNode; primary?: boolean }> = {
+    psych: { label: t.h_psy, ico: <Ic.heart />, primary: true },
+    police: { label: t.h_police, ico: <Ic.shield /> },
+    medical: { label: t.h_med, ico: <Ic.phone /> }
+  };
+  const lines = CN_PRIMARY_HOTLINES.map((h) => ({ num: h.number, tel: h.tel, ...HOTLINE_UI[h.id] }));
   const steps = [t.safety_1, t.safety_2, t.safety_3, t.safety_4];
   return (
     <Sheet onClose={onClose} className="crisis-sheet">
