@@ -41,7 +41,8 @@ const PLANNER_SYSTEM = [
   "10. intervention：本轮要做的一个微干预（不超过 40 字，必须可执行、低负担）。",
   "11. clarifying_question：本轮最后要问的那个澄清问题（不超过 30 字，开放式、不评判）。",
   "12. avoid：本轮明确要避免的一件事（不超过 30 字，例如'不要急着给方法'、'不要追问创伤细节'）。",
-  "13. 不要输出任何 JSON 之外的字符。不要使用 markdown 代码块。"
+  "13. 不要输出任何 JSON 之外的字符。不要使用 markdown 代码块。",
+  "14. 字段值用自然中文，不要出现下划线、星号、井号等 Markdown 标记，也不要引用研究 / 文献或写'研究表明'这类学术口吻。"
 ].join("\n");
 
 function clampList(value: unknown, max = 5): string[] {
