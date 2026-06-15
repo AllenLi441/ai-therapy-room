@@ -127,17 +127,24 @@ export async function POST(request: Request) {
     ).catch(() => {});
   }
 
-  if (risk.shouldEscalate) {
+  // Fire the full static crisis/suicide-concern template only on FIRST contact
+  // (or a fresh re-escalation after exit/de-escalation — crisisModeActive is false
+  // then). While ALREADY in an active crisis session, do NOT re-dump the identical
+  // template on every triggering turn (robotic + re-traumatizing). Instead fall
+  // through to the model path, which replies in context under the crisis-safety
+  // prompt (activateCrisisSessionRisk) while the crisis banner keeps the real
+  // hotlines one tap away (X-Crisis-Triggered, set on the normal path below).
+  if (risk.shouldEscalate && !crisisModeActive) {
     logFireAndForget("lexicon_crisis", stubImplicit, stubDecision);
     return new Response(textStreamFromString(createCrisisResponse(risk, { continuation: crisisModeActive, language })), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Crisis-Triggered": "1" }
     });
   }
 
-  if (risk.flags.includes("suicide_concern")) {
+  if (risk.flags.includes("suicide_concern") && !crisisModeActive) {
     logFireAndForget("lexicon_suicide_concern", stubImplicit, stubDecision);
     return new Response(textStreamFromString(createSuicideConcernResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Crisis-Triggered": "1" }
     });
   }
 
@@ -192,7 +199,9 @@ export async function POST(request: Request) {
   const implicitDecision = decideImplicitIntercept(implicitOutcome, risk);
   const mergedRisk = mergeImplicitWithLexicon(risk, implicitOutcome);
 
-  if (implicitDecision.intercept) {
+  // Same first-contact rule as the lexicon branches: don't re-dump a template from
+  // the implicit layer while already in an active crisis session — engage in context.
+  if (implicitDecision.intercept && !crisisModeActive) {
     if (implicitDecision.mode === "crisis") {
       logFireAndForget("implicit_crisis", implicitOutcome, implicitDecision);
       return new Response(
@@ -264,11 +273,16 @@ export async function POST(request: Request) {
     maxTokens: 900
   });
 
+  // On a continuation crisis turn (engaging in context instead of re-dumping the
+  // template), keep the crisis banner up so the real hotlines stay one tap away —
+  // the deterministic safety floor while the reply itself is model-generated.
+  const crisisHeader = crisisModeActive ? { "X-Crisis-Triggered": "1" } : undefined;
+
   try {
-    return streamTextResponse(createAssistantTextStream(await createDeepSeekTextStream(payload)));
+    return streamTextResponse(createAssistantTextStream(await createDeepSeekTextStream(payload)), crisisHeader);
   } catch {
     return new Response(createProviderErrorFallback(), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...crisisHeader }
     });
   }
 }
