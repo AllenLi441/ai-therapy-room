@@ -1,0 +1,74 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createCrisisReplyResponse escalate en 1`] = `
+"Thank you for telling me. From your answer, the most important thing right now is not this chat — it is getting a real person or emergency service to you in the next few minutes.
+
+Please do this now: call emergency or a crisis line, or reach someone who can come to you. US/Canada 988 or 911; UK/Ireland 116 123 (Samaritans); Australia 13 11 14 (Lifeline); mainland China 110/120 or 12356; elsewhere findahelpline.com.
+If anything you could use to hurt yourself is within reach, leave that room now or ask someone to hold it for you.
+
+I am staying right here with you, but I cannot replace in-person help. Can you make that call now, or tell me who is nearby that we can reach?"
+`;
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createCrisisReplyResponse escalate zh 1`] = `
+"谢谢你回我。从你的回答看，现在最重要的事不是继续聊，而是让一个真实的人或急救服务在接下来几分钟里到你身边。
+
+请现在就做：拨打急救或危机热线，或联系一个能马上到场的人。中国大陆 110/120，或全国心理援助热线 12356；美国/加拿大 988 或 911；英国/爱尔兰 116 123；澳洲 13 11 14；其他地区可在 findahelpline.com 找当地热线。
+如果手边有可能伤害自己的东西，先离开那个房间，或请别人替你拿走。
+
+我会一直在这儿陪着你，但我不能替代现场帮助。你愿意现在就打这个电话，或者告诉我你身边能联系到谁吗？"
+`;
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createCrisisResponse en 1`] = `
+"I am hearing a serious safety signal. Your safety matters more than finishing the story right now.
+
+Please do these first:
+1. If you already have a plan, a method nearby, or you worry you may lose control soon, call local emergency services now. In mainland China call 110/120 or the 12356 psychological support hotline; in the United States and Canada call 988 or 911.
+2. Try not to stay alone. Contact someone you trust in real life and say directly: I am not safe right now and need you to stay with me.
+3. Move anything you could use to hurt yourself or someone else out of reach, or ask someone else to hold it for you.
+4. If you can, put both feet on the floor. Inhale for 4 seconds and exhale for 6 seconds, five rounds.
+
+If you can reply, send only one number: 1=I moved dangerous items away, 2=someone is with me, 3=I am about to call, 4=I cannot do this right now.
+
+I can stay with you for the next few minutes of stabilization, but this is not emergency rescue and cannot replace in-person help. Please prioritize real-world support and emergency resources."
+`;
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createCrisisResponse zh 1`] = `
+"我听见这里有很强的危险信号。你的安全现在比把话说完整更重要。
+
+请你先做这几件事：
+1. 如果你已经有明确计划、工具在身边，或担心自己马上会失控，请立刻拨打当地急救电话。中国大陆可拨打 110/120，也可以拨打全国心理援助热线 12356；北京心理援助热线 010-82951332、希望24热线 400-161-9995 也可作为补充尝试。美国和加拿大可拨打 988 或 911。
+2. 现在尽量不要一个人待着。请马上联系一个现实中可信赖的人，直接说：我现在不安全，需要你陪我。
+3. 把可能伤害自己或他人的物品移到够不到的地方。比如把药、刀具、绳索、打火机等拿出房间、放进锁住的柜子，或者请别人帮你保管。
+4. 如果可以，先把双脚踩在地面上，慢慢吸气 4 秒、呼气 6 秒，连续做 5 轮。
+5. 先做一个今晚的安全约定：在联系到现实中的人之前，不去碰那些可能伤害自己的东西。
+
+如果你能回复，请只回一个数字：1=我已经移开危险物品，2=我身边有人，3=我准备打电话，4=我现在做不到。
+
+我可以继续陪你做眼前这几分钟的稳定化，但这不是紧急救援，也不能替代线下专业帮助。请优先联系现实中的人和紧急资源。"
+`;
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createMinorSupportLine en 1`] = `
+"If you're still in school or under 18: alongside everything above, please reach a trusted adult as soon as you can — a parent, a relative you trust, or your school counselor or teacher. You deserve to have someone with you in person.
+Youth help: in the US/Canada call or text 988, or text HOME to 741741 (Crisis Text Line). Elsewhere, find a local youth line at findahelpline.com."
+`;
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createMinorSupportLine zh 1`] = `
+"如果你还在上学、未满 18 岁：除了上面的资源，也请尽快找一个信任的成年人陪着你——可以是父母、信任的亲戚，或学校的心理老师/班主任。你值得有人在现实里陪你一起面对。
+面向未成年人的求助：全国青少年服务台 12355（共青团心理援助），以及全国心理援助热线 12356。"
+`;
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createSuicideConcernResponse en 1`] = `
+"I am going to take that seriously. It sounds like part of you may be thinking about disappearing, not waking up, or not having to keep living. We should not treat that as a normal venting line.
+
+Before analyzing why this feels so heavy, please check immediate safety first. If you have a plan, a method nearby, or you are worried you might act on it, contact emergency services now or ask someone nearby to stay with you. If there is no clear plan, please still do not carry this alone. Message someone you trust and say: I am not safe being alone with my thoughts tonight.
+
+You can reply with only one number: 1=I am safe but in a lot of pain, 2=I have thoughts of hurting myself but no plan, 3=I have a plan or method nearby, 4=I am not sure. If it is 3 or 4, please contact real-world help first while we keep this very practical."
+`;
+
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createSuicideConcernResponse zh 1`] = `
+"这句话我会认真对待。它听起来不只是普通抱怨，而像是有一部分你在想消失、不醒来，或者不用继续活着。
+
+先不急着分析为什么这么痛，先确认眼前安全。如果你已经有计划、工具在身边，或者担心自己会控制不住，请现在就联系急救服务，或者让身边可信赖的人过来陪你。中国大陆可拨打 110/120，也可以拨打全国心理援助热线 12356；北京心理援助热线 010-82951332、希望24热线 400-161-9995 也可作为补充尝试。如果还没有明确计划，也不要一个人扛，给现实中可信赖的人发一句：我今晚不太安全，不想一个人待着。
+
+你可以只回一个数字：1=我现在安全但很痛苦，2=我有伤害自己的念头但没有计划，3=我有计划或工具在身边，4=我不确定。如果是 3 或 4，请先联系现实帮助，我们先把当下安全放在第一位。"
+`;
