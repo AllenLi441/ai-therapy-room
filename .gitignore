@@ -36,3 +36,6 @@ _recovered_frontend_reference/
 
 # design handoff (prototype) — integrated into src/, kept locally as reference
 /design_handoff_jingshi/
+
+# safety-test ratchet: commit the baseline, not the raw vitest report
+/safety-ci/_raw.json
