@@ -7,6 +7,20 @@ import type {
   RiskFlag,
   RiskLevel
 } from "./types";
+import { CN_PRIMARY_HOTLINES, CN_SUPPLEMENTAL, INTL_RESOURCES, type CrisisHotline } from "./crisis-resources";
+
+// Crisis hotline numbers, read from the SSOT (crisis-resources.ts) so these
+// server-side templates can never drift from the UI CrisisSheet. Every value below
+// is byte-identical to the previously-hardcoded literal — behavior-preserving.
+function cnHotline(id: CrisisHotline["id"]): string {
+  const hit = CN_PRIMARY_HOTLINES.find((h) => h.id === id);
+  if (!hit) throw new Error(`crisis-resources: missing hotline ${id}`);
+  return hit.number;
+}
+const PSYCH = cnHotline("psych");      // 12356
+const POLICE = cnHotline("police");    // 110
+const MEDICAL = cnHotline("medical");  // 120
+const CN_EMS = `${POLICE}/${MEDICAL}`; // 110/120
 
 type RiskRule = {
   category: RiskCategory;
@@ -423,7 +437,7 @@ export function createCrisisResponse(
       opening,
       "",
       "Please do these first:",
-      "1. If you already have a plan, a method nearby, or you worry you may lose control soon, call local emergency services now. In mainland China call 110/120 or the 12356 psychological support hotline; in the United States and Canada call 988 or 911.",
+      `1. If you already have a plan, a method nearby, or you worry you may lose control soon, call local emergency services now. In mainland China call ${CN_EMS} or the ${PSYCH} psychological support hotline; in the United States and Canada call ${INTL_RESOURCES.usCrisis} or ${INTL_RESOURCES.usEmergency}.`,
       "2. Try not to stay alone. Contact someone you trust in real life and say directly: I am not safe right now and need you to stay with me.",
       "3. Move anything you could use to hurt yourself or someone else out of reach, or ask someone else to hold it for you.",
       "4. If you can, put both feet on the floor. Inhale for 4 seconds and exhale for 6 seconds, five rounds.",
@@ -446,7 +460,7 @@ export function createCrisisResponse(
     opening,
     "",
     "请你先做这几件事：",
-    "1. 如果你已经有明确计划、工具在身边，或担心自己马上会失控，请立刻拨打当地急救电话。中国大陆可拨打 110/120，也可以拨打全国心理援助热线 12356；北京心理援助热线 010-82951332、希望24热线 400-161-9995 也可作为补充尝试。美国和加拿大可拨打 988 或 911。",
+    `1. 如果你已经有明确计划、工具在身边，或担心自己马上会失控，请立刻拨打当地急救电话。中国大陆可拨打 ${CN_EMS}，也可以拨打全国心理援助热线 ${PSYCH}；北京心理援助热线 ${CN_SUPPLEMENTAL.beijing}、希望24热线 ${CN_SUPPLEMENTAL.hope24} 也可作为补充尝试。美国和加拿大可拨打 ${INTL_RESOURCES.usCrisis} 或 ${INTL_RESOURCES.usEmergency}。`,
     "2. 现在尽量不要一个人待着。请马上联系一个现实中可信赖的人，直接说：我现在不安全，需要你陪我。",
     "3. 把可能伤害自己或他人的物品移到够不到的地方。比如把药、刀具、绳索、打火机等拿出房间、放进锁住的柜子，或者请别人帮你保管。",
     "4. 如果可以，先把双脚踩在地面上，慢慢吸气 4 秒、呼气 6 秒，连续做 5 轮。",
@@ -536,7 +550,7 @@ export function createSuicideConcernResponse(language: AppLanguage = "zh") {
   return [
     "这句话我会认真对待。它听起来不只是普通抱怨，而像是有一部分你在想消失、不醒来，或者不用继续活着。",
     "",
-    "先不急着分析为什么这么痛，先确认眼前安全。如果你已经有计划、工具在身边，或者担心自己会控制不住，请现在就联系急救服务，或者让身边可信赖的人过来陪你。中国大陆可拨打 110/120，也可以拨打全国心理援助热线 12356；北京心理援助热线 010-82951332、希望24热线 400-161-9995 也可作为补充尝试。如果还没有明确计划，也不要一个人扛，给现实中可信赖的人发一句：我今晚不太安全，不想一个人待着。",
+    `先不急着分析为什么这么痛，先确认眼前安全。如果你已经有计划、工具在身边，或者担心自己会控制不住，请现在就联系急救服务，或者让身边可信赖的人过来陪你。中国大陆可拨打 ${CN_EMS}，也可以拨打全国心理援助热线 ${PSYCH}；北京心理援助热线 ${CN_SUPPLEMENTAL.beijing}、希望24热线 ${CN_SUPPLEMENTAL.hope24} 也可作为补充尝试。如果还没有明确计划，也不要一个人扛，给现实中可信赖的人发一句：我今晚不太安全，不想一个人待着。`,
     "",
     "你可以只回一个数字：1=我现在安全但很痛苦，2=我有伤害自己的念头但没有计划，3=我有计划或工具在身边，4=我不确定。如果是 3 或 4，请先联系现实帮助，我们先把当下安全放在第一位。"
   ].join("\n");
@@ -1080,12 +1094,12 @@ export function createMinorSupportLine(language: AppLanguage = "zh"): string {
   if (language === "en") {
     return [
       "If you're still in school or under 18: alongside everything above, please reach a trusted adult as soon as you can — a parent, a relative you trust, or your school counselor or teacher. You deserve to have someone with you in person.",
-      "Youth help: in the US/Canada call or text 988, or text HOME to 741741 (Crisis Text Line). Elsewhere, find a local youth line at findahelpline.com."
+      `Youth help: in the US/Canada call or text ${INTL_RESOURCES.usCrisis}, or text HOME to 741741 (Crisis Text Line). Elsewhere, find a local youth line at ${INTL_RESOURCES.finder}.`
     ].join("\n");
   }
   return [
     "如果你还在上学、未满 18 岁：除了上面的资源，也请尽快找一个信任的成年人陪着你——可以是父母、信任的亲戚，或学校的心理老师/班主任。你值得有人在现实里陪你一起面对。",
-    "面向未成年人的求助：全国青少年服务台 12355（共青团心理援助），以及全国心理援助热线 12356。"
+    `面向未成年人的求助：全国青少年服务台 ${CN_SUPPLEMENTAL.youth}（共青团心理援助），以及全国心理援助热线 ${PSYCH}。`
   ].join("\n");
 }
 export function hasMinorContextCue(text: string): boolean {
@@ -1101,7 +1115,7 @@ export function createCrisisReplyResponse(tier: CrisisReplyTier, language: AppLa
       return [
         "Thank you for telling me. From your answer, the most important thing right now is not this chat — it is getting a real person or emergency service to you in the next few minutes.",
         "",
-        "Please do this now: call emergency or a crisis line, or reach someone who can come to you. US/Canada 988 or 911; UK/Ireland 116 123 (Samaritans); Australia 13 11 14 (Lifeline); mainland China 110/120 or 12356; elsewhere findahelpline.com.",
+        `Please do this now: call emergency or a crisis line, or reach someone who can come to you. US/Canada ${INTL_RESOURCES.usCrisis} or ${INTL_RESOURCES.usEmergency}; UK/Ireland ${INTL_RESOURCES.ukSamaritans} (Samaritans); Australia ${INTL_RESOURCES.auLifeline} (Lifeline); mainland China ${CN_EMS} or ${PSYCH}; elsewhere ${INTL_RESOURCES.finder}.`,
         "If anything you could use to hurt yourself is within reach, leave that room now or ask someone to hold it for you.",
         "",
         "I am staying right here with you, but I cannot replace in-person help. Can you make that call now, or tell me who is nearby that we can reach?"
@@ -1121,7 +1135,7 @@ export function createCrisisReplyResponse(tier: CrisisReplyTier, language: AppLa
     return [
       "谢谢你回我。从你的回答看，现在最重要的事不是继续聊，而是让一个真实的人或急救服务在接下来几分钟里到你身边。",
       "",
-      "请现在就做：拨打急救或危机热线，或联系一个能马上到场的人。中国大陆 110/120，或全国心理援助热线 12356；美国/加拿大 988 或 911；英国/爱尔兰 116 123；澳洲 13 11 14；其他地区可在 findahelpline.com 找当地热线。",
+      `请现在就做：拨打急救或危机热线，或联系一个能马上到场的人。中国大陆 ${CN_EMS}，或全国心理援助热线 ${PSYCH}；美国/加拿大 ${INTL_RESOURCES.usCrisis} 或 ${INTL_RESOURCES.usEmergency}；英国/爱尔兰 ${INTL_RESOURCES.ukSamaritans}；澳洲 ${INTL_RESOURCES.auLifeline}；其他地区可在 ${INTL_RESOURCES.finder} 找当地热线。`,
       "如果手边有可能伤害自己的东西，先离开那个房间，或请别人替你拿走。",
       "",
       "我会一直在这儿陪着你，但我不能替代现场帮助。你愿意现在就打这个电话，或者告诉我你身边能联系到谁吗？"
