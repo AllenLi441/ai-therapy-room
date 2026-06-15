@@ -19,10 +19,11 @@ type DeepSeekPayload = {
   temperature: number;
   max_tokens: number;
   stream: boolean;
-  // Only sent for the standard chat model. deepseek-reasoner reasons inherently
-  // and rejects/ignores a thinking-disable, so we omit it there.
+  // Thinking-mode toggle (DeepSeek defaults to enabled). We set it explicitly:
+  // deep tier (v4-pro) → enabled (reasons before answering); fast tier (v4-flash)
+  // → disabled (quicker, no chain-of-thought).
   thinking?: {
-    type: "disabled";
+    type: "enabled" | "disabled";
   };
 };
 
@@ -82,16 +83,15 @@ export function buildDeepSeekPayload(input: {
   systemPrompt: string;
   messages: ChatMessage[];
   model?: DeepSeekModelId;        // legacy UI-label, ignored (kept for callers)
-  apiModel?: string;              // real API model: deepseek-chat | deepseek-reasoner
+  apiModel?: string;              // real API model: deepseek-v4-pro | deepseek-v4-flash
   stream?: boolean;
   maxTokens?: number;
 }) {
-  // The real API model: an explicit, VALID apiModel (the deep/fast → reasoner/chat
+  // The real API model: an explicit, VALID apiModel (the deep/fast → v4-pro/v4-flash
   // choice) overrides the env default. Unknown values fall back to env so a bad
-  // value never 400s the provider. The stale UI-label ids ("deepseek-v4-pro" …)
-  // are NOT valid API names and would 400 — never send them.
+  // value never 400s the provider.
   const model = isValidApiModel(input.apiModel) ? input.apiModel : getDeepSeekConfig().model;
-  const isReasoner = model === "deepseek-reasoner";
+  const isDeepThinking = model === "deepseek-v4-pro";
 
   return {
     model,
@@ -100,11 +100,12 @@ export function buildDeepSeekPayload(input: {
       ...normalizeConversationForProvider(input.messages)
     ],
     temperature: 0.5,
-    // reasoner spends tokens on the hidden chain-of-thought too, so give it room.
-    max_tokens: input.maxTokens ?? (isReasoner ? 1600 : 900),
+    // The thinking tier spends tokens on the hidden chain-of-thought too (counts
+    // toward max_tokens), so give it room for CoT + a full answer.
+    max_tokens: input.maxTokens ?? (isDeepThinking ? 8192 : 900),
     stream: input.stream ?? true,
-    // reasoner reasons inherently — omit the thinking-disable it would reject.
-    ...(isReasoner ? {} : { thinking: { type: "disabled" as const } })
+    // deep → think before answering; fast → no chain-of-thought, quicker reply.
+    thinking: { type: isDeepThinking ? "enabled" : "disabled" }
   } satisfies DeepSeekPayload;
 }
 
@@ -136,9 +137,10 @@ async function requestDeepSeek(payload: DeepSeekPayload) {
     throw new Error("Missing DEEPSEEK_API_KEY");
   }
 
-  // deepseek-reasoner thinks before any token and can take 15-40s; 30s would
-  // often abort it (→ fallback, reads as broken). Keep it under route maxDuration (60s).
-  const timeoutMs = payload.model === "deepseek-reasoner" ? 55_000 : 30_000;
+  // deepseek-v4-pro thinks before any token and can take tens of seconds; 30s
+  // would often abort it (→ fallback, reads as broken). Keep it under the route
+  // maxDuration (60s).
+  const timeoutMs = payload.model === "deepseek-v4-pro" ? 55_000 : 30_000;
   const { controller, clear } = withTimeout(timeoutMs);
 
   try {

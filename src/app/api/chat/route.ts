@@ -260,7 +260,7 @@ export async function POST(request: Request) {
     systemPrompt,
     messages,
     model,
-    apiModel: resolveApiModelForPace(body.pace), // deep→reasoner, fast→chat
+    apiModel: resolveApiModelForPace(body.pace), // deep→v4-pro, fast→v4-flash
     stream: true
   });
 
