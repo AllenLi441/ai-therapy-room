@@ -8,11 +8,12 @@ export function textStreamFromString(text: string) {
   });
 }
 
-export function streamTextResponse(stream: ReadableStream<Uint8Array>) {
+export function streamTextResponse(stream: ReadableStream<Uint8Array>, extraHeaders?: Record<string, string>) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store",
+      ...extraHeaders
     }
   });
 }

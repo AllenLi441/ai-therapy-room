@@ -67,4 +67,26 @@ describe("chat route — safety branch ordering", () => {
     const text = await bodyText([{ role: "user", content: "我突然胸口剧痛，喘不上气，话也说不清。" }]);
     expect(text).toContain("先把身体风险放在前面");
   });
+
+  // v2: once in an active crisis session, a triggering follow-up must NOT re-dump
+  // the identical static template (robotic / re-traumatizing). It should fall
+  // through to the contextual model path while the crisis banner stays up so the
+  // real hotlines remain one tap away (deterministic floor).
+  it("does NOT re-dump the suicide-concern template on a follow-up while already in crisis", async () => {
+    const res = await POST(
+      chatRequest([
+        { role: "user", content: "如果我不在了，大家应该会轻松一点。" },
+        { role: "assistant", content: "这句话我会认真对待。……（先前已发过的危机回复）" },
+        { role: "user", content: "我还是觉得活着没意思。" }
+      ])
+    );
+    const text = await res.text();
+    expect(text).not.toContain("这句话我会认真对待"); // template not repeated verbatim
+    expect(res.headers.get("X-Crisis-Triggered")).toBe("1"); // banner persists → resources reachable
+  });
+
+  it("first-contact suicide concern still DOES return the template (engage only kicks in on follow-ups)", async () => {
+    const text = await bodyText([{ role: "user", content: "如果我不在了，大家应该会轻松一点。" }]);
+    expect(text).toContain("这句话我会认真对待");
+  });
 });
