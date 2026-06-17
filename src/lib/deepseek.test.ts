@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildDeepSeekPayload, getDeepSeekConfig, normalizeConversationForProvider } from "./deepseek";
+import { resolveApiModelForPace } from "./model-options";
 import type { ChatMessage } from "./types";
 
 const u = (content: string): ChatMessage => ({ role: "user", content });
@@ -15,8 +16,8 @@ describe("deepseek config and payload", () => {
     expect(config.baseUrl).toBe("https://api.deepseek.com");
   });
 
-  it("builds an OpenAI-compatible chat payload", () => {
-    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-v5.5-flash");
+  it("builds an OpenAI-compatible chat payload (valid env model passes through)", () => {
+    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-v4-pro");
 
     const payload = buildDeepSeekPayload({
       systemPrompt: "system",
@@ -24,10 +25,36 @@ describe("deepseek config and payload", () => {
       stream: true
     });
 
-    expect(payload.model).toBe("deepseek-v5.5-flash");
+    expect(payload.model).toBe("deepseek-v4-pro");
     expect(payload.messages[0]).toEqual({ role: "system", content: "system" });
     expect(payload.messages[1]).toEqual({ role: "user", content: "你好" });
     expect(payload.stream).toBe(true);
+  });
+});
+
+describe("deep/fast → real model switch (A)", () => {
+  it("maps pace to a VALID API model: deep→v4-pro, fast→v4-flash, default→deep", () => {
+    expect(resolveApiModelForPace("deep")).toBe("deepseek-v4-pro");
+    expect(resolveApiModelForPace("fast")).toBe("deepseek-v4-flash");
+    expect(resolveApiModelForPace(undefined)).toBe("deepseek-v4-pro");
+  });
+
+  it("payload honors a valid apiModel; deep (v4-pro) thinks + gets more tokens", () => {
+    vi.stubEnv("DEEPSEEK_MODEL", "");
+    const deep = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-v4-pro" });
+    expect(deep.model).toBe("deepseek-v4-pro");
+    expect(deep.thinking).toEqual({ type: "enabled" });
+    expect(deep.max_tokens).toBeGreaterThan(900);
+
+    const fast = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-v4-flash" });
+    expect(fast.model).toBe("deepseek-v4-flash");
+    expect(fast.thinking).toEqual({ type: "disabled" });
+  });
+
+  it("a bogus apiModel falls back to the safe default — never sent to the API", () => {
+    vi.stubEnv("DEEPSEEK_MODEL", "");
+    const payload = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-reasoner" });
+    expect(payload.model).toBe("deepseek-v4-flash");
   });
 });
 
@@ -80,7 +107,7 @@ describe("normalizeConversationForProvider", () => {
   });
 
   it("is applied inside buildDeepSeekPayload so the provider never sees a leading assistant", () => {
-    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-v5.5-flash");
+    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-v4-flash");
     const payload = buildDeepSeekPayload({
       systemPrompt: "system",
       messages: [a("欢迎语"), u("我想聊聊"), a("好的"), a("已切换人设"), u("现在呢")]

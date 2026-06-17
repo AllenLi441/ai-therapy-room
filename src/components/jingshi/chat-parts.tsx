@@ -113,6 +113,13 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
           {hasText && <span className="bubble-text">{m.content}</span>}
           {m.streaming && m.content === "" && <Thinking startedAt={m.startedAt} lang={lang} />}
           {m.streaming && m.content !== "" && <span className="caret" />}
+          {m.streaming && m.content !== "" && (
+            <span className="stream-progress" aria-hidden="true">
+              {/* width tracks REAL arrived characters (asymptotic, no known total) —
+                  never a fake countdown/fill; the bar disappears when streaming ends. */}
+              <i style={{ width: `${Math.round((1 - Math.exp(-m.content.length / 360)) * 95)}%` }} />
+            </span>
+          )}
         </div>
         {m.errored && onRetry && (
           <button className="retry-btn" onClick={() => onRetry(m.id)}>

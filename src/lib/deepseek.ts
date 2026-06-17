@@ -1,6 +1,7 @@
 import type { ChatMessage } from "./types";
 import {
   getPipelineMode,
+  isValidApiModel,
   resolveApiModel,
   resolveDeepSeekModel,
   type DeepSeekModelId,
@@ -18,8 +19,11 @@ type DeepSeekPayload = {
   temperature: number;
   max_tokens: number;
   stream: boolean;
-  thinking: {
-    type: "disabled";
+  // Thinking-mode toggle (DeepSeek defaults to enabled). We set it explicitly:
+  // deep tier (v4-pro) → enabled (reasons before answering); fast tier (v4-flash)
+  // → disabled (quicker, no chain-of-thought).
+  thinking?: {
+    type: "enabled" | "disabled";
   };
 };
 
@@ -78,14 +82,16 @@ export function normalizeConversationForProvider(messages: ChatMessage[]) {
 export function buildDeepSeekPayload(input: {
   systemPrompt: string;
   messages: ChatMessage[];
-  model?: DeepSeekModelId;
+  model?: DeepSeekModelId;        // legacy UI-label, ignored (kept for callers)
+  apiModel?: string;              // real API model: deepseek-v4-pro | deepseek-v4-flash
   stream?: boolean;
   maxTokens?: number;
 }) {
-  // Send the REAL DeepSeek API model (env DEEPSEEK_MODEL, default "deepseek-chat").
-  // The UI-label ids ("deepseek-v5.5-pro" …) are NOT valid API model names — passing
-  // them made the provider 400 and fall back, which read as slowness.
-  const model = getDeepSeekConfig().model;
+  // The real API model: an explicit, VALID apiModel (the deep/fast → v4-pro/v4-flash
+  // choice) overrides the env default. Unknown values fall back to env so a bad
+  // value never 400s the provider.
+  const model = isValidApiModel(input.apiModel) ? input.apiModel : getDeepSeekConfig().model;
+  const isDeepThinking = model === "deepseek-v4-pro";
 
   return {
     model,
@@ -94,9 +100,12 @@ export function buildDeepSeekPayload(input: {
       ...normalizeConversationForProvider(input.messages)
     ],
     temperature: 0.5,
-    max_tokens: input.maxTokens ?? 900,
+    // The thinking tier spends tokens on the hidden chain-of-thought too (counts
+    // toward max_tokens), so give it room for CoT + a full answer.
+    max_tokens: input.maxTokens ?? (isDeepThinking ? 8192 : 900),
     stream: input.stream ?? true,
-    thinking: { type: "disabled" }
+    // deep → think before answering; fast → no chain-of-thought, quicker reply.
+    thinking: { type: isDeepThinking ? "enabled" : "disabled" }
   } satisfies DeepSeekPayload;
 }
 
@@ -128,7 +137,11 @@ async function requestDeepSeek(payload: DeepSeekPayload) {
     throw new Error("Missing DEEPSEEK_API_KEY");
   }
 
-  const { controller, clear } = withTimeout(30_000);
+  // deepseek-v4-pro thinks before any token and can take tens of seconds; 30s
+  // would often abort it (→ fallback, reads as broken). Keep it under the route
+  // maxDuration (60s).
+  const timeoutMs = payload.model === "deepseek-v4-pro" ? 55_000 : 30_000;
+  const { controller, clear } = withTimeout(timeoutMs);
 
   try {
     const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {

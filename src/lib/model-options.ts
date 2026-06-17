@@ -1,9 +1,8 @@
-// The chat always talks to ONE real DeepSeek model (deepseek-chat by default;
-// override with the DEEPSEEK_MODEL env var). The picker in the UI does NOT choose
-// a model — it chooses the SESSION PACE, i.e. how much of our own pipeline runs:
-//   deep → full plan + review pipeline (more considered, a little slower)
-//   fast → skip the review pass for a quicker reply
-// Both paces use the same underlying model.
+// The chat talks to a real DeepSeek model chosen by SESSION PACE:
+//   deep → deepseek-v4-pro   + full plan/review pipeline (more considered, slower)
+//   fast → deepseek-v4-flash + skip the review pass (quicker)
+// The env var DEEPSEEK_MODEL still sets the model for non-pace callers (e.g. the
+// summary route) and as a fallback; it defaults to the fast tier.
 export const SESSION_PACE_OPTIONS = [
   {
     id: "deep",
@@ -35,20 +34,31 @@ export function getPipelineMode(pace: unknown): ModelPipelineMode {
   return resolveSessionPace(pace) === "fast" ? "fast" : "deep";
 }
 
-// The real DeepSeek API model name. Driven entirely by env; never coerced to a UI
-// label, so DEEPSEEK_MODEL=deepseek-chat (or deepseek-reasoner) reaches the API as-is.
-export const DEFAULT_DEEPSEEK_API_MODEL = "deepseek-chat";
+// The real DeepSeek API model name (env-driven; used by the summary route and as
+// the chat fallback). Defaults to the cheap fast tier.
+export const DEFAULT_DEEPSEEK_API_MODEL = "deepseek-v4-flash";
 
-// The real DeepSeek chat-completions API only accepts "deepseek-chat" (fast) and
-// "deepseek-reasoner" (slow, reasoning). Any other value — including the UI labels
-// our .env.example used to suggest ("deepseek-v4-pro" …) — would 400 and make the
-// chat fall back, which reads as being slow/broken. So coerce anything unknown to
-// the fast default instead of trusting a stale env value.
-const VALID_API_MODELS = new Set(["deepseek-chat", "deepseek-reasoner"]);
+// Current DeepSeek API models: "deepseek-v4-flash" (fast) and "deepseek-v4-pro"
+// (the 1.6T reasoning tier). Legacy aliases "deepseek-chat"/"deepseek-reasoner"
+// are deprecated 2026-07-24 (both map to v4-flash's non-thinking/thinking modes),
+// so we standardize on the v4 names and coerce anything unknown to the fast
+// default rather than 400 the provider.
+const VALID_API_MODELS = new Set(["deepseek-v4-pro", "deepseek-v4-flash"]);
 
 export function resolveApiModel(): string {
   const fromEnv = process.env.DEEPSEEK_MODEL?.trim();
   return fromEnv && VALID_API_MODELS.has(fromEnv) ? fromEnv : DEFAULT_DEEPSEEK_API_MODEL;
+}
+
+export function isValidApiModel(value: unknown): value is string {
+  return typeof value === "string" && VALID_API_MODELS.has(value);
+}
+
+// The deep/fast toggle selects a REAL model: deep = deepseek-v4-pro (the 1.6T
+// reasoning model, deeper + slower + pricier), fast = deepseek-v4-flash (quicker,
+// cheaper). Both are current DeepSeek API model names.
+export function resolveApiModelForPace(pace: unknown): string {
+  return resolveSessionPace(pace) === "fast" ? "deepseek-v4-flash" : "deepseek-v4-pro";
 }
 
 // ── RECOVERY RECONCILIATION (2026-06-13) ──────────────────────────────────────
