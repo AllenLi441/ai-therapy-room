@@ -14,7 +14,8 @@
     "w1:append-seeds": "node scripts/append-w1-seeds.mjs",
     "w1:loop": "npm run eval:find-fp-fn && npm run w1:preannotate && npm run w1:append-seeds",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:ratchet": "node scripts/ci/test-ratchet.mjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",
