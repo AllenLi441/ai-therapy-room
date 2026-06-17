@@ -148,28 +148,13 @@ export async function POST(request: Request) {
     });
   }
 
-  if (risk.flags.includes("medication_request")) {
-    logFireAndForget("lexicon_medication", stubImplicit, stubDecision);
-    return new Response(textStreamFromString(createMedicationBoundaryResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
-    });
-  }
+  // NOTE: medication / diagnosis / medical_red_flag boundary replies USED to short-
+  // circuit here, before the LLM judge ran. That let a brittle keyword match (e.g.
+  // "安眠药" in "我把整瓶安眠药都吞了") pre-empt a real crisis. They now run AFTER the
+  // judge (below), so danger judgment wins; see the reordered branches past the
+  // implicit block.
 
-  if (risk.flags.includes("diagnosis_request")) {
-    logFireAndForget("lexicon_diagnosis", stubImplicit, stubDecision);
-    return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
-    });
-  }
-
-  if (risk.flags.includes("medical_red_flag")) {
-    logFireAndForget("lexicon_medical_red_flag", stubImplicit, stubDecision);
-    return new Response(textStreamFromString(createMedicalRedFlagResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
-    });
-  }
-
-  // -------- Implicit-risk layer (LLM semantic detection) --------
+  // -------- Implicit-risk layer (LLM semantic detection) — now PRIMARY danger judge --------
   //
   // The lexicon catches explicit signals. The synthesis in
   // docs/model-quality-evaluation-2026-05-14.md and the broader research
@@ -179,8 +164,9 @@ export async function POST(request: Request) {
   // front of a subtly-suicidal user.
   //
   // Order-of-effects:
-  //   - Lexicon-handled branches above ALREADY returned. We only reach
-  //     here when the explicit layer thinks the message is benign.
+  //   - Only the explicit CRISIS / suicide_concern floor returned above.
+  //     medication / diagnosis / medical_red_flag are deferred to AFTER this
+  //     judge, so danger judgment can override a brittle keyword short-circuit.
   //   - assessImplicitRiskWithLLM looks at the last 8 turns, returns a
   //     three-layer assessment (C-SSRS severity + pragmatic form +
   //     modifiers), and tags evidence spans.
@@ -227,6 +213,32 @@ export async function POST(request: Request) {
         "X-Risk-Level": "medium",
         "X-Implicit-Risk-Source": implicitDecision.source
       }
+    });
+  }
+
+  // Reordered scope-boundary replies — reached only AFTER the danger judge cleared
+  // the message. Had the judge seen danger it already returned crisis/suicide_concern
+  // above, so "我把整瓶安眠药都吞了" can no longer be short-circuited into a medication
+  // reply. medical_red_flag reads mergedRisk so the JUDGE (not only the lexicon) can
+  // raise it.
+  if (risk.flags.includes("medication_request")) {
+    logFireAndForget("lexicon_medication", implicitOutcome, implicitDecision);
+    return new Response(textStreamFromString(createMedicationBoundaryResponse(language)), {
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+    });
+  }
+
+  if (risk.flags.includes("diagnosis_request")) {
+    logFireAndForget("lexicon_diagnosis", implicitOutcome, implicitDecision);
+    return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language)), {
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+    });
+  }
+
+  if (mergedRisk.flags.includes("medical_red_flag")) {
+    logFireAndForget("lexicon_medical_red_flag", implicitOutcome, implicitDecision);
+    return new Response(textStreamFromString(createMedicalRedFlagResponse(language)), {
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
 

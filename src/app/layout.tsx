@@ -18,6 +18,10 @@ export const viewport: Viewport = {
 // Set theme/lang before paint to avoid a flash (mirrors the prototype's keys).
 const initScript = `(function(){try{var t=localStorage.getItem('js_theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var l=localStorage.getItem('js_lang');document.documentElement.lang=(l==='en')?'en':'zh';}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`;
 
+// Build marker (shown bottom-right) so a deploy can be visually confirmed live.
+// VERCEL_GIT_COMMIT_SHA is injected per-deploy on Vercel; falls back to "dev" locally.
+const BUILD_ID = (process.env.VERCEL_GIT_COMMIT_SHA ?? "dev").slice(0, 7);
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh" suppressHydrationWarning>
@@ -30,7 +34,26 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
         <script dangerouslySetInnerHTML={{ __html: initScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <span
+          aria-hidden
+          style={{
+            position: "fixed",
+            right: 8,
+            bottom: 6,
+            zIndex: 50,
+            fontSize: 10,
+            lineHeight: 1,
+            letterSpacing: "0.3px",
+            color: "rgba(130,130,130,0.5)",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            pointerEvents: "none"
+          }}
+        >
+          {`build ${BUILD_ID}`}
+        </span>
+      </body>
     </html>
   );
 }

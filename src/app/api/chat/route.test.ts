@@ -1,5 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
+import { assessImplicitRiskWithLLM } from "@/lib/implicit-risk";
+
+// The danger judge (Kimi) needs an API key, so it cannot run in unit tests. Mock it
+// to prove the reorder deterministically — when the JUDGE flags danger it must win
+// over a brittle medication-keyword match. Default = not_configured, so every other
+// (lexicon-only) test behaves exactly like production-without-a-key.
+vi.mock("@/lib/implicit-risk", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/implicit-risk")>();
+  return {
+    ...actual,
+    assessImplicitRiskWithLLM: vi.fn(async () => ({ kind: "not_configured" as const }))
+  };
+});
+const mockedJudge = vi.mocked(assessImplicitRiskWithLLM);
 
 /**
  * Branch-order regression tests for the chat route.
@@ -34,6 +48,21 @@ describe("chat route — safety branch ordering", () => {
   });
 
   it("overdose disclosure (P0 fix) routes to CRISIS, not medication boundary", async () => {
+    // Lexicon alone matched only "安眠药" → medication. The danger judge recognizes the
+    // overdose; the reorder runs the judge BEFORE the medication branch so danger wins.
+    // (Judge needs a Kimi key in prod; mocked here to a post-attempt disclosure.)
+    mockedJudge.mockResolvedValueOnce({
+      kind: "ok",
+      result: {
+        severity: "post_attempt_disclosure",
+        pragmatic: "self",
+        modifiers: ["means_capability"],
+        evidence: ["把整瓶安眠药都吞了"],
+        confidence: 0.95,
+        suggestedFlags: [],
+        rationale: "explicit overdose disclosure"
+      }
+    });
     const text = await bodyText([{ role: "user", content: "我刚刚把整瓶安眠药都吞了。" }]);
     expect(text).toContain("危险信号");
     expect(text).not.toContain("不能给你推荐药名、剂量");
