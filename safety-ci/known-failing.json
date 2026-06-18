@@ -1,6 +1,5 @@
 [
   "api/chat/route.test.ts::chat route — safety branch ordering medical red flag (P0 colloquial fix) routes to medical-first, not psychologized",
-  "api/chat/route.test.ts::chat route — safety branch ordering overdose disclosure (P0 fix) routes to CRISIS, not medication boundary",
   "src/lib/_concurrent-p3-compat.test.ts::concurrent P3 compat probe chain of separators",
   "src/lib/_concurrent-p3-compat.test.ts::concurrent P3 compat probe ellipsis in 想死",
   "src/lib/_concurrent-p3-compat.test.ts::concurrent P3 compat probe fullwidth english",
