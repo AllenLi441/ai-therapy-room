@@ -247,7 +247,7 @@ export async function POST(request: Request) {
   const plan = body.turnPlan ?? defaultTurnPlan();
   const caseMap = body.caseMap ?? null;
 
-  const knowledge = retrieveKnowledge(
+  const knowledge = await retrieveKnowledge(
     [
       body.profile?.concern,
       latestUserMessage.content,

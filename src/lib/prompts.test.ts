@@ -7,11 +7,11 @@ import { assessRisk } from "./safety";
 import { emptyCaseMap } from "./types";
 
 describe("buildCounselorSystemPrompt", () => {
-  it("injects boundaries, profile, safety, knowledge, turn plan, and case map", () => {
+  it("injects boundaries, profile, safety, knowledge, turn plan, and case map", async () => {
     const prompt = buildCounselorSystemPrompt({
       profile: { nickname: "小林", concern: "焦虑压力", intensity: 7 },
       risk: assessRisk("最近很焦虑"),
-      knowledge: retrieveKnowledge("焦虑 心慌"),
+      knowledge: await retrieveKnowledge("焦虑 心慌"),
       caseMap: {
         ...emptyCaseMap(),
         presenting: "工作压力下持续焦虑",
