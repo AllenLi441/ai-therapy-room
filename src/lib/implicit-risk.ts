@@ -208,6 +208,14 @@ const CLASSIFIER_SYSTEM = [
   "CN-I5 「焦虑到心跳很快、手发麻，感觉要出事，但我知道当下没有真实危险。」 → none, self（惊恐/躯体化，不是自杀意念；对照 EN-I5）。",
   "",
   "═══════════════════════════════════════════════════════════════",
+  "**身体急症红旗（与自杀严重度独立 —— severity 可为 none，但要在 suggested_flags 加 'medical_red_flag'）：**",
+  "═══════════════════════════════════════════════════════════════",
+  "",
+  "MED-1 「我突然胸口剧痛，喘不上气，话也说不清。」 → severity=none, pragmatic=self, suggested_flags=[medical_red_flag]（疑似急性心脏/神经急症，先导向医疗，不要当成惊恐而心理化）。",
+  "MED-2 「这两天一直胸闷、有点喘，第一次这样。」 → severity=none, pragmatic=self, suggested_flags=[medical_red_flag]（首次发作的胸闷气短，身体红旗）。",
+  "MED-3 (benign) 「最近老头疼，可能没睡好。」 → severity=none, pragmatic=self, suggested_flags=[]（普通躯体不适，不是急症红旗，不要标 medical_red_flag）。",
+  "",
+  "═══════════════════════════════════════════════════════════════",
   "**ENGLISH COVERAGE — apply the SAME schema / severity / pragmatic logic to English input.**",
   "═══════════════════════════════════════════════════════════════",
   "",
@@ -258,6 +266,7 @@ const CLASSIFIER_SYSTEM = [
   "5. **evidence 必须直接引用用户原话**，最多 3 条，每条不超过 60 字。可以引用早期轮次的话，不只是最后一条。",
   "6. **rationale 必须 < 120 字**，说明判断理由，并指出是单条触发还是累积触发。",
   "7. **suggested_flags**：当 severity ∈ {passive_death_wish, suicidal_ideation, plan_preparation, imminent_acute, post_attempt_disclosure} 且 pragmatic=self → 必须加 'suicide_concern' 标志。其他情况留空。",
+  "7b. **medical_red_flag（身体急症，独立于自杀判断）**：若消息描述疑似身体急症——胸痛/胸口剧痛、突发或持续呼吸困难/喘不上气、晕厥/意识模糊、疑似中风（一侧无力/说话不清/口角歪斜）、首次剧烈发作、孕期急症等——在 suggested_flags 加 'medical_red_flag'（severity 可独立为 none，pragmatic=self）。只标当下疑似急症；普通躯体不适（轻微头痛、偶尔心慌、慢性老毛病）不要标。",
   "8. **疑似未成年人优先保护**：出现 在校/年级/'班主任'/'爸妈不让/会骂'/'未成年'/年龄 12–17 岁 等线索，且同时有任何自伤、被动死亡愿望或绝望信号时 → 阈值放低、severity 至少按 MEDIUM 处理并倾向上调一级（青少年高冲动、求助意愿低），suggested_flags 照常加 'suicide_concern'。严格区分：用户本人是未成年→据此升级（pragmatic=self）；用户是老师/家长在谈孩子→pragmatic=other，不据此升级。",
   "",
   "C-SSRS 严重度等级 (severity 字段)：",
@@ -367,10 +376,13 @@ function parseImplicitOutput(raw: string): ImplicitRiskAssessment | null {
 
 function formatConversation(messages: ChatMessage[]) {
   return messages
-    .slice(-8)
+    // Widen the judge's window 8→14 turns and the per-message cap 600→1200 chars,
+    // so slowly-accumulating, cross-turn risk trajectories aren't truncated away
+    // before the classifier can add them up.
+    .slice(-14)
     .map((message) => {
       const speaker = message.role === "user" ? "来访者" : "AI";
-      return `${speaker}：${message.content.slice(0, 600)}`;
+      return `${speaker}：${message.content.slice(0, 1200)}`;
     })
     .join("\n");
 }

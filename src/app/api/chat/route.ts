@@ -261,6 +261,15 @@ export async function POST(request: Request) {
     4
   );
 
+  // Long-conversation memory: keep recent turns verbatim within the char budget,
+  // and inject a compact digest of the EARLIER user statements (names, facts,
+  // safety-relevant history) so they survive once the conversation scrolls past the
+  // recent window instead of being silently dropped. Wires up the chat-window
+  // machinery that existed but was previously unused. Short chats: recent = all,
+  // digest = "" → no change. (The danger judge still sees full history separately.)
+  const recentMessages = takeRecentWithinBudget(messages);
+  const earlierUserContext = buildEarlierUserDigest(messages, recentMessages.length);
+
   // Stay in safety mode during a recent-crisis window WITHOUT re-sending the
   // template: the model gets danger-level guidance, but the reply stays natural.
   const promptRisk = crisisModeActive ? activateCrisisSessionRisk(mergedRisk) : mergedRisk;
@@ -274,12 +283,13 @@ export async function POST(request: Request) {
     scaleResults: body.scaleResults,
     persona,
     pace: resolveSessionPace(body.pace),
-    language
+    language,
+    earlierUserContext
   });
 
   const payload = buildDeepSeekPayload({
     systemPrompt,
-    messages,
+    messages: recentMessages,
     model,
     apiModel: resolveApiModelForPace(body.pace), // deep→v4-pro, fast→v4-flash
     stream: true

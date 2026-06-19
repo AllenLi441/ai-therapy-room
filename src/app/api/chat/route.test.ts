@@ -93,6 +93,21 @@ describe("chat route — safety branch ordering", () => {
   });
 
   it("medical red flag (P0 colloquial fix) routes to medical-first, not psychologized", async () => {
+    // Colloquial body emergency the lexicon misses ("胸口剧痛" ≠ "胸口痛"). The judge
+    // recognizes it and suggests medical_red_flag; merge adds it (pragmatic=self) →
+    // the post-judge medical branch routes medical-first. (Judge needs a key in prod.)
+    mockedJudge.mockResolvedValueOnce({
+      kind: "ok",
+      result: {
+        severity: "none",
+        pragmatic: "self",
+        modifiers: [],
+        evidence: ["胸口剧痛，喘不上气"],
+        confidence: 0.8,
+        suggestedFlags: ["medical_red_flag"],
+        rationale: "suspected acute cardiac/neuro emergency"
+      }
+    });
     const text = await bodyText([{ role: "user", content: "我突然胸口剧痛，喘不上气，话也说不清。" }]);
     expect(text).toContain("先把身体风险放在前面");
   });
