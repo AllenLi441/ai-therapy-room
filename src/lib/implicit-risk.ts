@@ -376,13 +376,15 @@ function parseImplicitOutput(raw: string): ImplicitRiskAssessment | null {
 
 function formatConversation(messages: ChatMessage[]) {
   return messages
-    // Widen the judge's window 8→14 turns and the per-message cap 600→1200 chars,
-    // so slowly-accumulating, cross-turn risk trajectories aren't truncated away
-    // before the classifier can add them up.
+    // Widen the judge's window 8→14 turns so slowly-accumulating, cross-turn risk
+    // trajectories aren't truncated away before the classifier can add them up.
+    // Per-message cap kept lean (800) on purpose: the classifier is latency-bound
+    // (see the 12s timeout) and a fat window can overflow an 8k model — set
+    // KIMI_MODEL=moonshot-v1-32k in prod for real headroom.
     .slice(-14)
     .map((message) => {
       const speaker = message.role === "user" ? "来访者" : "AI";
-      return `${speaker}：${message.content.slice(0, 1200)}`;
+      return `${speaker}：${message.content.slice(0, 800)}`;
     })
     .join("\n");
 }
@@ -396,7 +398,11 @@ export type ImplicitOutcome =
 
 export async function assessImplicitRiskWithLLM(
   messages: ChatMessage[],
-  timeoutMs = 5_000
+  // Raised 5s→12s after a live eval: real classifier calls (300-line prompt + JSON,
+  // ~320 tokens out) measured ~6s, so the old 5s cap was timing out ~40% of calls →
+  // implicit-ideation cases the lexicon can't catch were being released (missed).
+  // 12s lets the call complete while staying well under the route's 60s maxDuration.
+  timeoutMs = 12_000
 ): Promise<ImplicitOutcome> {
   if (!isKimiConfigured()) {
     return { kind: "not_configured" };
