@@ -556,9 +556,66 @@ export function createSuicideConcernResponse(language: AppLanguage = "zh") {
   ].join("\n");
 }
 
+/**
+ * Deterministic crisis resource block (③ AI-tailored crisis). Appended verbatim
+ * AFTER an AI-generated crisis reply so the real hotlines + the structured safety
+ * check are GUARANTEED present even if the model's words omit them. Every number and
+ * the number-check are reused unchanged from the vetted templates above — no new
+ * clinical wording is introduced here.
+ */
+export function createCrisisResourceBlock(
+  mode: "crisis" | "suicide_concern",
+  language: AppLanguage = "zh"
+): string {
+  if (language === "en") {
+    const lines =
+      mode === "crisis"
+        ? [
+            "━━━━━━━━",
+            "Either way, these are here anytime:",
+            `· Immediate danger: in mainland China call ${CN_EMS}, or the ${PSYCH} psychological support line. US/Canada ${INTL_RESOURCES.usCrisis} or ${INTL_RESOURCES.usEmergency}.`,
+            "If you can reply, send only one number: 1=I moved dangerous items away, 2=someone is with me, 3=I am about to call, 4=I cannot do this right now.",
+            "I can stay with you for these few minutes, but this is not emergency rescue and cannot replace in-person help."
+          ]
+        : [
+            "━━━━━━━━",
+            `Either way, these are here anytime: in mainland China call ${CN_EMS} or the ${PSYCH} line; US/Canada ${INTL_RESOURCES.usCrisis}/${INTL_RESOURCES.usEmergency}.`,
+            "You can reply with only one number: 1=I am safe but in a lot of pain, 2=I have thoughts of hurting myself but no plan, 3=I have a plan or method nearby, 4=I am not sure. If it is 3 or 4, please contact real-world help first."
+          ];
+    return lines.join("\n");
+  }
+
+  const lines =
+    mode === "crisis"
+      ? [
+          "━━━━━━━━",
+          "无论如何，这些随时可用：",
+          `· 紧急危险：中国大陆拨 ${CN_EMS}；全国心理援助热线 ${PSYCH}。`,
+          `· 补充：北京心理援助 ${CN_SUPPLEMENTAL.beijing}、希望24 ${CN_SUPPLEMENTAL.hope24}。`,
+          "如果你能回复，请只回一个数字：1=我已移开危险物品，2=我身边有人，3=我准备打电话，4=我现在做不到。",
+          "我可以陪你眼前这几分钟，但这不是紧急救援，也不能替代线下专业帮助。"
+        ]
+      : [
+          "━━━━━━━━",
+          `无论如何，这些随时可用：中国大陆拨 ${CN_EMS}；全国心理援助热线 ${PSYCH}。补充：北京 ${CN_SUPPLEMENTAL.beijing}、希望24 ${CN_SUPPLEMENTAL.hope24}。`,
+          "如果你能回复，请只回一个数字：1=我现在安全但很痛苦，2=有伤害自己的念头但没计划，3=有计划或工具在身边，4=我不确定。如果是 3 或 4，请先联系现实帮助。"
+        ];
+  return lines.join("\n");
+}
+
 export function getRiskInstruction(assessment: RiskAssessment) {
   if (assessment.level === "high") {
-    return "高风险：必须停止普通咨询式回应，优先危机干预和现实求助。";
+    // Crisis-generation guidance (③): the model writes a TAILORED reply to someone
+    // who may be about to hurt themselves. The deterministic hotline block is
+    // appended by the route, so the model need not list numbers itself.
+    return [
+      "高风险危机——你不是在做普通咨询，是在陪一个可能要伤害自己的人度过眼前几分钟：",
+      "1. 先用一两句贴着对方刚说的话回应，具体说中此刻最重的那个感受（用对方的词，不要套话、不要复读模板）。",
+      "2. 不分析原因、不讲机制、不堆建议、不追问过去。",
+      "3. 温和把注意力引向「眼前安全」和「联系现实中的人」。",
+      "4. 不评判、不说教、不承诺一切会好、不替对方做决定；保持短。",
+      "5. 真实热线和安全步骤会由系统在你这段话后面自动附上，你不必自己列号码。"
+    ].join("\n");
   }
 
   if (assessment.level === "medium") {

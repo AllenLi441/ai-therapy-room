@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { assessImplicitRiskWithLLM } from "@/lib/implicit-risk";
+import { generateDeepSeekText } from "@/lib/deepseek";
 
 // The danger judge (Kimi) needs an API key, so it cannot run in unit tests. Mock it
 // to prove the reorder deterministically — when the JUDGE flags danger it must win
@@ -14,6 +15,20 @@ vi.mock("@/lib/implicit-risk", async (importOriginal) => {
   };
 });
 const mockedJudge = vi.mocked(assessImplicitRiskWithLLM);
+
+// No DEEPSEEK key in unit tests → a crisis reply can't be model-generated. Default to
+// throwing so respondTailoredCrisis falls back to the vetted fixed template
+// (deterministic, env-independent). One test overrides it to exercise the AI path.
+vi.mock("@/lib/deepseek", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/deepseek")>();
+  return {
+    ...actual,
+    generateDeepSeekText: vi.fn(async () => {
+      throw new Error("no DEEPSEEK key in tests");
+    })
+  };
+});
+const mockedGen = vi.mocked(generateDeepSeekText);
 
 /**
  * Branch-order regression tests for the chat route.
@@ -130,7 +145,19 @@ describe("chat route — safety branch ordering", () => {
   });
 
   it("first-contact suicide concern still DOES return the template (engage only kicks in on follow-ups)", async () => {
+    // No key in tests → respondTailoredCrisis falls back to the fixed template, so the
+    // template text is what's asserted here. (With a key, prod sends an AI-tailored reply.)
     const text = await bodyText([{ role: "user", content: "如果我不在了，大家应该会轻松一点。" }]);
     expect(text).toContain("这句话我会认真对待");
+  });
+
+  it("③ first-contact crisis is AI-tailored but ALWAYS carries the real hotline (deterministic floor)", async () => {
+    // The model returns a tailored line that deliberately omits any hotline number.
+    mockedGen.mockResolvedValueOnce("我在这里，你刚说的那种撑不住，我听见了。");
+    const res = await POST(chatRequest([{ role: "user", content: "我想跳楼，活不下去了。" }]));
+    const text = await res.text();
+    expect(text).toContain("我在这里"); // tailored AI words, not a fixed template
+    expect(text).toContain("12356");   // the vetted hotline is appended regardless
+    expect(res.headers.get("X-Crisis-Triggered")).toBe("1");
   });
 });

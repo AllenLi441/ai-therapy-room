@@ -1,6 +1,6 @@
 import { appendDecisionLog, buildDecisionLogEntry, type DecisionRoute } from "@/lib/decision-log";
 import { sanitizeConversation } from "@/lib/conversation-window";
-import { buildDeepSeekPayload, createDeepSeekTextStream } from "@/lib/deepseek";
+import { buildDeepSeekPayload, createDeepSeekTextStream, generateDeepSeekText } from "@/lib/deepseek";
 import { streamTextResponse, textStreamFromString } from "@/lib/http";
 import {
   assessImplicitRiskWithLLM,
@@ -21,6 +21,7 @@ import {
   assessConversationRisk,
   assessRisk,
   createCrisisResponse,
+  createCrisisResourceBlock,
   createDiagnosisBoundaryResponse,
   createGentleCheckResponse,
   createMedicationBoundaryResponse,
@@ -36,6 +37,7 @@ import type {
   ChatMessage,
   AppLanguage,
   IntakeProfile,
+  RiskAssessment,
   ScaleResult,
   TurnPlan
 } from "@/lib/types";
@@ -127,7 +129,57 @@ export async function POST(request: Request) {
     ).catch(() => {});
   }
 
-  // Fire the full static crisis/suicide-concern template only on FIRST contact
+  // ③ AI-tailored crisis reply: instead of a fixed template, generate a reply that
+  // fits what the user actually said (under the crisis-safety prompt, fast tier,
+  // non-streaming so the deterministic resource block can be GUARANTEED-appended),
+  // then append the vetted hotline block. On ANY model failure / missing key, fall
+  // back to the existing fixed template — never degrades below the previous behavior.
+  async function respondTailoredCrisis(
+    mode: "crisis" | "suicide_concern",
+    decisionRisk: RiskAssessment,
+    source: string
+  ): Promise<Response> {
+    const headers: Record<string, string> = {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Crisis-Triggered": "1",
+      "X-Crisis-Source": source
+    };
+    const block = createCrisisResourceBlock(mode, language);
+    try {
+      const recent = takeRecentWithinBudget(messages);
+      const crisisPrompt = buildCounselorSystemPrompt({
+        profile: body.profile,
+        risk: activateCrisisSessionRisk(decisionRisk),
+        knowledge: [],
+        caseMap: null,
+        turnPlan: defaultTurnPlan(),
+        scaleResults: body.scaleResults,
+        persona,
+        pace: resolveSessionPace(body.pace),
+        language,
+        earlierUserContext: buildEarlierUserDigest(messages, recent.length)
+      });
+      const payload = buildDeepSeekPayload({
+        systemPrompt: crisisPrompt,
+        messages: recent,
+        apiModel: "deepseek-v4-flash", // crisis: fast tier keeps the wait short
+        stream: false,
+        maxTokens: 500
+      });
+      const reply = (await generateDeepSeekText(payload)).trim();
+      if (!reply) throw new Error("empty crisis reply");
+      return new Response(textStreamFromString(`${reply}\n\n${block}`), { headers });
+    } catch {
+      const fallback =
+        mode === "crisis"
+          ? createCrisisResponse(decisionRisk, { language })
+          : createSuicideConcernResponse(language);
+      return new Response(textStreamFromString(fallback), { headers });
+    }
+  }
+
+  // Respond to a FIRST-contact crisis/suicide_concern with the AI-tailored reply only
   // (or a fresh re-escalation after exit/de-escalation — crisisModeActive is false
   // then). While ALREADY in an active crisis session, do NOT re-dump the identical
   // template on every triggering turn (robotic + re-traumatizing). Instead fall
@@ -136,16 +188,12 @@ export async function POST(request: Request) {
   // hotlines one tap away (X-Crisis-Triggered, set on the normal path below).
   if (risk.shouldEscalate && !crisisModeActive) {
     logFireAndForget("lexicon_crisis", stubImplicit, stubDecision);
-    return new Response(textStreamFromString(createCrisisResponse(risk, { continuation: crisisModeActive, language })), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Crisis-Triggered": "1" }
-    });
+    return await respondTailoredCrisis("crisis", risk, "lexicon");
   }
 
   if (risk.flags.includes("suicide_concern") && !crisisModeActive) {
     logFireAndForget("lexicon_suicide_concern", stubImplicit, stubDecision);
-    return new Response(textStreamFromString(createSuicideConcernResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Crisis-Triggered": "1" }
-    });
+    return await respondTailoredCrisis("suicide_concern", risk, "lexicon");
   }
 
   // NOTE: medication / diagnosis / medical_red_flag boundary replies USED to short-
@@ -190,30 +238,12 @@ export async function POST(request: Request) {
   if (implicitDecision.intercept && !crisisModeActive) {
     if (implicitDecision.mode === "crisis") {
       logFireAndForget("implicit_crisis", implicitOutcome, implicitDecision);
-      return new Response(
-        textStreamFromString(createCrisisResponse(mergedRisk, { continuation: crisisModeActive, language })),
-        {
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Cache-Control": "no-store",
-            "X-Risk-Level": "high",
-            "X-Crisis-Triggered": "1",
-            "X-Crisis-Source": implicitDecision.source
-          }
-        }
-      );
+      return await respondTailoredCrisis("crisis", mergedRisk, implicitDecision.source);
     }
     const route: DecisionRoute =
       implicitDecision.source === "fail_safe" ? "implicit_fail_safe" : "implicit_suicide_concern";
     logFireAndForget(route, implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createSuicideConcernResponse(language)), {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-store",
-        "X-Risk-Level": "medium",
-        "X-Implicit-Risk-Source": implicitDecision.source
-      }
-    });
+    return await respondTailoredCrisis("suicide_concern", mergedRisk, implicitDecision.source);
   }
 
   // Reordered scope-boundary replies — reached only AFTER the danger judge cleared
