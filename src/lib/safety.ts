@@ -651,11 +651,10 @@ export function createCrisisResourceBlock(
 }
 
 /**
- * §3 global safety footer (clinical review 2026-06-16, 陈思远): one minimal line
- * appended to EVERY non-crisis reply, so a deterministic help entry survives even
- * when BOTH detection layers fail (the single-point-of-failure the reviewer flagged).
- * Crisis/suicide replies already carry the full resource block, so they do NOT get
- * this (avoids duplicate hotlines). Minimal, action-oriented, de-stigmatized.
+ * Canonical one-line safety hotline (de-stigmatized, action-oriented). Shown to the
+ * user as a single dismissable notice below the chat (see the frontend); crisis /
+ * suicide replies carry the full resource block instead. Kept here as the server-side
+ * source of truth for the wording.
  */
 export function createGlobalSafetyFooter(language: AppLanguage = "zh"): string {
   if (language === "en") {

@@ -1,7 +1,7 @@
 import { appendDecisionLog, buildDecisionLogEntry, type DecisionRoute } from "@/lib/decision-log";
 import { sanitizeConversation } from "@/lib/conversation-window";
 import { buildDeepSeekPayload, createDeepSeekTextStream, generateDeepSeekText } from "@/lib/deepseek";
-import { appendToStream, streamTextResponse, textStreamFromString } from "@/lib/http";
+import { sanitizeReplyStream, streamTextResponse, textStreamFromString } from "@/lib/http";
 import {
   assessImplicitRiskWithLLM,
   decideImplicitIntercept,
@@ -24,7 +24,6 @@ import {
   createCrisisResourceBlock,
   createDiagnosisBoundaryResponse,
   createGentleCheckResponse,
-  createGlobalSafetyFooter,
   createMedicationBoundaryResponse,
   createMedicalRedFlagResponse,
   createMinorSupportLine,
@@ -84,9 +83,6 @@ export async function POST(request: Request) {
     return new Response("Missing user message", { status: 400 });
   }
   const latestUserText = latestUserMessage.content;
-  // §3 global safety footer — appended to every non-crisis reply (crisis replies
-  // already carry the full resource block, so the footer is not added there).
-  const safetyFooter = `\n\n${createGlobalSafetyFooter(language)}`;
 
   // Multi-turn aggregation: looks at last 4 user messages, not just current.
   // This is what catches the PDF gradient case (turn 1: 看着药盒 → turn 2:
@@ -263,21 +259,21 @@ export async function POST(request: Request) {
   // raise it.
   if (risk.flags.includes("medication_request")) {
     logFireAndForget("lexicon_medication", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createMedicationBoundaryResponse(language) + safetyFooter), {
+    return new Response(textStreamFromString(createMedicationBoundaryResponse(language)), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
 
   if (risk.flags.includes("diagnosis_request")) {
     logFireAndForget("lexicon_diagnosis", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language) + safetyFooter), {
+    return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language)), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
 
   if (mergedRisk.flags.includes("medical_red_flag")) {
     logFireAndForget("lexicon_medical_red_flag", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createMedicalRedFlagResponse(language) + safetyFooter), {
+    return new Response(textStreamFromString(createMedicalRedFlagResponse(language)), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
@@ -341,9 +337,9 @@ export async function POST(request: Request) {
   const crisisHeader = crisisModeActive ? { "X-Crisis-Triggered": "1" } : undefined;
 
   try {
-    return streamTextResponse(appendToStream(createAssistantTextStream(await createDeepSeekTextStream(payload)), safetyFooter), crisisHeader);
+    return streamTextResponse(sanitizeReplyStream(createAssistantTextStream(await createDeepSeekTextStream(payload))), crisisHeader);
   } catch {
-    return new Response(createProviderErrorFallback() + safetyFooter, {
+    return new Response(createProviderErrorFallback(), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...crisisHeader }
     });
   }

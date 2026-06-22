@@ -32,6 +32,7 @@ export function App() {
   const offeredScales = useRef<Set<string>>(new Set());
   const exitedCrisisRef = useRef(false); // user tapped "我没事了" → judge next msgs solo until new risk
   const [crisis, setCrisis] = useState(false);
+  const [safetyTipOff, setSafetyTipOff] = useState(false); // dismissed for this conversation
   // P3-a: completed self-check results (sent to /api/chat so they actually shape
   // the reply) + the accumulated case understanding (lazily fetched from /api/plan
   // when the drawer opens). Both persist on-device and are wiped by 一键彻底删除.
@@ -226,7 +227,7 @@ export function App() {
     try { localStorage.removeItem("js_chat"); localStorage.removeItem("js_scales"); localStorage.removeItem("js_case"); localStorage.removeItem("js_consent"); } catch {}
     caseForCount.current = -1;
     retryPayloads.current.clear();
-    setBusy(false); setCrisis(false); setConsented(false);
+    setBusy(false); setCrisis(false); setConsented(false); setSafetyTipOff(false);
     setScaleResults([]); setCaseMap(null);
     setMessages([freshGreeting(lang)]);
     setConfirmingDelete(false);
@@ -283,6 +284,13 @@ export function App() {
             </span>
             <button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button>
             <button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button>
+          </div>
+        )}
+        {started && !crisis && !safetyTipOff && (
+          <div className="scale-suggest" role="note">
+            <span className="ss-ico" aria-hidden>📞</span>
+            <span className="ss-text">{STR[lang].safety_tip}</span>
+            <button className="ss-dismiss" onClick={() => setSafetyTipOff(true)} aria-label={STR[lang].safety_tip_dismiss}><Ic.close /></button>
           </div>
         )}
         <Composer lang={lang} pace={pace} busy={busy} tone={persona.av} onSend={(t, a) => void send(t, a)} onPace={setPace} />
