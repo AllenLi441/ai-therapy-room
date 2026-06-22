@@ -131,6 +131,12 @@ export type KnowledgeCard = {
   keywords: string[];
   content: string;
   guidance: string[];
+  // Web-grounded RAG (2026-06): authoritative source domains the card was grounded
+  // in (e.g. "who.int", "nhs.uk") — for auditability.
+  sources?: string[];
+  // Clinical sign-off gate: only "approved" cards are retrieved (see knowledge.ts).
+  // Missing / "draft" = NOT approved = inert.
+  clinicalStatus?: "draft" | "approved";
 };
 
 export type TherapyModality =

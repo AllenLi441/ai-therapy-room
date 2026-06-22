@@ -64,7 +64,7 @@ describe("pure: topK", () => {
   });
 });
 
-describe("pure: keywordScore weights", () => {
+describe("pure: keywordScore", () => {
   const c = card({
     id: "k1",
     title: "惊恐发作",
@@ -72,24 +72,26 @@ describe("pure: keywordScore weights", () => {
     keywords: ["心慌", "呼吸急促"]
   });
 
-  it("keyword hit = 1.0", () => {
-    expect(keywordScore(c, "我突然心慌")).toBeCloseTo(1.0, 6);
+  it("an exact keyword match scores at least its base weight", () => {
+    expect(keywordScore(c, "我突然心慌")).toBeGreaterThanOrEqual(1.0);
   });
-  it("tag hit = 0.5", () => {
-    expect(keywordScore(card({ id: "x", tags: ["焦虑"] }), "焦虑得睡不着")).toBeCloseTo(0.5, 6);
+  it("a keyword match outscores the same term matched only as a tag", () => {
+    const asKw = card({ id: "a", keywords: ["心慌"] });
+    const asTag = card({ id: "b", tags: ["心慌"] });
+    expect(keywordScore(asKw, "我心慌")).toBeGreaterThan(keywordScore(asTag, "我心慌"));
   });
-  it("title hit = 0.8", () => {
-    expect(keywordScore(card({ id: "x", title: "惊恐发作" }), "像惊恐发作一样")).toBeCloseTo(
-      0.8,
-      6
-    );
+  it("a more specific keyword outranks a generic one (specificity weighting)", () => {
+    const specific = card({ id: "exam", keywords: ["考试焦虑"] });
+    const generic = card({ id: "gen", keywords: ["焦虑"] });
+    const q = "我一到考试焦虑得不行";
+    expect(keywordScore(specific, q)).toBeGreaterThan(keywordScore(generic, q));
   });
-  it("sums across keyword + tag + title hits", () => {
-    // keyword 心慌 (1.0) + tag 焦虑 (0.5) + title 惊恐发作 (0.8) = 2.3
-    expect(keywordScore(c, "惊恐发作 焦虑 心慌")).toBeCloseTo(1.0 + 0.5 + 0.8, 6);
+  it("recall net: a paraphrase with NO exact keyword match still scores > 0 via shared bigrams", () => {
+    const ctrl = card({ id: "ctrl", title: "被父母控制", keywords: ["父母管太多", "什么都要插手"] });
+    expect(keywordScore(ctrl, "父母什么都要管，一点自己的空间都没有")).toBeGreaterThan(0);
   });
-  it("no hit = 0", () => {
-    expect(keywordScore(c, "今天天气不错")).toBe(0);
+  it("a totally unrelated query scores 0", () => {
+    expect(keywordScore(c, "披萨和可乐")).toBe(0);
   });
 });
 
@@ -140,11 +142,14 @@ describe("vectorRetrieve (injected provider + vectors, no network)", () => {
   });
 });
 
-describe("retrieveKnowledge integration (KNOWLEDGE_CARDS empty in 流①)", () => {
-  it("never throws and returns [] when there are no cards (provider unset)", async () => {
+describe("retrieveKnowledge integration (web-grounded KB populated)", () => {
+  it("retrieves relevant, clinician-approved cards via the keyword path (provider unset)", async () => {
     vi.stubEnv("EMBEDDING_PROVIDER", "cloud");
     vi.stubEnv("EMBEDDING_API_KEY", "");
-    await expect(retrieveKnowledge("焦虑 心慌")).resolves.toEqual([]);
+    const out = await retrieveKnowledge("我一到考试就焦虑得不行");
+    expect(out.length).toBeGreaterThan(0);
+    // The clinical gate: only "approved" cards are ever surfaced.
+    expect(out.every((c) => c.clinicalStatus === "approved")).toBe(true);
   });
 
   it("never throws even when the provider's embed rejects", async () => {

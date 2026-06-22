@@ -94,11 +94,24 @@ export function topK<T>(items: T[], scores: number[], limit: number): T[] {
  *   keyword hit → 1.0, title token hit → 0.8, tag hit → 0.5 (summed).
  * Substring match (handles CJK where there are no word boundaries).
  */
+/** Character bigrams of a string (whitespace-stripped, lowercased). */
+function charBigrams(s: string): Set<string> {
+  const t = s.replace(/\s+/g, "").toLowerCase();
+  const out = new Set<string>();
+  for (let i = 0; i + 1 < t.length; i++) out.add(t.slice(i, i + 2));
+  return out;
+}
+
 export function keywordScore(card: KnowledgeCard, queryLower: string): number {
   let score = 0;
+  // Strong signal: exact substring matches, specificity-weighted — a longer matched
+  // phrase ("考试焦虑") beats a short generic one ("焦虑"). 2-char stays 1.0, each
+  // extra char +0.1 (capped +0.8). 1-char keywords are ignored as noise.
   for (const kw of card.keywords) {
     const k = kw.trim().toLowerCase();
-    if (k && queryLower.includes(k)) score += 1.0;
+    if (k.length >= 2 && queryLower.includes(k)) {
+      score += 1.0 + Math.min(k.length - 2, 8) * 0.1;
+    }
   }
   for (const tag of card.tags) {
     const t = tag.trim().toLowerCase();
@@ -106,6 +119,22 @@ export function keywordScore(card: KnowledgeCard, queryLower: string): number {
   }
   const title = card.title.trim().toLowerCase();
   if (title && queryLower.includes(title)) score += 0.8;
+
+  // Recall net: shared character bigrams between the query and the card's keywords +
+  // title surface paraphrases that no keyword matches verbatim ("父母什么都要管" ↔ a
+  // card keyworded "父母管太多"). Weak per-bigram so exact matches always dominate.
+  const qb = charBigrams(queryLower);
+  if (qb.size) {
+    const counted = new Set<string>();
+    for (const kw of [...card.keywords, card.title]) {
+      for (const bg of charBigrams(kw)) {
+        if (qb.has(bg)) counted.add(bg);
+      }
+    }
+    // Need ≥3 shared bigrams before the recall net fires — 1–2 coincidental
+    // overlaps (common in any Chinese sentence) are noise, not a topical match.
+    score += Math.min(Math.max(0, counted.size - 2), 10) * 0.15;
+  }
   return score;
 }
 
@@ -186,14 +215,24 @@ function vectorsMatchProvider(
 // ---------------------------------------------------------------------------
 
 /**
+ * Clinical sign-off gate: only cards flipped to "approved" are retrieved
+ * (missing/"draft" = inert). Lets any card be gated out by flipping its status,
+ * without deleting it.
+ */
+function approvedCards(): KnowledgeCard[] {
+  return KNOWLEDGE_CARDS.filter((c) => c.clinicalStatus === "approved");
+}
+
+/**
  * Retrieve up to `limit` knowledge cards relevant to `query`. Vector-first,
  * keyword fallback, never throws. See the FAIL-SAFE CONTRACT above.
  */
 export async function retrieveKnowledge(query: string, limit = 4): Promise<KnowledgeCard[]> {
   try {
     const q = (query ?? "").trim();
-    if (!q || limit <= 0 || KNOWLEDGE_CARDS.length === 0) {
-      return keywordRetrieve(q, limit);
+    const cards = approvedCards();
+    if (!q || limit <= 0 || cards.length === 0) {
+      return keywordRetrieve(q, limit, cards);
     }
 
     const provider = getEmbeddingProvider();
@@ -203,7 +242,7 @@ export async function retrieveKnowledge(query: string, limit = 4): Promise<Knowl
           q,
           limit,
           provider,
-          KNOWLEDGE_CARDS,
+          cards,
           GENERATED.vectors,
           getMinScore()
         );
@@ -216,7 +255,7 @@ export async function retrieveKnowledge(query: string, limit = 4): Promise<Knowl
       }
     }
 
-    return keywordRetrieve(q, limit);
+    return keywordRetrieve(q, limit, cards);
   } catch {
     // Absolute backstop: retrieval must never throw into the chat path.
     return [];

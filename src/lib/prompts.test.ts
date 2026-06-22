@@ -90,9 +90,9 @@ describe("buildCounselorSystemPrompt", () => {
     expect(prompt).toContain("没有命中特定知识卡");
   });
 
-  // P3-c: pace shapes the output. 快速 drops the 4-step structure for a short
-  // reply; 深度 (and the default) keeps the full structure.
-  it("fast pace gives a short reply shape; deep keeps the 4-step structure", () => {
+  // pace shapes the output. 快速 gives a short reply; 深度 (and default) a fuller,
+  // natural reply — neither uses a fixed step template anymore (de-AI rewrite).
+  it("fast pace gives a short reply shape; deep is fuller and natural (no fixed template)", () => {
     const base = {
       risk: assessRisk("还行"),
       knowledge: [],
@@ -103,9 +103,11 @@ describe("buildCounselorSystemPrompt", () => {
     const fast = buildCounselorSystemPrompt({ ...base, pace: "fast" as const });
     const dflt = buildCounselorSystemPrompt(base);
 
-    expect(deep).toContain("结构必须是");
-    expect(dflt).toContain("结构必须是");   // default (no pace) stays deep
-    expect(fast).not.toContain("结构必须是");
-    expect(fast).toContain("用 1-2 句");
+    expect(deep).toContain("不按模板走");
+    expect(dflt).toContain("不按模板走");        // default (no pace) stays deep
+    expect(fast).not.toContain("不按模板走");
+    expect(fast).toContain("用一两句简短回应");
+    // the old rigid 4-step is gone for everyone
+    expect(deep).not.toContain("结构必须是");
   });
 });
