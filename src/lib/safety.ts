@@ -39,6 +39,8 @@ const HIGH_RISK_RULES: RiskRule[] = [
       "结束生命",
       "不想活了",
       "不想再活",
+      "不想活着",
+      "不想活下去",
       "活不下去",
       "想死",
       "死了算了",
@@ -377,15 +379,60 @@ function collectMatches(text: string, rules: RiskRule[]) {
   return matches;
 }
 
+// §2 negation/idiom disambiguation (clinical review 2026-06-16). The substring
+// lexicon false-fires on benign 想死/自杀 usages — lone negation ("我不想死"), idioms
+// ("想死你了"), rote ("死记硬背"), denials ("我没想过自杀"). Drop ONLY provably-benign
+// occurrences; real ideation, ambivalence ("又想死又不想死"), the death-wish family
+// ("不想活着"), and any OTHER risk term still fire. Conservative by design: when
+// unsure, keep the match (over-triage), and the LLM judge backstops the rest.
+// 想死 is benign ONLY as an idiom (想死你了), rote (死记硬背), or lone ADJACENT
+// negation (不想死). We strip only those exact forms — NOT a fuzzy "negator nearby"
+// window — so "控制不住想死" (a REAL crisis, where 不 belongs to 控制不住) still fires.
+// A denial is [negator][optional intent verb][core], where the negator is bound to
+// the core by AT MOST one intent verb. This deliberately does NOT match "控制不住想自杀"
+// / "控制不住想死" (the 不 belongs to 控制不住, separated from the core by 住), nor
+// "有自杀计划" (no negator) — those keep firing. It DOES catch "(从来)没(有)(想过)自杀"
+// and "(从来)没(有)想死".
+function stripDenials(text: string, core: string): string {
+  const re = new RegExp(
+    `(从来|从)?(没有|没|不|未|别)(想过|想要|想|有过|有|会|要|打算|过)?${core}`,
+    "g"
+  );
+  return text.replace(re, "");
+}
+function hasRealXiangSi(normalized: string): boolean {
+  const stripped = stripDenials(
+    normalized
+      .replace(/想死[你我他她它您们]+了?/g, "") // 想死你了 / 想死我了 hyperbole
+      .replace(/想死记/g, ""),                  // 死记硬背 rote
+    "想死"
+  );
+  return stripped.includes("想死");
+}
+function hasRealZiSha(normalized: string): boolean {
+  return stripDenials(normalized, "自杀").includes("自杀");
+}
+function filterNegatedSuicide(
+  text: string,
+  matches: ReturnType<typeof collectMatches>
+): ReturnType<typeof collectMatches> {
+  const normalized = normalizeText(text);
+  return matches.filter((m) => {
+    if (m.term === "想死" || m.term === "想死了") return hasRealXiangSi(normalized);
+    if (m.term === "自杀") return hasRealZiSha(normalized);
+    return true;
+  });
+}
+
 export function assessRisk(text: string): RiskAssessment {
-  const matches = [
+  const matches = filterNegatedSuicide(text, [
     ...collectMatches(text, HIGH_RISK_RULES),
     ...collectMatches(text, MEDICATION_REQUEST_RULES),
     ...collectMatches(text, DIAGNOSIS_REQUEST_RULES),
     ...collectMatches(text, MEDICAL_RED_FLAG_RULES),
     ...collectMatches(text, MEDIUM_RISK_RULES),
     ...collectMatches(text, LOW_RISK_RULES)
-  ];
+  ]);
 
   const base: RiskAssessment =
     matches.length === 0
@@ -462,7 +509,7 @@ export function createCrisisResponse(
     "请你先做这几件事：",
     `1. 如果你已经有明确计划、工具在身边，或担心自己马上会失控，请立刻拨打当地急救电话。中国大陆可拨打 ${CN_EMS}，也可以拨打全国心理援助热线 ${PSYCH}；北京心理援助热线 ${CN_SUPPLEMENTAL.beijing}、希望24热线 ${CN_SUPPLEMENTAL.hope24} 也可作为补充尝试。美国和加拿大可拨打 ${INTL_RESOURCES.usCrisis} 或 ${INTL_RESOURCES.usEmergency}。`,
     "2. 现在尽量不要一个人待着。请马上联系一个现实中可信赖的人，直接说：我现在不安全，需要你陪我。",
-    "3. 把可能伤害自己或他人的物品移到够不到的地方。比如把药、刀具、绳索、打火机等拿出房间、放进锁住的柜子，或者请别人帮你保管。",
+    "3. 把可能伤害自己或他人的物品移到够不到的地方——请环顾一下周围，任何让你觉得不安全的东西，先拿开或请别人帮你保管。",
     "4. 如果可以，先把双脚踩在地面上，慢慢吸气 4 秒、呼气 6 秒，连续做 5 轮。",
     "5. 先做一个今晚的安全约定：在联系到现实中的人之前，不去碰那些可能伤害自己的东西。",
     "",
@@ -497,7 +544,7 @@ export function createMedicationBoundaryResponse(language: AppLanguage = "zh") {
     return [
       "I cannot recommend medication names or doses, and I cannot decide whether you should increase, reduce, stop, or switch medication.",
       "",
-      "The safer next step is to organize your symptoms, how long they have lasted, sleep, appetite, any self-harm thoughts, previous medications, and side effects, then bring that to a psychiatrist or another licensed clinician. If you are already taking medication, do not stop, switch, or change the dose on your own.",
+      "The safer next step is to organize your symptoms, how long they have lasted, sleep, appetite, any self-harm thoughts, previous medications, and side effects, then bring that to a psychiatrist or another licensed clinician. If you are already taking medication, do not stop, switch, or change the dose on your own — stopping suddenly can cause withdrawal or a rebound of symptoms, and any change should be tapered under a doctor's guidance.",
       "",
       "If you have severe allergy symptoms, confusion, chest pain, trouble breathing, seizures, or strong urges to harm yourself, contact emergency or in-person medical help promptly.",
       "",
@@ -508,7 +555,7 @@ export function createMedicationBoundaryResponse(language: AppLanguage = "zh") {
   return [
     "药物这部分我不能给你推荐药名、剂量，也不能替你决定加药、减药、停药或换药。",
     "",
-    "更稳妥的做法是把症状、持续时间、睡眠、食欲、是否有自伤想法、既往用药和副作用整理出来，带给精神科医生或其他持证医生评估。已经在服药的话，不要自行停药、换药或改剂量。",
+    "更稳妥的做法是把症状、持续时间、睡眠、食欲、是否有自伤想法、既往用药和副作用整理出来，带给精神科医生或其他持证医生评估。已经在服药的话，不要自行停药、换药或改剂量——突然停药可能引起不适或症状反弹，调整药物需要在医生指导下逐步进行。",
     "",
     "如果出现严重过敏、意识模糊、胸痛、呼吸困难、抽搐，或强烈自伤冲动，请及时联系急救或线下医疗帮助。",
     "",
@@ -601,6 +648,20 @@ export function createCrisisResourceBlock(
           "如果你能回复，请只回一个数字：1=我现在安全但很痛苦，2=有伤害自己的念头但没计划，3=有计划或工具在身边，4=我不确定。如果是 3 或 4，请先联系现实帮助。"
         ];
   return lines.join("\n");
+}
+
+/**
+ * §3 global safety footer (clinical review 2026-06-16, 陈思远): one minimal line
+ * appended to EVERY non-crisis reply, so a deterministic help entry survives even
+ * when BOTH detection layers fail (the single-point-of-failure the reviewer flagged).
+ * Crisis/suicide replies already carry the full resource block, so they do NOT get
+ * this (avoids duplicate hotlines). Minimal, action-oriented, de-stigmatized.
+ */
+export function createGlobalSafetyFooter(language: AppLanguage = "zh"): string {
+  if (language === "en") {
+    return `📞 If you are in danger or need immediate help, call ${INTL_RESOURCES.usCrisis}/${INTL_RESOURCES.usEmergency} (US/CA) or ${CN_EMS} (CN), or reach someone you trust.`;
+  }
+  return `📞 如果你现在有危险或需要立即帮助，请拨打 ${CN_EMS} 或 ${PSYCH}，或联系身边可信赖的人。`;
 }
 
 export function getRiskInstruction(assessment: RiskAssessment) {
@@ -1131,7 +1192,7 @@ export function createGentleCheckResponse(cue: string | undefined, language: App
     return [
       lead,
       "",
-      "You don't have to explain it all right now, and I'm not going to rush to analyze it. I just wanted to gently ask: lately, has it been the kind of tired where part of you wants to stop, to put it all down?",
+      "You don't have to explain it all right now, and I'm not going to rush to analyze it. I just wanted to gently ask: lately, has it been the kind of tired — not just in your body but inside — where part of you wants to pause and rest? And if I've read it wrong, that's okay.",
       "",
       "If you'd like, you could tell me one more thing about what's felt heaviest. And if you'd rather not right now, that's okay — we can take it slow. I'm here."
     ].join("\n");
@@ -1142,7 +1203,7 @@ export function createGentleCheckResponse(cue: string | undefined, language: App
   return [
     lead,
     "",
-    "你不用现在就解释清楚，我也不急着分析。只是想轻轻问一句：这阵子，是不是有那种“撑得有点累、想停下来”的感觉？",
+    "你不用现在就解释清楚，我也不急着分析。只是想轻轻问一句：这阵子，是不是有那种“不只身体上、心里也撑得有点累、想停下来休息一下”的感觉？如果我没理解对，也没关系。",
     "",
     "如果愿意，可以多和我聊一句最近最沉的是什么；如果暂时不想说，我们就慢慢来，我在这儿。"
   ].join("\n");
@@ -1155,7 +1216,7 @@ export function createMinorSupportLine(language: AppLanguage = "zh"): string {
     ].join("\n");
   }
   return [
-    "如果你还在上学、未满 18 岁：除了上面的资源，也请尽快找一个信任的成年人陪着你——可以是父母、信任的亲戚，或学校的心理老师/班主任。你值得有人在现实里陪你一起面对。",
+    "如果你还在上学、未满 18 岁：除了上面的资源，也请尽快找一个信任的成年人陪着你——可以是学校的心理老师或班主任、信任的亲戚，或父母。你值得有人在现实里陪你一起面对。",
     `面向未成年人的求助：全国青少年服务台 ${CN_SUPPLEMENTAL.youth}（共青团心理援助），以及全国心理援助热线 ${PSYCH}。`
   ].join("\n");
 }

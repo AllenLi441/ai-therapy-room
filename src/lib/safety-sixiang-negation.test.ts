@@ -54,3 +54,34 @@ describe("regressions kept", () => {
     expect(isHigh("我不想死，但我有自杀计划")).toBe(true);
   });
 });
+
+// §2 over-suppression guard (clinical review 2026-06-16): the negation fix must NOT
+// false-suppress real ideation where 不 belongs to a surrounding word (控制不住).
+describe("§2 fix must NOT over-suppress — embedded 不 and real 自杀 still fire", () => {
+  for (const text of [
+    "我控制不住想死",
+    "我控制不住想自杀",
+    "我想自杀",
+    "我有自杀计划",
+    "我没想过自杀，但最近控制不住想死",
+  ]) {
+    it(`danger: ${text}`, () => {
+      expect(isHigh(text)).toBe(true);
+    });
+  }
+});
+
+describe("§2 clear 自杀 / 想死 denials stay safe (incl. 没有 variant)", () => {
+  for (const text of [
+    "我没想过自杀",
+    "我没有自杀的念头",
+    "我不会自杀的",
+    "我从来没有想过自杀，就是最近压力大",
+    "我从来没有想死过",
+    "我没有想死的念头"
+  ]) {
+    it(`safe: ${text}`, () => {
+      expect(isHigh(text)).toBe(false);
+    });
+  }
+});

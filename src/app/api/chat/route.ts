@@ -1,7 +1,7 @@
 import { appendDecisionLog, buildDecisionLogEntry, type DecisionRoute } from "@/lib/decision-log";
 import { sanitizeConversation } from "@/lib/conversation-window";
 import { buildDeepSeekPayload, createDeepSeekTextStream, generateDeepSeekText } from "@/lib/deepseek";
-import { streamTextResponse, textStreamFromString } from "@/lib/http";
+import { appendToStream, streamTextResponse, textStreamFromString } from "@/lib/http";
 import {
   assessImplicitRiskWithLLM,
   decideImplicitIntercept,
@@ -24,6 +24,7 @@ import {
   createCrisisResourceBlock,
   createDiagnosisBoundaryResponse,
   createGentleCheckResponse,
+  createGlobalSafetyFooter,
   createMedicationBoundaryResponse,
   createMedicalRedFlagResponse,
   createMinorSupportLine,
@@ -82,6 +83,10 @@ export async function POST(request: Request) {
   if (!latestUserMessage) {
     return new Response("Missing user message", { status: 400 });
   }
+  const latestUserText = latestUserMessage.content;
+  // §3 global safety footer — appended to every non-crisis reply (crisis replies
+  // already carry the full resource block, so the footer is not added there).
+  const safetyFooter = `\n\n${createGlobalSafetyFooter(language)}`;
 
   // Multi-turn aggregation: looks at last 4 user messages, not just current.
   // This is what catches the PDF gradient case (turn 1: 看着药盒 → turn 2:
@@ -146,6 +151,11 @@ export async function POST(request: Request) {
       "X-Crisis-Source": source
     };
     const block = createCrisisResourceBlock(mode, language);
+    // §5 additive minor support: if this looks like a minor, append the 12355 youth
+    // line to the crisis reply (never replaces — zero downside per clinical review).
+    const minorLine = hasMinorContextCue(latestUserText)
+      ? `\n\n${createMinorSupportLine(language)}`
+      : "";
     try {
       const recent = takeRecentWithinBudget(messages);
       const crisisPrompt = buildCounselorSystemPrompt({
@@ -169,13 +179,13 @@ export async function POST(request: Request) {
       });
       const reply = (await generateDeepSeekText(payload)).trim();
       if (!reply) throw new Error("empty crisis reply");
-      return new Response(textStreamFromString(`${reply}\n\n${block}`), { headers });
+      return new Response(textStreamFromString(`${reply}\n\n${block}${minorLine}`), { headers });
     } catch {
       const fallback =
         mode === "crisis"
           ? createCrisisResponse(decisionRisk, { language })
           : createSuicideConcernResponse(language);
-      return new Response(textStreamFromString(fallback), { headers });
+      return new Response(textStreamFromString(`${fallback}${minorLine}`), { headers });
     }
   }
 
@@ -253,21 +263,21 @@ export async function POST(request: Request) {
   // raise it.
   if (risk.flags.includes("medication_request")) {
     logFireAndForget("lexicon_medication", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createMedicationBoundaryResponse(language)), {
+    return new Response(textStreamFromString(createMedicationBoundaryResponse(language) + safetyFooter), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
 
   if (risk.flags.includes("diagnosis_request")) {
     logFireAndForget("lexicon_diagnosis", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language)), {
+    return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language) + safetyFooter), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
 
   if (mergedRisk.flags.includes("medical_red_flag")) {
     logFireAndForget("lexicon_medical_red_flag", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createMedicalRedFlagResponse(language)), {
+    return new Response(textStreamFromString(createMedicalRedFlagResponse(language) + safetyFooter), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
@@ -331,9 +341,9 @@ export async function POST(request: Request) {
   const crisisHeader = crisisModeActive ? { "X-Crisis-Triggered": "1" } : undefined;
 
   try {
-    return streamTextResponse(createAssistantTextStream(await createDeepSeekTextStream(payload)), crisisHeader);
+    return streamTextResponse(appendToStream(createAssistantTextStream(await createDeepSeekTextStream(payload)), safetyFooter), crisisHeader);
   } catch {
-    return new Response(createProviderErrorFallback(), {
+    return new Response(createProviderErrorFallback() + safetyFooter, {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...crisisHeader }
     });
   }
