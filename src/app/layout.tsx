@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { APP_VERSION } from "@/lib/version";
 
 export const metadata: Metadata = {
   title: "静室 · JÌNGSHÌ — AI 心理陪伴室",
@@ -17,10 +18,6 @@ export const viewport: Viewport = {
 
 // Set theme/lang before paint to avoid a flash (mirrors the prototype's keys).
 const initScript = `(function(){try{var t=localStorage.getItem('js_theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var l=localStorage.getItem('js_lang');document.documentElement.lang=(l==='en')?'en':'zh';}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`;
-
-// Build marker (shown bottom-right) so a deploy can be visually confirmed live.
-// VERCEL_GIT_COMMIT_SHA is injected per-deploy on Vercel; falls back to "dev" locally.
-const BUILD_ID = (process.env.VERCEL_GIT_COMMIT_SHA ?? "dev").slice(0, 7);
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -51,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             pointerEvents: "none"
           }}
         >
-          {`build ${BUILD_ID}`}
+          {`v${APP_VERSION}`}
         </span>
       </body>
     </html>
