@@ -177,7 +177,7 @@ export function App() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, scaleResults })
+        body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, crisisModeActive: crisis, scaleResults })
       });
       if (res.headers.get("X-Crisis-Triggered") === "1") setCrisis(true);
       const kh = res.headers.get("X-Knowledge");

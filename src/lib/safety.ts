@@ -542,7 +542,9 @@ export function createMedicalRedFlagResponse(language: AppLanguage = "zh") {
 export function createMedicationBoundaryResponse(language: AppLanguage = "zh") {
   if (language === "en") {
     return [
-      "I cannot recommend medication names or doses, and I cannot decide whether you should increase, reduce, stop, or switch medication.",
+      "Wanting to know whether to take something or adjust it usually means you've been worn down by all this and are looking for something that actually helps — that makes sense, and I hear it.",
+      "",
+      "On the medication itself, I cannot recommend names or doses, and I cannot decide whether you should increase, reduce, stop, or switch medication.",
       "",
       "The safer next step is to organize your symptoms, how long they have lasted, sleep, appetite, any self-harm thoughts, previous medications, and side effects, then bring that to a psychiatrist or another licensed clinician. If you are already taking medication, do not stop, switch, or change the dose on your own — stopping suddenly can cause withdrawal or a rebound of symptoms, and any change should be tapered under a doctor's guidance.",
       "",
@@ -553,7 +555,9 @@ export function createMedicationBoundaryResponse(language: AppLanguage = "zh") {
   }
 
   return [
-    "药物这部分我不能给你推荐药名、剂量，也不能替你决定加药、减药、停药或换药。",
+    "会想着要不要吃药、能不能调整，通常是你已经被这些状态折腾得挺累了，想找一个真正能缓解的办法，这份着急我接得住。",
+    "",
+    "只是关于用药，我不能给你推荐药名、剂量，也不能替你决定加药、减药、停药或换药。",
     "",
     "更稳妥的做法是把症状、持续时间、睡眠、食欲、是否有自伤想法、既往用药和副作用整理出来，带给精神科医生或其他持证医生评估。已经在服药的话，不要自行停药、换药或改剂量——突然停药可能引起不适或症状反弹，调整药物需要在医生指导下逐步进行。",
     "",
@@ -566,6 +570,8 @@ export function createMedicationBoundaryResponse(language: AppLanguage = "zh") {
 export function createDiagnosisBoundaryResponse(language: AppLanguage = "zh") {
   if (language === "en") {
     return [
+      "Wanting to know whether something is wrong usually comes from a real place — things have felt off and you want to understand what's going on and whether it can get better. That's a very normal thing to want.",
+      "",
       "I cannot diagnose you or confirm whether this is depression, anxiety, bipolar disorder, or another condition from a chat.",
       "",
       "A safer next step is to bring this to a psychiatrist, a psychological clinic, a school counselor, or another licensed clinician, especially if symptoms last more than two weeks, affect school/work/sleep, or include self-harm thoughts. You can tell them: how long this has lasted, sleep and appetite changes, concentration, energy, panic symptoms, medication or substance use, and any safety concerns.",
@@ -575,6 +581,8 @@ export function createDiagnosisBoundaryResponse(language: AppLanguage = "zh") {
   }
 
   return [
+    "想知道自己是不是病了，背后常常是这阵子真的很不对劲，你想弄清楚到底怎么了、还能不能好起来，想搞明白是很自然的。",
+    "",
     "我不能在聊天里替你诊断，也不能确认你是不是抑郁症、焦虑症、双相或其他疾病。",
     "",
     "更稳妥的下一步，是把这个问题带到精神科、心理科、学校心理老师或其他持证专业人员那里评估。尤其是症状持续两周以上，已经影响学习、工作、睡眠，或出现自伤念头时，更应该尽快线下求助。你可以准备这些信息：持续多久、睡眠和食欲、注意力、精力、惊恐症状、既往用药或物质使用、有没有安全风险。",
