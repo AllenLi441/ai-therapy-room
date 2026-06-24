@@ -180,6 +180,15 @@ export function App() {
         body: JSON.stringify({ messages: payloadMsgs, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, scaleResults })
       });
       if (res.headers.get("X-Crisis-Triggered") === "1") setCrisis(true);
+      const kh = res.headers.get("X-Knowledge");
+      if (kh) {
+        try {
+          const refs = JSON.parse(decodeURIComponent(kh));
+          if (Array.isArray(refs) && refs.length) {
+            setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, refs } : m)));
+          }
+        } catch { /* malformed header — just skip the 数据来源 chip */ }
+      }
       if (!res.ok) {
         // truthful error state — do NOT pretend we're still generating
         const errText = res.status === 429 ? STR[lang].err_busy : STR[lang].err_connect;

@@ -131,9 +131,14 @@ export type KnowledgeCard = {
   keywords: string[];
   content: string;
   guidance: string[];
-  // Web-grounded RAG (2026-06): authoritative source domains the card was grounded
-  // in (e.g. "who.int", "nhs.uk") — for auditability.
-  sources?: string[];
+  // VERIFIABLE source (2026-06 rebuild): a specific, long-standing authoritative
+  // research source — not a domain label. sourceUrl is clickable so anyone can check
+  // the claim; sourceQuote is a VERBATIM excerpt actually fetched from that page
+  // (omitted when the figure came from a search index rather than a direct fetch).
+  // Shown to the user as "数据来源" under the reply (see the chat UI).
+  sourceTitle?: string;
+  sourceUrl?: string;
+  sourceQuote?: string;
   // Clinical sign-off gate: only "approved" cards are retrieved (see knowledge.ts).
   // Missing / "draft" = NOT approved = inert.
   clinicalStatus?: "draft" | "approved";

@@ -121,6 +121,23 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
             </span>
           )}
         </div>
+        {isAI && m.refs && m.refs.length > 0 && (
+          <details className="kb-refs" style={{ marginTop: 6, fontSize: 12, color: "rgba(120,120,120,0.95)" }}>
+            <summary style={{ cursor: "pointer", userSelect: "none" }}>
+              {lang === "zh" ? `数据来源 · ${m.refs.length}` : `Sources · ${m.refs.length}`}
+            </summary>
+            <ul style={{ margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
+              {m.refs.map((r, i) => (
+                <li key={i} style={{ marginBottom: 4 }}>
+                  {r.url
+                    ? <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--tone, #3a8a78)", textDecoration: "underline" }}>{r.source || r.title}</a>
+                    : <span>{r.source || r.title}</span>}
+                  {r.quote && <div style={{ opacity: 0.85, fontStyle: "italic", marginTop: 2 }}>“{r.quote}”</div>}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         {m.errored && onRetry && (
           <button className="retry-btn" onClick={() => onRetry(m.id)}>
             <Ic.refresh className="retry-ico" /> {STR[lang].retry}

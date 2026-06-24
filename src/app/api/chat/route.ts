@@ -336,8 +336,20 @@ export async function POST(request: Request) {
   // the deterministic safety floor while the reply itself is model-generated.
   const crisisHeader = crisisModeActive ? { "X-Crisis-Triggered": "1" } : undefined;
 
+  // Visible RAG: tell the client which knowledge cards were actually consulted for
+  // this reply, so the UI can show "数据来源" with clickable, checkable links. URL-
+  // encoded JSON (headers are latin-1; titles are Chinese). Only cards with a real
+  // source are surfaced.
+  const refs = knowledge
+    .filter((k) => k.sourceUrl)
+    .map((k) => ({ title: k.title, source: k.sourceTitle, url: k.sourceUrl, quote: k.sourceQuote }));
+  const knowledgeHeader = refs.length
+    ? { "X-Knowledge": encodeURIComponent(JSON.stringify(refs)) }
+    : undefined;
+  const replyHeaders = { ...crisisHeader, ...knowledgeHeader };
+
   try {
-    return streamTextResponse(sanitizeReplyStream(createAssistantTextStream(await createDeepSeekTextStream(payload))), crisisHeader);
+    return streamTextResponse(sanitizeReplyStream(createAssistantTextStream(await createDeepSeekTextStream(payload))), replyHeaders);
   } catch {
     return new Response(createProviderErrorFallback(), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...crisisHeader }

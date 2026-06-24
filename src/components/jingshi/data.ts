@@ -16,6 +16,10 @@ export type Persona = {
 
 export type Media = { id: string; type: "image" | "video"; url: string; name?: string };
 
+// A knowledge-base source actually consulted for a reply (shown to the user as
+// 数据来源 with a clickable, checkable link — see the X-Knowledge response header).
+export type KnowledgeRef = { title: string; source?: string; url?: string; quote?: string };
+
 export type Message = {
   id: string;
   role: "user" | "assistant";
@@ -26,6 +30,7 @@ export type Message = {
   startedAt?: number; // ms timestamp when the request was sent — for a REAL elapsed counter
   errored?: boolean; // the reply failed (truthful error state, not "still generating")
   visionPending?: boolean; // image(s) are being read by /api/vision (transient)
+  refs?: KnowledgeRef[]; // RAG sources consulted for this reply (visible 数据来源)
 };
 
 export type ScaleId = "PHQ-9" | "GAD-7" | "ISI";
