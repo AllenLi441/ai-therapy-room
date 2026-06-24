@@ -37,6 +37,12 @@ const GENERATED = generated as GeneratedEmbeddings;
 /** Default cosine threshold; override with RAG_MIN_SCORE (0..1). */
 const DEFAULT_MIN_SCORE = 0.3;
 
+// Keyword path: minimum keywordScore for a card to enter the model's context.
+// An exact keyword (≥1.0) or tag (0.5) match always clears it; bigram-only recall
+// needs ~4 shared bigrams. Keeps barely-related cards out on long, multi-field
+// queries (concern + message + case map) where many cards pick up a few bigrams.
+const KEYWORD_MIN_SCORE = 0.3;
+
 function getMinScore(): number {
   const raw = process.env.RAG_MIN_SCORE;
   if (!raw) return DEFAULT_MIN_SCORE;
@@ -151,7 +157,7 @@ export function keywordRetrieve(
   const q = query.toLowerCase();
   const scored = cards
     .map((card) => ({ card, score: keywordScore(card, q) }))
-    .filter((s) => s.score > 0);
+    .filter((s) => s.score >= KEYWORD_MIN_SCORE);
   if (scored.length === 0) return [];
   return topK(
     scored.map((s) => s.card),
