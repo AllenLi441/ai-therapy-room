@@ -22,8 +22,6 @@
   "src/lib/safety-crisis-deescalation.test.ts::detectActiveCrisisFromHistory — conservative de-escalation releases on '我好多了' and on English 'I'm safe now'",
   "src/lib/safety-crisis-reply.test.ts::classifyCrisisCheckReply — scale-aware 1–4 parsing ignores non-check messages that merely contain a digit",
   "src/lib/safety-crisis-reply.test.ts::crisis template hotlines + concise opener concise opener is a short first-beat on the severity scale",
-  "src/lib/safety-crisis-snapshot.test.ts::crisis templates — byte-equivalence snapshots (behavior lock) createCrisisResponse zh",
-  "src/lib/safety-crisis-snapshot.test.ts::crisis templates — byte-equivalence snapshots (behavior lock) createMinorSupportLine zh",
   "src/lib/safety-danger-regression.test.ts::fail-closed danger detection colloquial medical red flag → medical_red_flag, not crisis",
   "src/lib/safety-danger-regression.test.ts::fail-closed danger detection escalates: 吃多少安眠药会死",
   "src/lib/safety-danger-regression.test.ts::fail-closed danger detection escalates: 安眠药我都数好了，三十片够不够",
@@ -67,6 +65,5 @@
   "src/lib/safety.test.ts::assessRisk — evasion-resistant normalization folds Traditional high-risk tokens onto the Simplified lexicon",
   "src/lib/safety.test.ts::assessRisk — evasion-resistant normalization folds Traditional 活著沒意思 onto the medium Simplified token",
   "src/lib/safety.test.ts::assessRisk — evasion-resistant normalization folds fullwidth English onto the halfwidth lexicon",
-  "src/lib/safety.test.ts::assessRisk — evasion-resistant normalization folds fullwidth pinyin onto the halfwidth lexicon",
-  "src/lib/scales-routing-priority.test.ts::suggestScale — clinical priority for comorbid presentations depression + insomnia → PHQ-9 (was ISI: the eval bug)"
+  "src/lib/safety.test.ts::assessRisk — evasion-resistant normalization folds fullwidth pinyin onto the halfwidth lexicon"
 ]

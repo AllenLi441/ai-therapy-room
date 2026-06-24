@@ -115,6 +115,13 @@ export function suggestScale(text: string): ScaleId | null {
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score);
 
+  // Clinical priority for comorbid/mixed presentations: depression (PHQ-9) is
+  // hard-promoted over anxiety/insomnia whenever it has ANY match — PHQ-9 item 9
+  // screens self-harm, so a depressed user must not be routed to ISI/GAD-7 just
+  // because those happened to have more keyword hits. GAD-7 vs ISI still goes by
+  // score (only PHQ-9 is hard-promoted).
+  if (ranked.some((entry) => entry.id === "PHQ-9")) return "PHQ-9";
+
   return ranked[0]?.id ?? null;
 }
 
