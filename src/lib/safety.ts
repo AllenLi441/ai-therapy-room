@@ -484,7 +484,7 @@ export function createCrisisResponse(
       opening,
       "",
       "Please do these first:",
-      `1. If you already have a plan, a method nearby, or you worry you may lose control soon, call local emergency services now. In mainland China call ${CN_EMS} or the ${PSYCH} psychological support hotline; in the United States and Canada call ${INTL_RESOURCES.usCrisis} or ${INTL_RESOURCES.usEmergency}.`,
+      `1. If you already have a plan, a method nearby, or you worry you may lose control soon, call your local emergency number now (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada). For a crisis line: ${INTL_RESOURCES.usCrisis} (US Suicide & Crisis Lifeline), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/Ireland), Lifeline ${INTL_RESOURCES.auLifeline} (Australia), or find one near you at ${INTL_RESOURCES.finder}.`,
       "2. Try not to stay alone. Contact someone you trust in real life and say directly: I am not safe right now and need you to stay with me.",
       "3. Move anything you could use to hurt yourself or someone else out of reach, or ask someone else to hold it for you.",
       "4. If you can, put both feet on the floor. Inhale for 4 seconds and exhale for 6 seconds, five rounds.",
@@ -620,13 +620,13 @@ export function createCrisisResourceBlock(
         ? [
             "━━━━━━━━",
             "Either way, these are here anytime:",
-            `· Immediate danger: in mainland China call ${CN_EMS}, or the ${PSYCH} psychological support line. US/Canada ${INTL_RESOURCES.usCrisis} or ${INTL_RESOURCES.usEmergency}.`,
+            `· Immediate danger: call your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada). Crisis lines: ${INTL_RESOURCES.usCrisis} (US), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/IE), Lifeline ${INTL_RESOURCES.auLifeline} (AU), or ${INTL_RESOURCES.finder}.`,
             "If you can reply, send only one number: 1=I moved dangerous items away, 2=someone is with me, 3=I am about to call, 4=I cannot do this right now.",
             "I can stay with you for these few minutes, but this is not emergency rescue and cannot replace in-person help."
           ]
         : [
             "━━━━━━━━",
-            `Either way, these are here anytime: in mainland China call ${CN_EMS} or the ${PSYCH} line; US/Canada ${INTL_RESOURCES.usCrisis}/${INTL_RESOURCES.usEmergency}.`,
+            `Either way, these are here anytime: your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada), or a crisis line — ${INTL_RESOURCES.usCrisis} (US), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/IE), Lifeline ${INTL_RESOURCES.auLifeline} (AU), or ${INTL_RESOURCES.finder}.`,
             "You can reply with only one number: 1=I am safe but in a lot of pain, 2=I have thoughts of hurting myself but no plan, 3=I have a plan or method nearby, 4=I am not sure. If it is 3 or 4, please contact real-world help first."
           ];
     return lines.join("\n");
@@ -658,7 +658,7 @@ export function createCrisisResourceBlock(
  */
 export function createGlobalSafetyFooter(language: AppLanguage = "zh"): string {
   if (language === "en") {
-    return `📞 If you are in danger or need immediate help, call ${INTL_RESOURCES.usCrisis}/${INTL_RESOURCES.usEmergency} (US/CA) or ${CN_EMS} (CN), or reach someone you trust.`;
+    return `📞 If you are in danger or need immediate help, call your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} US/Canada) or a crisis line (${INTL_RESOURCES.usCrisis} US · Samaritans ${INTL_RESOURCES.ukSamaritans} · ${INTL_RESOURCES.finder}), or reach someone you trust.`;
   }
   return `📞 如果你现在有危险或需要立即帮助，请拨打 ${CN_EMS} 或 ${PSYCH}，或联系身边可信赖的人。`;
 }

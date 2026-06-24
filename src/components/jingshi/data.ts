@@ -142,7 +142,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     scales: "Self check-in", scales_d: "Gentle short questionnaires to see things more clearly.",
     scales_sub: "Anonymous clinical self-checks. Results are a reference, never a diagnosis.", scale_items_zh: "items", scale_mins: "~1 min",
     scale_suggest: "Would a 1-minute self check-in help us see things more clearly? It's a reference, not a diagnosis.", scale_suggest_cta: "Take it", scale_dismiss: "Not now",
-    safety_tip: "If you are in danger or need immediate help, call 988/911 (US/CA) or 110/120 (CN), or reach someone you trust.", safety_tip_dismiss: "Got it",
+    safety_tip: "If you're in danger or need help now, call your local emergency number (e.g. 911 in the US/Canada) or a crisis line (988 · Samaritans 116 123 · findahelpline.com), or reach someone you trust.", safety_tip_dismiss: "Got it",
     crisis_tool: "I'm in danger now", crisis_tool_d: "See hotlines and real-person support now.",
     case_title: "What I understand", case_note: "This is the understanding I've slowly formed in our talk. It may be wrong — please correct me anytime.",
     case_empty: "We've only just begun — I don't yet understand enough to say. Tell me a little more and I'll slowly piece it together here.",

@@ -22,7 +22,6 @@
   "src/lib/safety-crisis-deescalation.test.ts::detectActiveCrisisFromHistory — conservative de-escalation releases on '我好多了' and on English 'I'm safe now'",
   "src/lib/safety-crisis-reply.test.ts::classifyCrisisCheckReply — scale-aware 1–4 parsing ignores non-check messages that merely contain a digit",
   "src/lib/safety-crisis-reply.test.ts::crisis template hotlines + concise opener concise opener is a short first-beat on the severity scale",
-  "src/lib/safety-crisis-reply.test.ts::crisis template hotlines + concise opener the full English crisis template now lists UK/AU/international lines",
   "src/lib/safety-crisis-snapshot.test.ts::crisis templates — byte-equivalence snapshots (behavior lock) createCrisisResponse zh",
   "src/lib/safety-crisis-snapshot.test.ts::crisis templates — byte-equivalence snapshots (behavior lock) createMinorSupportLine zh",
   "src/lib/safety-danger-regression.test.ts::fail-closed danger detection colloquial medical red flag → medical_red_flag, not crisis",
