@@ -475,6 +475,27 @@ export type ImplicitDecision =
   | { intercept: false; source: "none" | "low_confidence" | "non_self_pragmatic" | "fail_safe_release"; rationale: string }
   | { intercept: true; mode: "crisis" | "suicide_concern" | "gentle_check"; source: "llm" | "fail_safe"; rationale: string };
 
+// Clear death / self-exit / hopelessness cues used to CONFIRM a judge-labelled
+// passive_death_wish before it routes anywhere. Deliberately excludes ambiguous
+// everyday idioms (撑不住 / 好累 / 好烦 / 没动力) so plain venting the judge mislabels
+// is RELEASED, not re-admitted. This only gates the SOFT tier (passive_death_wish);
+// it never affects the crisis tiers. ⚠ Part of the clinically-reviewed gentle_check
+// design (see gentle-check.test.ts) — keep edits conservative + run that suite.
+const DEATH_CUE_MARKERS = [
+  "没意义", "没什么意义", "没有意义", "活着没意思", "活着没什么意思", "活着没意义", "活着没劲",
+  "不想活", "活不下去", "想死", "不想醒", "醒不来", "不想再醒", "睡过去就", "永远睡",
+  "消失", "从这个世界", "离开这个世界", "解脱", "一了百了", "结束这一切", "结束自己", "结束生命",
+  "没有未来", "看不到希望", "绝望", "不如死", "死了算了", "不如不在", "没人会想念我", "活着是负担",
+  "no point in living", "not worth living", "want to disappear", "don't want to be here",
+  "dont want to be here", "end it all", "no reason to live", "no future", "better off without me",
+  "wish i was gone", "want to die", "don't want to wake up"
+];
+
+function hasRealDeathCue(evidence: string[]): boolean {
+  const hay = evidence.join(" ").toLowerCase();
+  return DEATH_CUE_MARKERS.some((m) => hay.includes(m));
+}
+
 export function decideImplicitIntercept(
   outcome: ImplicitOutcome,
   lexicon: RiskAssessment
@@ -514,11 +535,10 @@ export function decideImplicitIntercept(
       };
     }
 
-    // Passive death wish / suicidal ideation / NSSI → suicide_concern (medium).
+    // Suicidal ideation / NSSI (active) → suicide_concern, NEVER softened — active
+    // ideation is not a gentle-tier candidate even at modest confidence.
     if (
-      (r.severity === "passive_death_wish" ||
-        r.severity === "suicidal_ideation" ||
-        r.severity === "non_suicidal_self_harm") &&
+      (r.severity === "suicidal_ideation" || r.severity === "non_suicidal_self_harm") &&
       r.confidence >= 0.4
     ) {
       return {
@@ -526,6 +546,56 @@ export function decideImplicitIntercept(
         mode: "suicide_concern",
         source: "llm",
         rationale: `${r.severity} (conf=${r.confidence.toFixed(2)}): ${r.rationale}`
+      };
+    }
+
+    // passive_death_wish — the mildest tier and the one the intentionally-aggressive
+    // judge over-triages onto plain sadness ("我好伤心" → full number-grading, per the
+    // 2026-06-25 owner report). GRADED routing (clinically-reviewed gentle_check design,
+    // gentle-check.test.ts):
+    //   • a HARD signal (lexicon suicide flag, or a means/farewell/imminent-timeframe
+    //     modifier) → always the full template.
+    //   • otherwise gate on the judge's OWN evidence: if it carries no real death/
+    //     hopelessness cue, the judge mislabelled benign venting → RELEASE.
+    //   • cue present + high confidence (≥0.6) → full template.
+    //   • cue present + low confidence (0.4–0.6) → warm gentle check (no hotlines/grading).
+    if (r.severity === "passive_death_wish" && r.confidence >= 0.4) {
+      const hardSignal =
+        lexicon.flags.includes("suicide_concern") ||
+        lexicon.categories.includes("suicide") ||
+        lexicon.categories.includes("self_harm") ||
+        LEVEL_SCORE[lexicon.level] >= LEVEL_SCORE.high ||
+        r.modifiers.includes("means_capability") ||
+        r.modifiers.includes("farewell_closure") ||
+        r.modifiers.includes("timeframe_recency");
+      if (hardSignal) {
+        return {
+          intercept: true,
+          mode: "suicide_concern",
+          source: "llm",
+          rationale: `passive_death_wish + hard signal (conf=${r.confidence.toFixed(2)}): ${r.rationale}`
+        };
+      }
+      if (!hasRealDeathCue(r.evidence)) {
+        return {
+          intercept: false,
+          source: "none",
+          rationale: `passive_death_wish but no death cue in evidence → likely mislabel, release: ${r.rationale}`
+        };
+      }
+      if (r.confidence >= 0.6) {
+        return {
+          intercept: true,
+          mode: "suicide_concern",
+          source: "llm",
+          rationale: `passive_death_wish + cue (conf=${r.confidence.toFixed(2)}): ${r.rationale}`
+        };
+      }
+      return {
+        intercept: true,
+        mode: "gentle_check",
+        source: "llm",
+        rationale: `passive_death_wish + cue, low conf (${r.confidence.toFixed(2)}) → gentle: ${r.rationale}`
       };
     }
 

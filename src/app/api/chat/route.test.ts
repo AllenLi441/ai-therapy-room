@@ -125,6 +125,46 @@ describe("chat route — safety branch ordering", () => {
     expect(text).toContain("认真对待"); // the suicide-concern template still fires
   });
 
+  it("judge passive_death_wish + a cue at LOW confidence (lexicon clean) → warm gentle check, NOT the grading block", async () => {
+    // The 2026-06-25 report: the intentionally-aggressive judge over-triaged soft
+    // distress into the full number-grading. With a clean lexicon, no hard modifier and
+    // only low confidence, the route now softens to the warm gentle check.
+    mockedJudge.mockResolvedValueOnce({
+      kind: "ok",
+      result: {
+        severity: "passive_death_wish",
+        pragmatic: "self",
+        modifiers: [],
+        evidence: ["一切都没什么意义了"],
+        confidence: 0.5,
+        suggestedFlags: [],
+        rationale: "low-confidence passive death wish"
+      }
+    });
+    const text = await bodyText([{ role: "user", content: "我好伤心" }]);
+    expect(text).toContain("想停下来休息一下"); // gentle check
+    expect(text).not.toContain("认真对待"); // NOT the suicide-concern grading template
+  });
+
+  it("judge passive_death_wish WITH a means modifier → full template even on a clean lexicon (real implicit risk kept)", async () => {
+    mockedJudge.mockResolvedValueOnce({
+      kind: "ok",
+      result: {
+        severity: "passive_death_wish",
+        pragmatic: "self",
+        modifiers: ["means_capability"],
+        evidence: [],
+        confidence: 0.7,
+        suggestedFlags: [],
+        rationale: "implicit ideation with means cue the lexicon missed"
+      }
+    });
+    // Same benign-looking input as the soften test — ONLY the judge's means modifier
+    // differs — and that alone keeps the full template (real implicit risk not dropped).
+    const text = await bodyText([{ role: "user", content: "我好伤心" }]);
+    expect(text).toContain("认真对待"); // full suicide-concern template, NOT softened
+  });
+
   it("plain medication request returns the medication-boundary template", async () => {
     const text = await bodyText([{ role: "user", content: "你推荐我吃什么药？剂量多少？" }]);
     expect(text).toContain("不能给你推荐药名、剂量");

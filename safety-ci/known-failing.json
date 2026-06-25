@@ -8,8 +8,6 @@
   "src/lib/_concurrent-p3-compat.test.ts::concurrent P3 compat probe traditional medium 活著沒意思",
   "src/lib/_concurrent-p3-compat.test.ts::concurrent P3 compat probe zero-width",
   "src/lib/_probe.test.ts::PROBE current main-checkout assessRisk prints behavior for each case",
-  "src/lib/gentle-check.test.ts::P2 gentle_check — graded routing soft tier low-confidence (0.4–0.6) passive death-wish WITH a real cue → gentle_check, not hotlines",
-  "src/lib/gentle-check.test.ts::P2 gentle_check — graded routing soft tier no-cue passive (sleep/panic/venting mislabel) still RELEASES — gentle_check does not re-admit FPs",
   "src/lib/model-api-mapping.test.ts::toDeepSeekApiModel falls back to a valid model for unknown/garbage input",
   "src/lib/model-api-mapping.test.ts::toDeepSeekApiModel maps EVERY UI model id to a provider-accepted API model name",
   "src/lib/model-api-mapping.test.ts::toDeepSeekApiModel preserves the pro/flash tier through mapping",

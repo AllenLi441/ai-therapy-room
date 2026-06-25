@@ -48,8 +48,8 @@ describe("decideImplicitIntercept — over-triage policy", () => {
     if (decision.intercept) expect(decision.mode).toBe("crisis");
   });
 
-  it("passive_death_wish at conf >= 0.4 fires SUICIDE_CONCERN", () => {
-    const lex = assessRisk("最近压力很大");
+  it("passive_death_wish WITH lexicon corroboration → full SUICIDE_CONCERN", () => {
+    const lex = assessRisk("活着好累"); // lexicon already flags suicide_concern
     const decision = decideImplicitIntercept(
       ok(build({ severity: "passive_death_wish", confidence: 0.7, pragmatic: "self" })),
       lex
@@ -58,14 +58,43 @@ describe("decideImplicitIntercept — over-triage policy", () => {
     if (decision.intercept) expect(decision.mode).toBe("suicide_concern");
   });
 
-  it("suicidal_ideation at conf >= 0.4 fires SUICIDE_CONCERN", () => {
-    const lex = assessRisk("最近很难");
+  it("suicidal_ideation WITH lexicon corroboration → full SUICIDE_CONCERN", () => {
+    const lex = assessRisk("如果我不在了，大家应该会轻松一点"); // lexicon flags suicide_concern
     const decision = decideImplicitIntercept(
       ok(build({ severity: "suicidal_ideation", confidence: 0.5, pragmatic: "self" })),
       lex
     );
     expect(decision.intercept).toBe(true);
     if (decision.intercept) expect(decision.mode).toBe("suicide_concern");
+  });
+
+  it("passive_death_wish + hard modifier (means_capability) → full SUICIDE_CONCERN even if lexicon is clean", () => {
+    const lex = assessRisk("我好伤心"); // lexicon clean, but the judge saw a means cue
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "passive_death_wish", confidence: 0.7, pragmatic: "self", modifiers: ["means_capability"] })),
+      lex
+    );
+    expect(decision.intercept).toBe(true);
+    if (decision.intercept) expect(decision.mode).toBe("suicide_concern");
+  });
+
+  it("JUDGE-ONLY passive_death_wish + a real cue at LOW confidence (0.5) → GENTLE_CHECK, not the grading block", () => {
+    const lex = assessRisk("我好伤心"); // lexicon clean — the over-triage case
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "passive_death_wish", confidence: 0.5, pragmatic: "self", evidence: ["一切都没什么意义了"] })),
+      lex
+    );
+    expect(decision.intercept).toBe(true);
+    if (decision.intercept) expect(decision.mode).toBe("gentle_check");
+  });
+
+  it("JUDGE-ONLY passive_death_wish with NO death cue (judge mislabeled plain venting) → RELEASE", () => {
+    const lex = assessRisk("我好伤心"); // lexicon clean
+    const decision = decideImplicitIntercept(
+      ok(build({ severity: "passive_death_wish", confidence: 0.8, pragmatic: "self", evidence: ["我好伤心", "最近老是睡不着"] })),
+      lex
+    );
+    expect(decision.intercept).toBe(false); // no real death cue → not re-admitted as a crisis
   });
 
   it("pragmatic=other never intercepts on implicit alone (lexicon may still escalate)", () => {

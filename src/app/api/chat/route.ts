@@ -249,6 +249,16 @@ export async function POST(request: Request) {
       logFireAndForget("implicit_crisis", implicitOutcome, implicitDecision);
       return await respondTailoredCrisis("crisis", mergedRisk, implicitDecision.source);
     }
+    if (implicitDecision.mode === "gentle_check") {
+      // Judge-only medium signal on an otherwise-benign message (e.g. it over-triaged
+      // plain "我好伤心"): a warm safety check instead of the cold number-grading — and
+      // instant (fixed text, no model round-trip, so it also kills the ~30s crisis-path
+      // latency these false positives used to incur). Hotlines stay in the global footer.
+      logFireAndForget("implicit_gentle_check", implicitOutcome, implicitDecision);
+      return new Response(textStreamFromString(createGentleCheckResponse(undefined, language)), {
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      });
+    }
     const route: DecisionRoute =
       implicitDecision.source === "fail_safe" ? "implicit_fail_safe" : "implicit_suicide_concern";
     logFireAndForget(route, implicitOutcome, implicitDecision);
