@@ -197,10 +197,13 @@ export async function POST(request: Request) {
     return await respondTailoredCrisis("crisis", risk, "lexicon");
   }
 
-  if (risk.flags.includes("suicide_concern") && !crisisModeActive) {
-    logFireAndForget("lexicon_suicide_concern", stubImplicit, stubDecision);
-    return await respondTailoredCrisis("suicide_concern", risk, "lexicon");
-  }
+  // NOTE: lexicon suicide_concern (medium) NO LONGER short-circuits here. Firing the
+  // full number-grading block on a bare keyword over-triggered on ordinary distress
+  // idioms — "快撑不住了" got the same clinical grading as real ideation (2026-06-24
+  // eval, finding #1). It is now handled AFTER the implicit danger judge below: the
+  // judge weighs intent+severity, so judge-cleared ordinary distress gets a warm
+  // gentle check instead of the cold grading, while a Kimi outage / unconfigured judge
+  // still fires the template (fail-safe — a lexicon suicide signal is never released blind).
 
   // NOTE: medication / diagnosis / medical_red_flag boundary replies USED to short-
   // circuit here, before the LLM judge ran. That let a brittle keyword match (e.g.
@@ -250,6 +253,27 @@ export async function POST(request: Request) {
       implicitDecision.source === "fail_safe" ? "implicit_fail_safe" : "implicit_suicide_concern";
     logFireAndForget(route, implicitOutcome, implicitDecision);
     return await respondTailoredCrisis("suicide_concern", mergedRisk, implicitDecision.source);
+  }
+
+  // Lexicon flagged suicide_concern but the implicit judge did NOT intercept above.
+  // This is where the eval-#1 over-trigger is fixed: branch on whether the judge
+  // actually ran.
+  //   - judge unavailable/errored (kind !== "ok") → fire the full template (FAIL-SAFE:
+  //     never release a lexicon suicide signal blind during a Kimi outage / no key —
+  //     this preserves the exact pre-change behavior whenever the judge can't speak).
+  //   - judge ran and read it as ordinary distress (kind === "ok", no intercept) → the
+  //     idiom is everyday venting ("快撑不住了"), so soften to a WARM gentle check-in
+  //     instead of the clinical number-grading. A genuinely risky message would have
+  //     been intercepted by the judge block just above.
+  if (risk.flags.includes("suicide_concern") && !crisisModeActive) {
+    if (implicitOutcome.kind !== "ok") {
+      logFireAndForget("lexicon_suicide_concern", implicitOutcome, implicitDecision);
+      return await respondTailoredCrisis("suicide_concern", mergedRisk, "lexicon");
+    }
+    logFireAndForget("implicit_gentle_check", implicitOutcome, implicitDecision);
+    return new Response(textStreamFromString(createGentleCheckResponse(undefined, language)), {
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+    });
   }
 
   // Reordered scope-boundary replies — reached only AFTER the danger judge cleared

@@ -97,6 +97,34 @@ describe("chat route — safety branch ordering", () => {
     expect(text).not.toContain("不能给你推荐药名、剂量");
   });
 
+  it("eval #1 fix: ordinary distress idiom the JUDGE clears → warm gentle check, NOT the grading block", async () => {
+    // "快撑不住了" matches the lexicon suicide_concern list, but here it's an ordinary
+    // work-stress vent. With a real judge reading it as everyday distress, the route
+    // must soften to the gentle check instead of the cold number-grading template.
+    mockedJudge.mockResolvedValueOnce({
+      kind: "ok",
+      result: {
+        severity: "none",
+        pragmatic: "self",
+        modifiers: [],
+        evidence: [],
+        confidence: 0.9,
+        suggestedFlags: [],
+        rationale: "ordinary work stress, no death/means/farewell framing"
+      }
+    });
+    const text = await bodyText([{ role: "user", content: "我最近工作压力好大，天天加班，快撑不住了。" }]);
+    expect(text).toContain("想停下来休息一下"); // the gentle check
+    expect(text).not.toContain("认真对待"); // NOT the suicide-concern grading template
+  });
+
+  it("eval #1 fix preserves the FAIL-SAFE: same idiom but judge unavailable → still fires the template", async () => {
+    // Default judge mock = not_configured (a Kimi outage / no key). A lexicon suicide
+    // signal must NEVER be silently released when the judge can't weigh in.
+    const text = await bodyText([{ role: "user", content: "我最近工作压力好大，天天加班，快撑不住了。" }]);
+    expect(text).toContain("认真对待"); // the suicide-concern template still fires
+  });
+
   it("plain medication request returns the medication-boundary template", async () => {
     const text = await bodyText([{ role: "user", content: "你推荐我吃什么药？剂量多少？" }]);
     expect(text).toContain("不能给你推荐药名、剂量");
