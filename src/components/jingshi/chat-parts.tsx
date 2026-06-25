@@ -122,20 +122,36 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
           )}
         </div>
         {isAI && m.refs && m.refs.length > 0 && (
-          <details className="kb-refs" style={{ marginTop: 6, fontSize: 12, color: "rgba(120,120,120,0.95)" }}>
-            <summary style={{ cursor: "pointer", userSelect: "none" }}>
-              {lang === "zh" ? `数据来源 · ${m.refs.length}` : `Sources · ${m.refs.length}`}
+          <details className="kb-refs" style={{ marginTop: 8, fontSize: 12.5, color: "rgba(120,120,120,0.95)" }}>
+            <summary style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "var(--tone, #3a8a78)", fontWeight: 500 }}>
+              <Ic.clipboard style={{ width: 14, height: 14, opacity: 0.9 }} />
+              {lang === "zh"
+                ? `研究过程 · 参考了 ${m.refs.length} 条循证资料`
+                : `Research · ${m.refs.length} evidence source${m.refs.length > 1 ? "s" : ""}`}
             </summary>
-            <ul style={{ margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
-              {m.refs.map((r, i) => (
-                <li key={i} style={{ marginBottom: 4 }}>
-                  {r.url
-                    ? <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--tone, #3a8a78)", textDecoration: "underline" }}>{r.source || r.title}</a>
-                    : <span>{r.source || r.title}</span>}
-                  {r.quote && <div style={{ opacity: 0.85, fontStyle: "italic", marginTop: 2 }}>“{r.quote}”</div>}
-                </li>
-              ))}
-            </ul>
+            <div style={{ marginTop: 8 }}>
+              <div style={{ opacity: 0.78, marginBottom: 8, lineHeight: 1.55 }}>
+                {lang === "zh"
+                  ? "这条回应参考了下面这些权威来源的要点。点链接可核对原文——只用真实、可查证的资料,不替代专业诊疗。"
+                  : "This reply drew on the authoritative sources below — open a link to verify the original. We use only real, checkable sources, never a substitute for professional care."}
+              </div>
+              <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
+                {m.refs.map((r, i) => (
+                  <li key={i} style={{ borderLeft: "2px solid var(--tone, #3a8a78)", paddingLeft: 10, lineHeight: 1.5 }}>
+                    <div style={{ fontWeight: 500, color: "inherit", opacity: 0.95, marginBottom: 2 }}>{r.title}</div>
+                    {r.quote && <div style={{ fontStyle: "italic", opacity: 0.82, marginBottom: 3 }}>“{r.quote}”</div>}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {r.source && <span style={{ opacity: 0.7 }}>{r.source}</span>}
+                      {r.url && (
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--tone, #3a8a78)", textDecoration: "underline", whiteSpace: "nowrap" }}>
+                          {lang === "zh" ? "查看来源 ↗" : "View source ↗"}
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </details>
         )}
         {m.errored && onRetry && (
