@@ -10,6 +10,7 @@ import {
   type ImplicitOutcome
 } from "@/lib/implicit-risk";
 import { retrieveKnowledge } from "@/lib/knowledge";
+import { searchAuthoritative } from "@/lib/web-search";
 import { createAssistantTextStream, createAssistantTextStreamWithThinking } from "@/lib/output-style";
 import { resolvePersona, type PersonaId } from "@/lib/personas";
 import { buildCounselorSystemPrompt, createProviderErrorFallback } from "@/lib/prompts";
@@ -417,6 +418,15 @@ export async function POST(request: Request) {
     4
   );
 
+  // KB miss + DEEP mode + non-crisis → live web fallback, restricted to authoritative
+  // medical/research domains (see web-search.ts). Fast mode skips it (would blow the ≤6s
+  // budget); no SEARCH_API_KEY → [] (KB-only, unchanged). Crisis is handled far above and
+  // never reaches here, so a vulnerable user's crisis is never web-searched.
+  const webResults =
+    resolveSessionPace(body.pace) === "deep" && !crisisModeActive && knowledge.length === 0
+      ? await searchAuthoritative(latestUserMessage.content, 3)
+      : [];
+
   // Long-conversation memory: keep recent turns verbatim within the char budget,
   // and inject a compact digest of the EARLIER user statements (names, facts,
   // safety-relevant history) so they survive once the conversation scrolls past the
@@ -440,7 +450,8 @@ export async function POST(request: Request) {
     persona,
     pace: resolveSessionPace(body.pace),
     language,
-    earlierUserContext
+    earlierUserContext,
+    webResults
   });
 
   const payload = buildDeepSeekPayload({
@@ -460,9 +471,18 @@ export async function POST(request: Request) {
   // this reply, so the UI can show "数据来源" with clickable, checkable links. URL-
   // encoded JSON (headers are latin-1; titles are Chinese). Only cards with a real
   // source are surfaced.
-  const refs = knowledge
-    .filter((k) => k.sourceUrl)
-    .map((k) => ({ title: k.title, source: k.sourceTitle, url: k.sourceUrl, quote: k.sourceQuote }));
+  const refs = [
+    ...knowledge
+      .filter((k) => k.sourceUrl)
+      .map((k) => ({ title: k.title, source: k.sourceTitle, url: k.sourceUrl, quote: k.sourceQuote, kind: "kb" as const })),
+    ...webResults.map((w) => ({
+      title: w.title,
+      source: w.url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0],
+      url: w.url,
+      quote: w.snippet,
+      kind: "web" as const
+    }))
+  ];
   const knowledgeHeader = refs.length
     ? { "X-Knowledge": encodeURIComponent(JSON.stringify(refs)) }
     : undefined;

@@ -79,6 +79,13 @@ function formatKnowledge(cards: KnowledgeCard[]) {
     .join("\n\n");
 }
 
+function formatWebResults(results?: Array<{ title: string; url: string; snippet: string }>) {
+  if (!results || results.length === 0) return "（本轮未做实时检索。）";
+  return results
+    .map((r, i) => [`资料 ${i + 1}：${r.title}`, `摘要：${r.snippet}`].join("\n"))
+    .join("\n\n");
+}
+
 function formatMoodMemory(summary?: string) {
   const text = summary?.trim();
   if (!text) return "（暂无历史心情记录；只根据本次对话回应。）";
@@ -184,6 +191,7 @@ export function buildCounselorSystemPrompt(input: {
   language?: AppLanguage;
   earlierUserContext?: string;
   moodMemory?: string;
+  webResults?: Array<{ title: string; url: string; snippet: string }>;
 }) {
   const scaleSafetyDirective = formatScaleSafetyDirective(input.scaleResults);
   return [
@@ -221,6 +229,13 @@ export function buildCounselorSystemPrompt(input: {
     "",
     "【可参考的心理支持知识】",
     formatKnowledge(input.knowledge),
+    ...(input.webResults && input.webResults.length
+      ? [
+          "",
+          "【实时检索到的权威资料（知识库未覆盖本话题，以下来自权威医疗站点的实时检索；请基于这些事实自然回应，可点链接核对，但不要照搬术语或说“研究表明”）】",
+          formatWebResults(input.webResults)
+        ]
+      : []),
     "",
     "【输出格式】",
     formatLanguageInstruction(input.language),

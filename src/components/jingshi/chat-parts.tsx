@@ -176,7 +176,14 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
               <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
                 {m.refs.map((r, i) => (
                   <li key={i} style={{ borderLeft: "2px solid var(--tone, #3a8a78)", paddingLeft: 10, lineHeight: 1.5 }}>
-                    <div style={{ fontWeight: 500, color: "inherit", opacity: 0.95, marginBottom: 2 }}>{r.title}</div>
+                    <div style={{ fontWeight: 500, color: "inherit", opacity: 0.95, marginBottom: 2 }}>
+                      {r.title}
+                      {r.kind === "web" && (
+                        <span style={{ marginLeft: 6, fontSize: 10, padding: "0 5px", borderRadius: 4, border: "1px solid currentColor", opacity: 0.6, verticalAlign: "middle" }}>
+                          {lang === "zh" ? "实时" : "live"}
+                        </span>
+                      )}
+                    </div>
                     {r.quote && <div style={{ fontStyle: "italic", opacity: 0.82, marginBottom: 3 }}>“{r.quote}”</div>}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       {r.source && <span style={{ opacity: 0.7 }}>{r.source}</span>}

@@ -18,7 +18,7 @@ export type Media = { id: string; type: "image" | "video"; url: string; name?: s
 
 // A knowledge-base source actually consulted for a reply (shown to the user as
 // 数据来源 with a clickable, checkable link — see the X-Knowledge response header).
-export type KnowledgeRef = { title: string; source?: string; url?: string; quote?: string };
+export type KnowledgeRef = { title: string; source?: string; url?: string; quote?: string; kind?: "kb" | "web" };
 
 export type Message = {
   id: string;
