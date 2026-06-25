@@ -9,6 +9,7 @@ import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
 import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet, ConsentGate } from "./overlays";
 import type { CaseMap, ScaleResult } from "@/lib/types";
+import { REASONING_OPEN, REASONING_CLOSE } from "@/lib/stream-markers";
 
 let _mid = 0;
 const uid = () => "m" + ++_mid;
@@ -106,6 +107,7 @@ export function App() {
       const slim = messages.slice(-120).map((m) => ({
         ...m,
         streaming: false,
+        thinking: undefined, // transparency-only + can be large — don't persist
         media: m.media?.filter((x) => !x.url.startsWith("data:"))
       }));
       localStorage.setItem("js_chat", JSON.stringify(slim));
@@ -126,7 +128,7 @@ export function App() {
     const userMsg: Message = { id: uid(), role: "user", content: text, media, visionPending: hasImages };
     const userId = userMsg.id;
     const aiId = uid();
-    const aiMsg: Message = { id: aiId, role: "assistant", personaId: "linxi", content: "", streaming: true, startedAt: Date.now() };
+    const aiMsg: Message = { id: aiId, role: "assistant", personaId: "linxi", content: "", streaming: true, startedAt: Date.now(), pace };
     const history = [...messagesRef.current, userMsg];
     setMessages((ms) => [...ms, userMsg, aiMsg]);
     setBusy(true);
@@ -199,11 +201,29 @@ export function App() {
       } else {
         const reader = res.body.getReader();
         const dec = new TextDecoder();
+        // Deep-tier replies arrive as [思考过程]<answer>, delimited by the
+        // REASONING_OPEN/CLOSE control chars. Route the thinking to its own panel
+        // and the answer to the bubble. Fast/crisis replies have no markers → all answer.
+        let phase: "answer" | "thinking" = "answer";
+        const apply = (think: string, content: string) =>
+          setMessages((ms) => ms.map((m) => (m.id === aiId
+            ? { ...m, thinking: (m.thinking || "") + think, content: m.content + content }
+            : m)));
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
-          const chunk = dec.decode(value, { stream: true });
-          setAi((c) => c + chunk);
+          let chunk = dec.decode(value, { stream: true });
+          while (chunk.length) {
+            if (phase === "answer") {
+              const o = chunk.indexOf(REASONING_OPEN);
+              if (o === -1) { apply("", chunk); chunk = ""; }
+              else { if (o > 0) apply("", chunk.slice(0, o)); phase = "thinking"; chunk = chunk.slice(o + 1); }
+            } else {
+              const c = chunk.indexOf(REASONING_CLOSE);
+              if (c === -1) { apply(chunk, ""); chunk = ""; }
+              else { if (c > 0) apply(chunk.slice(0, c), ""); phase = "answer"; chunk = chunk.slice(c + 1); }
+            }
+          }
         }
       }
     } catch {
@@ -226,7 +246,7 @@ export function App() {
       payload = messagesRef.current.slice(0, idx).map((m) => ({ role: m.role, content: m.content }));
       retryPayloads.current.set(aiId, payload);
     }
-    setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: "", errored: false, streaming: true, startedAt: Date.now() } : m)));
+    setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: "", thinking: "", errored: false, streaming: true, startedAt: Date.now() } : m)));
     void streamReply(aiId, payload);
   }
 

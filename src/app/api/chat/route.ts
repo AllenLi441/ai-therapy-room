@@ -10,7 +10,7 @@ import {
   type ImplicitOutcome
 } from "@/lib/implicit-risk";
 import { retrieveKnowledge } from "@/lib/knowledge";
-import { createAssistantTextStream } from "@/lib/output-style";
+import { createAssistantTextStream, createAssistantTextStreamWithThinking } from "@/lib/output-style";
 import { resolvePersona, type PersonaId } from "@/lib/personas";
 import { buildCounselorSystemPrompt, createProviderErrorFallback } from "@/lib/prompts";
 import { stripLeadingPreface } from "@/lib/preface";
@@ -346,10 +346,21 @@ export async function POST(request: Request) {
   const knowledgeHeader = refs.length
     ? { "X-Knowledge": encodeURIComponent(JSON.stringify(refs)) }
     : undefined;
-  const replyHeaders = { ...crisisHeader, ...knowledgeHeader };
+
+  // Deep tier streams the model's reasoning ("思考过程") as a leading block the
+  // client shows in a collapsible panel — this is what makes 深度 vs 快速 visible.
+  // Never during an active crisis (keep those replies fast + free of raw risk
+  // deliberation): fall back to the plain content-only cleaning path.
+  const pace = resolveSessionPace(body.pace);
+  const wantThinking = pace === "deep" && !crisisModeActive;
+  const replyHeaders = { ...crisisHeader, ...knowledgeHeader, "X-Pace": pace };
 
   try {
-    return streamTextResponse(sanitizeReplyStream(createAssistantTextStream(await createDeepSeekTextStream(payload))), replyHeaders);
+    const raw = await createDeepSeekTextStream(payload, { includeReasoning: wantThinking });
+    const styled = wantThinking
+      ? createAssistantTextStreamWithThinking(raw)
+      : sanitizeReplyStream(createAssistantTextStream(raw));
+    return streamTextResponse(styled, replyHeaders);
   } catch {
     return new Response(createProviderErrorFallback(), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...crisisHeader }

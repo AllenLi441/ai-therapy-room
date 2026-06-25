@@ -1,4 +1,5 @@
 import type { ChatMessage } from "./types";
+import { REASONING_OPEN, REASONING_CLOSE } from "./stream-markers";
 import {
   getPipelineMode,
   isValidApiModel,
@@ -165,7 +166,20 @@ async function requestDeepSeek(payload: DeepSeekPayload) {
   }
 }
 
-export async function createDeepSeekTextStream(payload: DeepSeekPayload) {
+/**
+ * Stream the assistant reply as raw text chunks. With `opts.includeReasoning`
+ * (deep tier only — the thinking model emits `reasoning_content` BEFORE the
+ * answer), the reasoning is forwarded as a leading block delimited by the
+ * REASONING_OPEN/REASONING_CLOSE control chars, so the caller can route it to a
+ * separate "思考过程" UI channel without it being mistaken for the answer. The
+ * default (no opts) is byte-for-byte the previous content-only behaviour, so
+ * fast-tier and crisis callers are unaffected.
+ */
+export async function createDeepSeekTextStream(
+  payload: DeepSeekPayload,
+  opts?: { includeReasoning?: boolean }
+) {
+  const includeReasoning = opts?.includeReasoning ?? false;
   const response = await requestDeepSeek({ ...payload, stream: true });
 
   if (!response.body) {
@@ -178,6 +192,8 @@ export async function createDeepSeekTextStream(payload: DeepSeekPayload) {
   let buffer = "";
   const pendingTexts: string[] = [];
   let isDone = false;
+  let reasoningOpen = false; // emitted REASONING_OPEN, still in the thinking phase
+  let contentSeen = false; // first answer token arrived → thinking phase closed
 
   function drainLines(lines: string[]) {
     for (const rawLine of lines) {
@@ -194,16 +210,39 @@ export async function createDeepSeekTextStream(payload: DeepSeekPayload) {
 
       try {
         const parsed = JSON.parse(data) as {
-          choices?: Array<{ delta?: { content?: string } }>;
+          choices?: Array<{ delta?: { content?: string; reasoning_content?: string } }>;
         };
-        const content = parsed.choices?.[0]?.delta?.content;
+        const delta = parsed.choices?.[0]?.delta;
+        const reasoning = delta?.reasoning_content;
+        const content = delta?.content;
+
+        if (includeReasoning && reasoning && !contentSeen) {
+          if (!reasoningOpen) {
+            pendingTexts.push(REASONING_OPEN);
+            reasoningOpen = true;
+          }
+          pendingTexts.push(reasoning);
+        }
 
         if (content) {
+          if (reasoningOpen && !contentSeen) {
+            pendingTexts.push(REASONING_CLOSE);
+          }
+          contentSeen = true;
           pendingTexts.push(content);
         }
       } catch {
         // Ignore malformed provider chunks and continue reading.
       }
+    }
+  }
+
+  // Degenerate case: thinking arrived but the model never produced an answer —
+  // close the thinking block so the client doesn't hang in the思考过程 phase.
+  function closeReasoningIfDangling(controller: ReadableStreamDefaultController<Uint8Array>) {
+    if (reasoningOpen && !contentSeen) {
+      controller.enqueue(encoder.encode(REASONING_CLOSE));
+      contentSeen = true;
     }
   }
 
@@ -217,6 +256,7 @@ export async function createDeepSeekTextStream(payload: DeepSeekPayload) {
         }
 
         if (isDone) {
+          closeReasoningIfDangling(controller);
           controller.close();
           return;
         }
@@ -224,6 +264,7 @@ export async function createDeepSeekTextStream(payload: DeepSeekPayload) {
         const { done, value } = await reader.read();
 
         if (done) {
+          closeReasoningIfDangling(controller);
           controller.close();
           return;
         }

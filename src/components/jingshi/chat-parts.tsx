@@ -100,7 +100,26 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
     <div className={"msg " + (isAI ? "ai" : "user")}>
       {isAI ? <Avatar size={34} /> : <div className="avatar user-av" aria-hidden="true"><Ic.user style={{ width: 18, height: 18 }} /></div>}
       <div className="msg-body">
-        <div className="msg-who">{isAI ? p.name[lang] : (lang === "zh" ? "你" : "You")}</div>
+        <div className="msg-who">
+          {isAI ? p.name[lang] : (lang === "zh" ? "你" : "You")}
+          {isAI && m.pace && (
+            <span style={{ marginLeft: 6, fontSize: 10.5, padding: "1px 6px", borderRadius: 999, border: "1px solid var(--tone, #3a8a78)", color: "var(--tone, #3a8a78)", opacity: 0.75, verticalAlign: "middle" }}>
+              {m.pace === "deep" ? STR[lang].pace_deep : STR[lang].pace_fast}
+            </span>
+          )}
+        </div>
+        {isAI && m.thinking && m.thinking.trim() && (
+          <details className="think-trace" open={!!m.streaming && m.content === ""} style={{ margin: "2px 0 6px", fontSize: 12.5, color: "rgba(120,120,120,0.95)" }}>
+            <summary style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "var(--tone, #3a8a78)", fontWeight: 500 }}>
+              <Ic.insight style={{ width: 14, height: 14, opacity: 0.9 }} />
+              {STR[lang].think_label}{m.streaming && m.content === "" ? "…" : ""}
+            </summary>
+            <div style={{ marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.6, maxHeight: 260, overflowY: "auto", padding: "8px 10px", borderLeft: "2px solid var(--tone, #3a8a78)", background: "rgba(127,127,127,0.06)", borderRadius: 6, opacity: 0.92 }}>
+              {m.thinking}
+            </div>
+            <div style={{ marginTop: 4, opacity: 0.6, fontSize: 11.5 }}>{STR[lang].think_hint}</div>
+          </details>
+        )}
         <div className={"bubble" + (hasMedia && !hasText ? " media-only" : "") + (m.errored ? " bubble-error" : "")}>
           {hasMedia && (
             <div className="bubble-media">
@@ -307,9 +326,9 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
       </div>
       <div className="composer-meta">
         <span className="disclaimer"><Ic.heart style={{ color: "var(--ink-3)" }} />{t.disclaimer}</span>
-        <div className="pace-toggle" role="group" aria-label="pace">
-          <button className={pace === "deep" ? "on" : ""} onClick={() => onPace("deep")}>{t.pace_deep}</button>
-          <button className={pace === "fast" ? "on" : ""} onClick={() => onPace("fast")}>{t.pace_fast}</button>
+        <div className="pace-toggle" role="group" aria-label="pace" title={t.pace_hint}>
+          <button className={pace === "deep" ? "on" : ""} onClick={() => onPace("deep")} title={t.pace_hint}>{t.pace_deep}</button>
+          <button className={pace === "fast" ? "on" : ""} onClick={() => onPace("fast")} title={t.pace_hint}>{t.pace_fast}</button>
         </div>
       </div>
     </div>
