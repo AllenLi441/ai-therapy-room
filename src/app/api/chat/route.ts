@@ -1,7 +1,7 @@
 import { appendDecisionLog, buildDecisionLogEntry, type DecisionRoute } from "@/lib/decision-log";
 import { sanitizeConversation } from "@/lib/conversation-window";
 import { buildDeepSeekPayload, createDeepSeekTextStream, generateDeepSeekText } from "@/lib/deepseek";
-import { sanitizeReplyStream, streamTextResponse, textStreamFromString } from "@/lib/http";
+import { appendParallelSafety, prependEventToStream, sanitizeReplyStream, streamTextResponse, textStreamFromString } from "@/lib/http";
 import {
   assessImplicitRiskWithLLM,
   decideImplicitIntercept,
@@ -211,6 +211,92 @@ export async function POST(request: Request) {
   // judge (below), so danger judgment wins; see the reordered branches past the
   // implicit block.
 
+  // ============ FAST-MODE PARALLEL SAFETY PATH (target: reply ≤ ~6s) ============
+  // In fast mode, when the INSTANT lexicon floor found no danger signal, don't block the
+  // reply on the ~6–12s Kimi judge. Stream the v4-flash answer immediately and run the
+  // judge CONCURRENTLY; its verdict arrives as a trailing event (and a vetted intervention
+  // if it caught implicit danger the lexicon missed — a few seconds late, the accepted
+  // fast-mode trade-off). Explicit danger is already handled by the lexicon floor above;
+  // deep mode, crisis mode, exit turns, and any lexicon-flagged message fall through to the
+  // unchanged blocking flow below.
+  const lexiconClean =
+    !risk.flags.includes("suicide_concern") &&
+    !risk.flags.includes("medication_request") &&
+    !risk.flags.includes("diagnosis_request") &&
+    !risk.flags.includes("medical_red_flag");
+  if (resolveSessionPace(body.pace) === "fast" && lexiconClean && !crisisModeActive && !body.exitedCrisis) {
+    const fastCaseMap = body.caseMap ?? null;
+    const fastKnowledge = await retrieveKnowledge(
+      [
+        body.profile?.concern,
+        latestUserMessage.content,
+        fastCaseMap?.presenting,
+        fastCaseMap?.workingHypothesis,
+        ...(fastCaseMap?.triggers ?? []),
+        ...(fastCaseMap?.automaticThoughts ?? [])
+      ]
+        .filter(Boolean)
+        .join(" "),
+      4
+    );
+    const fastRecent = takeRecentWithinBudget(messages);
+    const fastSystemPrompt = buildCounselorSystemPrompt({
+      profile: body.profile,
+      risk,
+      knowledge: fastKnowledge,
+      caseMap: fastCaseMap,
+      turnPlan: body.turnPlan ?? defaultTurnPlan(),
+      scaleResults: body.scaleResults,
+      persona,
+      pace: "fast",
+      language,
+      earlierUserContext: buildEarlierUserDigest(messages, fastRecent.length)
+    });
+    const fastPayload = buildDeepSeekPayload({
+      systemPrompt: fastSystemPrompt,
+      messages: fastRecent,
+      apiModel: "deepseek-v4-flash",
+      stream: true
+    });
+    // Kick the danger judge off NOW so it runs while v4-flash writes the reply. Tight 5s
+    // budget (vs 12s in deep mode) so the reply + trailing safety event close within ~6s;
+    // if Kimi can't answer that fast the event is "unchecked" (the lexicon floor already
+    // cleared explicit danger, and deep mode remains the fully-blocking safe option).
+    const judgePromise = assessImplicitRiskWithLLM(messages, 5_000)
+      .then((o) => ({ o, d: decideImplicitIntercept(o, risk) }))
+      .catch(() => ({
+        o: { kind: "error", reason: "parallel judge threw" } as ImplicitOutcome,
+        d: { intercept: false, source: "fail_safe_release", rationale: "parallel judge threw" } as ImplicitDecision
+      }));
+    const resolveSafety = async () => {
+      const { o, d } = await judgePromise;
+      logFireAndForget("deepseek_normal", o, d);
+      if (d.intercept && d.mode === "crisis") {
+        return { event: { type: "safety", status: "crisis" }, intervention: createCrisisResourceBlock("crisis", language) };
+      }
+      if (d.intercept && d.mode === "suicide_concern") {
+        return { event: { type: "safety", status: "suicide_concern" }, intervention: createCrisisResourceBlock("suicide_concern", language) };
+      }
+      if (d.intercept && d.mode === "gentle_check") {
+        return { event: { type: "safety", status: "gentle" }, intervention: createGentleCheckResponse(undefined, language) };
+      }
+      return { event: { type: "safety", status: o.kind === "ok" ? "safe" : "unchecked" } };
+    };
+    const fastRefs = fastKnowledge
+      .filter((k) => k.sourceUrl)
+      .map((k) => ({ title: k.title, source: k.sourceTitle, url: k.sourceUrl, quote: k.sourceQuote }));
+    const fastHeaders: Record<string, string> = { "X-Pace": "fast", "X-Safety": "parallel" };
+    if (fastRefs.length) fastHeaders["X-Knowledge"] = encodeURIComponent(JSON.stringify(fastRefs));
+    try {
+      const answer = sanitizeReplyStream(createAssistantTextStream(await createDeepSeekTextStream(fastPayload)));
+      return streamTextResponse(appendParallelSafety(answer, resolveSafety), fastHeaders);
+    } catch {
+      return new Response(createProviderErrorFallback(), {
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      });
+    }
+  }
+
   // -------- Implicit-risk layer (LLM semantic detection) — now PRIMARY danger judge --------
   //
   // The lexicon catches explicit signals. The synthesis in
@@ -389,12 +475,18 @@ export async function POST(request: Request) {
   const wantThinking = pace === "deep" && !crisisModeActive;
   const replyHeaders = { ...crisisHeader, ...knowledgeHeader, "X-Pace": pace };
 
+  // The danger judge already ran (blocking) above and did NOT intercept, so prepend a
+  // leading safety event the client shows as "🛡 安全识别 ✓" (or 未检 if the judge was
+  // unavailable) — the visible danger-check step for deep mode.
+  const safetyStatus = implicitOutcome.kind === "ok" ? "safe" : "unchecked";
+
   try {
     const raw = await createDeepSeekTextStream(payload, { includeReasoning: wantThinking });
     const styled = wantThinking
       ? createAssistantTextStreamWithThinking(raw)
       : sanitizeReplyStream(createAssistantTextStream(raw));
-    return streamTextResponse(styled, replyHeaders);
+    const withSafety = prependEventToStream(styled, { type: "safety", status: safetyStatus });
+    return streamTextResponse(withSafety, replyHeaders);
   } catch {
     return new Response(createProviderErrorFallback(), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...crisisHeader }

@@ -138,10 +138,10 @@ async function requestDeepSeek(payload: DeepSeekPayload) {
     throw new Error("Missing DEEPSEEK_API_KEY");
   }
 
-  // deepseek-v4-pro thinks before any token and can take tens of seconds; 30s
-  // would often abort it (→ fallback, reads as broken). Keep it under the route
-  // maxDuration (60s).
-  const timeoutMs = payload.model === "deepseek-v4-pro" ? 55_000 : 30_000;
+  // deepseek-v4-pro thinks before any token and can take tens of seconds; too short a
+  // cap aborts it mid-thought (→ fallback, reads as broken). Target: deep ≤ 30s (per
+  // product spec), fast tier far quicker. Both stay under the route maxDuration (60s).
+  const timeoutMs = payload.model === "deepseek-v4-pro" ? 30_000 : 20_000;
   const { controller, clear } = withTimeout(timeoutMs);
 
   try {

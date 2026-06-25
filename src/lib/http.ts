@@ -1,3 +1,88 @@
+import { EVENT_DELIM } from "./stream-markers";
+
+/** Encode a process event (e.g. the safety-check result) as an in-stream RS-wrapped JSON token. */
+function encodeEvent(event: unknown): string {
+  return EVENT_DELIM + JSON.stringify(event) + EVENT_DELIM;
+}
+
+/**
+ * Prepend a single process event to a stream (used in DEEP mode, where the Kimi
+ * danger-check has already resolved before the reply streams — so the client can show
+ * "🛡 安全识别 ✓" from the very start).
+ */
+export function prependEventToStream(
+  stream: ReadableStream<Uint8Array>,
+  event: unknown
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const reader = stream.getReader();
+  let sentPrefix = false;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (!sentPrefix) {
+        sentPrefix = true;
+        controller.enqueue(encoder.encode(encodeEvent(event)));
+        return;
+      }
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(value);
+    },
+    cancel() {
+      void reader.cancel();
+    }
+  });
+}
+
+/**
+ * FAST-mode parallel safety: stream the answer immediately, and once it finishes await
+ * the (concurrently-running) Kimi danger check. Emit its result as a trailing event and,
+ * if it flags danger the instant lexicon floor missed, append a vetted intervention. This
+ * is what lets fast replies land in seconds while the implicit-risk net still closes —
+ * just a few seconds later, which is the accepted product trade-off for fast mode.
+ */
+export function appendParallelSafety(
+  answerStream: ReadableStream<Uint8Array>,
+  resolveSafety: () => Promise<{ event: unknown; intervention?: string }>
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const reader = answerStream.getReader();
+  let answerDone = false;
+  let tailSent = false;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (!answerDone) {
+        const { done, value } = await reader.read();
+        if (!done) {
+          controller.enqueue(value);
+          return;
+        }
+        answerDone = true;
+      }
+      if (!tailSent) {
+        tailSent = true;
+        let tail = "";
+        try {
+          const { event, intervention } = await resolveSafety();
+          tail = encodeEvent(event);
+          if (intervention) tail += "\n\n" + intervention;
+        } catch {
+          tail = encodeEvent({ type: "safety", status: "unchecked" });
+        }
+        controller.enqueue(encoder.encode(tail));
+        return;
+      }
+      controller.close();
+    },
+    cancel() {
+      void reader.cancel();
+    }
+  });
+}
+
 export function textStreamFromString(text: string) {
   const encoder = new TextEncoder();
   return new ReadableStream<Uint8Array>({

@@ -33,6 +33,7 @@ export type Message = {
   refs?: KnowledgeRef[]; // RAG sources consulted for this reply (visible 数据来源)
   thinking?: string; // deep-tier reasoning ("思考过程"), shown in a collapsible panel
   pace?: "deep" | "fast"; // which tier produced this reply (for the mode badge)
+  safety?: "safe" | "unchecked" | "gentle" | "suicide_concern" | "crisis"; // Kimi danger-check result
 };
 
 export type ScaleId = "PHQ-9" | "GAD-7" | "ISI";
@@ -84,6 +85,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     pace_deep: "深度", pace_fast: "快速",
     pace_hint: "深度：先推理再回应、展示思考过程，更慢更细致；快速：跳过推理、即时回应。",
     think_label: "思考过程", think_hint: "深度模式下 AI 回应前的推理草稿，可能粗糙、不完整，仅作透明参考——它不是给你的建议。",
+    safety_label: "安全识别", safety_checking: "识别中…", safety_safe: "未见风险", safety_unchecked: "未启用", safety_flagged: "检测到风险，请看下方资源", safety_gentle: "附了一句温和确认",
     disclaimer: "我是 AI 陪伴，不是医生或持证咨询师",
     switch_persona: "更换陪伴者", persona_title: "选择此刻陪你的人", persona_sub: "切换会改变陪伴的方式，随时可以换回来。",
     current: "正在陪你",
@@ -144,6 +146,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     pace_deep: "Depth", pace_fast: "Quick",
     pace_hint: "Depth: reasons first and shows its thinking — slower, more considered. Quick: skips reasoning, replies instantly.",
     think_label: "Reasoning", think_hint: "The model's working-out before replying (deep mode) — rough, for transparency only, not advice for you.",
+    safety_label: "Safety check", safety_checking: "checking…", safety_safe: "no risk flagged", safety_unchecked: "not run", safety_flagged: "risk flagged — see resources below", safety_gentle: "added a gentle check-in",
     disclaimer: "I'm an AI companion — not a doctor or licensed therapist",
     switch_persona: "Change companion", persona_title: "Who's with you right now", persona_sub: "Switching changes how I support you. You can switch back anytime.",
     current: "With you now",

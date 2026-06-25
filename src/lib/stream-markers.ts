@@ -5,3 +5,9 @@
 // to the bubble. Pure constants — safe to import from both server and client.
 export const REASONING_OPEN = String.fromCharCode(2);
 export const REASONING_CLOSE = String.fromCharCode(3);
+
+// Wraps a one-line JSON "process event" (e.g. the Kimi danger-check result) inside the
+// chat stream: …answer…  RS {json} RS  …more answer…. RS (U+001E) never appears in model
+// text, so the client can split events out of the visible reply. Used for the safety
+// step that, in fast mode, resolves in PARALLEL and arrives AFTER the answer.
+export const EVENT_DELIM = String.fromCharCode(30);

@@ -9,7 +9,7 @@ import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
 import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet, ConsentGate } from "./overlays";
 import type { CaseMap, ScaleResult } from "@/lib/types";
-import { REASONING_OPEN, REASONING_CLOSE } from "@/lib/stream-markers";
+import { REASONING_OPEN, REASONING_CLOSE, EVENT_DELIM } from "@/lib/stream-markers";
 
 let _mid = 0;
 const uid = () => "m" + ++_mid;
@@ -201,27 +201,47 @@ export function App() {
       } else {
         const reader = res.body.getReader();
         const dec = new TextDecoder();
-        // Deep-tier replies arrive as [思考过程]<answer>, delimited by the
-        // REASONING_OPEN/CLOSE control chars. Route the thinking to its own panel
-        // and the answer to the bubble. Fast/crisis replies have no markers → all answer.
-        let phase: "answer" | "thinking" = "answer";
+        // The stream interleaves three things, delimited by control chars:
+        //   REASONING_OPEN…REASONING_CLOSE = 思考过程 (deep), EVENT_DELIM{json}EVENT_DELIM
+        //   = a process event (the 安全识别 result), everything else = the answer.
+        let phase: "answer" | "thinking" | "event" = "answer";
+        let evtBuf = "";
         const apply = (think: string, content: string) =>
           setMessages((ms) => ms.map((m) => (m.id === aiId
             ? { ...m, thinking: (m.thinking || "") + think, content: m.content + content }
             : m)));
+        const applySafety = (status: Message["safety"]) => {
+          if (!status) return;
+          setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, safety: status } : m)));
+          if (status === "crisis" || status === "suicide_concern") setCrisis(true);
+        };
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
-          let chunk = dec.decode(value, { stream: true });
-          while (chunk.length) {
-            if (phase === "answer") {
-              const o = chunk.indexOf(REASONING_OPEN);
-              if (o === -1) { apply("", chunk); chunk = ""; }
-              else { if (o > 0) apply("", chunk.slice(0, o)); phase = "thinking"; chunk = chunk.slice(o + 1); }
+          let rest = dec.decode(value, { stream: true });
+          while (rest.length) {
+            if (phase === "event") {
+              const e = rest.indexOf(EVENT_DELIM);
+              if (e === -1) { evtBuf += rest; rest = ""; }
+              else {
+                evtBuf += rest.slice(0, e);
+                try { const o = JSON.parse(evtBuf); if (o && o.type === "safety") applySafety(o.status); } catch { /* malformed event */ }
+                evtBuf = ""; phase = "answer"; rest = rest.slice(e + 1);
+              }
+            } else if (phase === "thinking") {
+              const c = rest.indexOf(REASONING_CLOSE);
+              if (c === -1) { apply(rest, ""); rest = ""; }
+              else { if (c > 0) apply(rest.slice(0, c), ""); phase = "answer"; rest = rest.slice(c + 1); }
             } else {
-              const c = chunk.indexOf(REASONING_CLOSE);
-              if (c === -1) { apply(chunk, ""); chunk = ""; }
-              else { if (c > 0) apply(chunk.slice(0, c), ""); phase = "answer"; chunk = chunk.slice(c + 1); }
+              const o = rest.indexOf(REASONING_OPEN);
+              const e = rest.indexOf(EVENT_DELIM);
+              const next = [o, e].filter((i) => i !== -1).sort((a, b) => a - b)[0];
+              if (next === undefined) { apply("", rest); rest = ""; }
+              else {
+                if (next > 0) apply("", rest.slice(0, next));
+                if (next === o) { phase = "thinking"; rest = rest.slice(o + 1); }
+                else { phase = "event"; evtBuf = ""; rest = rest.slice(e + 1); }
+              }
             }
           }
         }
@@ -246,7 +266,7 @@ export function App() {
       payload = messagesRef.current.slice(0, idx).map((m) => ({ role: m.role, content: m.content }));
       retryPayloads.current.set(aiId, payload);
     }
-    setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: "", thinking: "", errored: false, streaming: true, startedAt: Date.now() } : m)));
+    setMessages((ms) => ms.map((m) => (m.id === aiId ? { ...m, content: "", thinking: "", safety: undefined, errored: false, streaming: true, startedAt: Date.now() } : m)));
     void streamReply(aiId, payload);
   }
 
