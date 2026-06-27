@@ -2,7 +2,15 @@ import type { KnowledgeCard } from "./types";
 import type { EmbeddingProvider } from "./embeddings";
 import { getEmbeddingProvider } from "./embeddings";
 import { KNOWLEDGE_CARDS, cardEmbedText } from "./knowledge-cards";
+import { rerankByRelevance, getRerankMinScore } from "./rerank";
 import generated from "./knowledge-embeddings.generated.json";
+
+// Reranking pipeline (the "检索完先整理" step): pull a wider VECTOR recall set above a
+// lenient cosine floor, then let the cross-encoder reranker judge true relevance and keep
+// only the cards that clear getRerankMinScore(). Cosine baselines run high in-domain, so
+// recall stays broad and precision is the reranker's job.
+const RECALL_N = 8;
+const RECALL_FLOOR = 0.3;
 
 /**
  * Retrieval-augmented knowledge lookup (P4 RAG 流①).
@@ -34,8 +42,14 @@ type GeneratedEmbeddings = {
 
 const GENERATED = generated as GeneratedEmbeddings;
 
-/** Default cosine threshold; override with RAG_MIN_SCORE (0..1). */
-const DEFAULT_MIN_SCORE = 0.3;
+/** Default cosine threshold; override with RAG_MIN_SCORE (0..1).
+ *  0.50 (was 0.30): with Qwen3/bge vectors, same-domain cosine baselines run high
+ *  (~0.35–0.45 even for OFF-topic cards), so a 0.30 floor pulled clinical cards into
+ *  casual venting → replies drifted into a textbook/科普 tone (2026-06-27 owner report).
+ *  Measured separation: genuinely-relevant cards land 0.55–0.69, noise 0.35–0.47, so
+ *  0.50 keeps real topical matches and leaves a pure-empathy reply card-free. (Keyword
+ *  path keeps its own KEYWORD_MIN_SCORE below — this only affects the vector path.) */
+const DEFAULT_MIN_SCORE = 0.5;
 
 // Keyword path: minimum keywordScore for a card to enter the model's context.
 // An exact keyword (≥1.0) or tag (0.5) match always clears it; bigram-only recall
@@ -233,6 +247,33 @@ function approvedCards(): KnowledgeCard[] {
  * Retrieve up to `limit` knowledge cards relevant to `query`. Vector-first,
  * keyword fallback, never throws. See the FAIL-SAFE CONTRACT above.
  */
+/**
+ * Rerank a vector-recall candidate set, keeping only the cards above getRerankMinScore().
+ * Returns the kept cards, or null when reranking is unavailable (caller falls back to
+ * cosine). An EMPTY array is meaningful: the reranker ran and judged NOTHING relevant —
+ * exactly what should happen for a casual/off-topic message (so the shown sources never
+ * drift from the reply). Sorted by reranker relevance.
+ */
+async function rerankCards(
+  query: string,
+  candidates: KnowledgeCard[],
+  limit: number
+): Promise<KnowledgeCard[] | null> {
+  const scores = await rerankByRelevance(
+    query,
+    candidates.map((c) => ({ id: c.id, text: `${c.title}。${c.content}` }))
+  );
+  if (!scores) return null;
+  const minScore = getRerankMinScore();
+  const byId = new Map(candidates.map((c) => [c.id, c]));
+  return scores
+    .filter((s) => s.score >= minScore)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((s) => byId.get(s.id))
+    .filter((c): c is KnowledgeCard => Boolean(c));
+}
+
 export async function retrieveKnowledge(query: string, limit = 4): Promise<KnowledgeCard[]> {
   try {
     const q = (query ?? "").trim();
@@ -244,20 +285,19 @@ export async function retrieveKnowledge(query: string, limit = 4): Promise<Knowl
     const provider = getEmbeddingProvider();
     if (provider && vectorsMatchProvider(provider, GENERATED)) {
       try {
-        const hits = await vectorRetrieve(
-          q,
-          limit,
-          provider,
-          cards,
-          GENERATED.vectors,
-          getMinScore()
-        );
-        // A successful-but-empty vector pass is a legitimate "no card cleared
-        // the threshold"; still offer the keyword net so a clear lexical match
-        // isn't silently dropped.
-        if (hits.length > 0) return hits;
+        // 1) Broad vector recall (lenient cosine floor — recall, not precision).
+        const candidates = await vectorRetrieve(q, RECALL_N, provider, cards, GENERATED.vectors, RECALL_FLOOR);
+        if (candidates.length > 0) {
+          // 2) Rerank to TRUE relevance. If it ran (non-null), trust it — even an empty
+          //    result means "nothing is actually relevant" (don't re-admit cosine noise).
+          const reranked = await rerankCards(q, candidates, limit);
+          if (reranked !== null) return reranked;
+          // 3) Reranker unavailable → cosine top-k at the stricter cosine threshold.
+          const cosineHits = await vectorRetrieve(q, limit, provider, cards, GENERATED.vectors, getMinScore());
+          if (cosineHits.length > 0) return cosineHits;
+        }
       } catch {
-        // embed failed / timed out → fall through to keywords.
+        // embed / rerank failed or timed out → fall through to keywords.
       }
     }
 
