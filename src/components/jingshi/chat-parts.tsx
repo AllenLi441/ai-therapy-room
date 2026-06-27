@@ -164,8 +164,8 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
             <summary style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "var(--tone, #3a8a78)", fontWeight: 500 }}>
               <Ic.clipboard style={{ width: 14, height: 14, opacity: 0.9 }} />
               {lang === "zh"
-                ? `研究过程 · 参考了 ${m.refs.length} 条循证资料`
-                : `Research · ${m.refs.length} evidence source${m.refs.length > 1 ? "s" : ""}`}
+                ? `信息来源 · ${m.refs.length} 条（点开看原文出处）`
+                : `Sources · ${m.refs.length} (open to check)`}
             </summary>
             <div style={{ marginTop: 8 }}>
               <div style={{ opacity: 0.78, marginBottom: 8, lineHeight: 1.55 }}>
@@ -198,6 +198,12 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
               </ol>
             </div>
           </details>
+        )}
+        {isAI && !m.streaming && hasText && (!m.refs || m.refs.length === 0) && (
+          <div style={{ marginTop: 6, fontSize: 11.5, color: "rgba(120,120,120,0.62)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <Ic.clipboard style={{ width: 12, height: 12, opacity: 0.7 }} />
+            {lang === "zh" ? "本次未引用知识库/外部资料（一般性陪伴）" : "No source cited this turn (general support)"}
+          </div>
         )}
         {m.errored && onRetry && (
           <button className="retry-btn" onClick={() => onRetry(m.id)}>
