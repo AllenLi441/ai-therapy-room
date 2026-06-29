@@ -12,6 +12,32 @@ import generated from "./knowledge-embeddings.generated.json";
 const RECALL_N = 8;
 const RECALL_FLOOR = 0.3;
 
+// Intent gate: only ground a reply in the KB when the user is actually ASKING for
+// information / methods — not merely venting about a topic. A relevant card retrieved for
+// "睡不着好烦" (venting) produces a warm empathy reply that doesn't use the card, so the
+// shown sources look bolted-on and the whole chat tips clinical. Venting → no retrieval →
+// pure companionship (like before RAG). Errs toward NOT retrieving (warmth first); the
+// reranker is the second filter for whatever does get retrieved. Boundary replies
+// (medication/diagnosis) are routed by safety.ts, NOT here, so they are unaffected.
+const INFO_MARKERS = [
+  "?", "？",
+  "怎么办", "怎么治", "怎么调", "怎么缓解", "怎么改善", "怎么应对", "怎么克服", "怎么处理", "怎么调理",
+  "如何缓解", "如何改善", "如何应对", "如何处理", "如何调整",
+  "有什么办法", "有什么方法", "有什么建议", "有没有办法", "有没有什么", "什么方法可以",
+  "为什么会", "有用吗", "管用吗", "有效吗", "能不能", "可不可以", "该怎么", "该不该",
+  "求助", "求推荐", "教我", "教教我", "想了解", "想知道", "介绍一下", "科普",
+  "是不是抑郁", "是不是焦虑", "是不是得了", "算不算", "正常吗", "正常么", "靠谱吗", "怎么回事",
+  "科学的方法", "科学方法", "循证"
+];
+const INFO_SEEKING_EN = /\b(how (do|to|can)|what (is|are|causes)|why does|should i|can i|is it normal|any (tips|advice)|what should)\b|\?/i;
+
+/** Whether the user is asking for information/methods (→ ground in the KB) vs just venting. */
+export function isInfoSeeking(text: string): boolean {
+  const t = (text || "").trim().toLowerCase();
+  if (!t) return false;
+  return INFO_MARKERS.some((m) => t.includes(m)) || INFO_SEEKING_EN.test(t);
+}
+
 /**
  * Retrieval-augmented knowledge lookup (P4 RAG 流①).
  *

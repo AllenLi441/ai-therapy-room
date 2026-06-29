@@ -9,7 +9,7 @@ import {
   type ImplicitDecision,
   type ImplicitOutcome
 } from "@/lib/implicit-risk";
-import { retrieveKnowledge } from "@/lib/knowledge";
+import { retrieveKnowledge, isInfoSeeking } from "@/lib/knowledge";
 import { searchAuthoritative } from "@/lib/web-search";
 import { createAssistantTextStream, createAssistantTextStreamWithThinking } from "@/lib/output-style";
 import { resolvePersona, type PersonaId } from "@/lib/personas";
@@ -84,6 +84,9 @@ export async function POST(request: Request) {
     return new Response("Missing user message", { status: 400 });
   }
   const latestUserText = latestUserMessage.content;
+  // Only ground in the KB / web when the user is actually asking for info or methods —
+  // venting gets pure warm companionship with no bolted-on sources (see isInfoSeeking).
+  const infoSeeking = isInfoSeeking(latestUserText);
 
   // Multi-turn aggregation: looks at last 4 user messages, not just current.
   // This is what catches the PDF gradient case (turn 1: 看着药盒 → turn 2:
@@ -227,19 +230,21 @@ export async function POST(request: Request) {
     !risk.flags.includes("medical_red_flag");
   if (resolveSessionPace(body.pace) === "fast" && lexiconClean && !crisisModeActive && !body.exitedCrisis) {
     const fastCaseMap = body.caseMap ?? null;
-    const fastKnowledge = await retrieveKnowledge(
-      [
-        body.profile?.concern,
-        latestUserMessage.content,
-        fastCaseMap?.presenting,
-        fastCaseMap?.workingHypothesis,
-        ...(fastCaseMap?.triggers ?? []),
-        ...(fastCaseMap?.automaticThoughts ?? [])
-      ]
-        .filter(Boolean)
-        .join(" "),
-      4
-    );
+    const fastKnowledge = infoSeeking
+      ? await retrieveKnowledge(
+          [
+            body.profile?.concern,
+            latestUserMessage.content,
+            fastCaseMap?.presenting,
+            fastCaseMap?.workingHypothesis,
+            ...(fastCaseMap?.triggers ?? []),
+            ...(fastCaseMap?.automaticThoughts ?? [])
+          ]
+            .filter(Boolean)
+            .join(" "),
+          4
+        )
+      : [];
     const fastRecent = takeRecentWithinBudget(messages);
     const fastSystemPrompt = buildCounselorSystemPrompt({
       profile: body.profile,
@@ -404,26 +409,28 @@ export async function POST(request: Request) {
   const plan = body.turnPlan ?? defaultTurnPlan();
   const caseMap = body.caseMap ?? null;
 
-  const knowledge = await retrieveKnowledge(
-    [
-      body.profile?.concern,
-      latestUserMessage.content,
-      caseMap?.presenting,
-      caseMap?.workingHypothesis,
-      ...(caseMap?.triggers ?? []),
-      ...(caseMap?.automaticThoughts ?? [])
-    ]
-      .filter(Boolean)
-      .join(" "),
-    4
-  );
+  const knowledge = infoSeeking
+    ? await retrieveKnowledge(
+        [
+          body.profile?.concern,
+          latestUserMessage.content,
+          caseMap?.presenting,
+          caseMap?.workingHypothesis,
+          ...(caseMap?.triggers ?? []),
+          ...(caseMap?.automaticThoughts ?? [])
+        ]
+          .filter(Boolean)
+          .join(" "),
+        4
+      )
+    : [];
 
   // KB miss + DEEP mode + non-crisis → live web fallback, restricted to authoritative
   // medical/research domains (see web-search.ts). Fast mode skips it (would blow the ≤6s
   // budget); no SEARCH_API_KEY → [] (KB-only, unchanged). Crisis is handled far above and
   // never reaches here, so a vulnerable user's crisis is never web-searched.
   const webResults =
-    resolveSessionPace(body.pace) === "deep" && !crisisModeActive && knowledge.length === 0
+    infoSeeking && resolveSessionPace(body.pace) === "deep" && !crisisModeActive && knowledge.length === 0
       ? await searchAuthoritative(latestUserMessage.content, 3)
       : [];
 

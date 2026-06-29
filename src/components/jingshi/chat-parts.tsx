@@ -108,25 +108,15 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
             </span>
           )}
         </div>
-        {isAI && (m.safety || (m.streaming && m.pace === "fast")) && (() => {
-          const st = m.safety;
-          const checking = !st && m.streaming;
-          const flagged = st === "crisis" || st === "suicide_concern";
-          const t = STR[lang];
-          const label = checking ? t.safety_checking
-            : st === "safe" ? `✓ ${t.safety_safe}`
-            : st === "unchecked" ? t.safety_unchecked
-            : st === "gentle" ? t.safety_gentle
-            : flagged ? `⚠ ${t.safety_flagged}`
-            : "";
-          const color = flagged ? "#c0563b" : st === "safe" ? "var(--tone, #3a8a78)" : "rgba(120,120,120,0.95)";
-          return (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color, margin: "2px 0 4px" }}>
-              <Ic.shield style={{ width: 13, height: 13, opacity: 0.9 }} />
-              <span style={{ opacity: 0.9 }}>{t.safety_label} · {label}</span>
-            </div>
-          );
-        })()}
+        {isAI && (m.safety === "crisis" || m.safety === "suicide_concern") && (
+          // Only surface the safety step when the danger check ACTUALLY caught something
+          // (e.g. fast-mode parallel judge late-flag). A "✓未见风险" badge on every normal
+          // reply made the whole chat feel clinical/monitored — keep it warm by default.
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#c0563b", margin: "2px 0 4px" }}>
+            <Ic.shield style={{ width: 13, height: 13, opacity: 0.9 }} />
+            <span style={{ opacity: 0.9 }}>{STR[lang].safety_label} · ⚠ {STR[lang].safety_flagged}</span>
+          </div>
+        )}
         {isAI && m.thinking && m.thinking.trim() && (
           <details className="think-trace" open={!!m.streaming && m.content === ""} style={{ margin: "2px 0 6px", fontSize: 12.5, color: "rgba(120,120,120,0.95)" }}>
             <summary style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "var(--tone, #3a8a78)", fontWeight: 500 }}>
@@ -198,12 +188,6 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
               </ol>
             </div>
           </details>
-        )}
-        {isAI && !m.streaming && hasText && (!m.refs || m.refs.length === 0) && (
-          <div style={{ marginTop: 6, fontSize: 11.5, color: "rgba(120,120,120,0.62)", display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <Ic.clipboard style={{ width: 12, height: 12, opacity: 0.7 }} />
-            {lang === "zh" ? "本次未引用知识库/外部资料（一般性陪伴）" : "No source cited this turn (general support)"}
-          </div>
         )}
         {m.errored && onRetry && (
           <button className="retry-btn" onClick={() => onRetry(m.id)}>
