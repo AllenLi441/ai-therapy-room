@@ -113,19 +113,37 @@ async function ensureCollection() {
   });
   if (getRes.ok) {
     console.log(`Collection "${QDRANT_COLLECTION}" already exists.`);
-    return;
+  } else {
+    const putRes = await fetch(`${baseUrl}/collections/${QDRANT_COLLECTION}`, {
+      method: "PUT",
+      headers: qdrantHeaders,
+      body: JSON.stringify({ vectors: { size: dim, distance: "Cosine" } })
+    });
+    if (!putRes.ok) {
+      const body = await putRes.text().catch(() => "");
+      console.error(`❌ Failed to create collection (${putRes.status}): ${body.slice(0, 240)}`);
+      process.exit(1);
+    }
+    console.log(`Created collection "${QDRANT_COLLECTION}" (size ${dim}, Cosine).`);
   }
-  const putRes = await fetch(`${baseUrl}/collections/${QDRANT_COLLECTION}`, {
-    method: "PUT",
-    headers: qdrantHeaders,
-    body: JSON.stringify({ vectors: { size: dim, distance: "Cosine" } })
-  });
-  if (!putRes.ok) {
-    const body = await putRes.text().catch(() => "");
-    console.error(`❌ Failed to create collection (${putRes.status}): ${body.slice(0, 240)}`);
-    process.exit(1);
+
+  // Payload indexes are REQUIRED by Qdrant Cloud (strict mode) for any field used in a
+  // filter — without them the runtime query (src/lib/qdrant.ts pins clinicalStatus, and
+  // may filter lang/trustTier) returns 400 and retrieval silently degrades to keyword.
+  // Creating an existing index is idempotent.
+  for (const field of ["clinicalStatus", "lang", "trustTier"]) {
+    const idxRes = await fetch(`${baseUrl}/collections/${QDRANT_COLLECTION}/index?wait=true`, {
+      method: "PUT",
+      headers: qdrantHeaders,
+      body: JSON.stringify({ field_name: field, field_schema: "keyword" })
+    });
+    if (!idxRes.ok) {
+      const body = await idxRes.text().catch(() => "");
+      console.error(`❌ Failed to create payload index for "${field}" (${idxRes.status}): ${body.slice(0, 200)}`);
+      process.exit(1);
+    }
   }
-  console.log(`Created collection "${QDRANT_COLLECTION}" (size ${dim}, Cosine).`);
+  console.log(`Ensured payload indexes: clinicalStatus, lang, trustTier (keyword).`);
 }
 
 // Deterministic UUID from the card id (Qdrant point ids must be uint or UUID; our card

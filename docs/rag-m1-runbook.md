@@ -21,11 +21,17 @@ Add to the Vercel project (Production + Preview):
 - `QDRANT_API_KEY` = your key
 - `QDRANT_COLLECTION` = `jingshi-clinical`
 
-## 3. Confirm / rotate the embedding key
-- The runtime embeds each user query with `EMBEDDING_*` (already set 6/27, SiliconFlow).
-  Confirm `EMBEDDING_API_KEY` still works; rotate if unsure.
-- **Do NOT change `EMBEDDING_BASE_URL` / `EMBEDDING_MODEL`** — `rerank.ts` reuses the base
-  URL, and query/corpus vectors must come from the SAME model or Qdrant returns nothing.
+## 3. Confirm the embedding key + endpoint (VERIFIED CONFIG)
+- Provider: SiliconFlow. **`EMBEDDING_BASE_URL=https://api.siliconflow.com/v1`** — the
+  `.com` (international) endpoint. NOTE: this account's key is rejected (401) by the `.cn`
+  endpoint; it only works on `.com`. **Very likely the prod "no RAG" root cause**: if
+  Vercel's `EMBEDDING_BASE_URL` is `.cn`, the live embed call 401s → silent keyword
+  fallback. Set Vercel to `.com`.
+- `EMBEDDING_MODEL=Qwen/Qwen3-Embedding-0.6B`, `EMBEDDING_DIM=1024`. Query and corpus
+  vectors MUST come from the SAME model — keep ingest and Vercel identical.
+- The key transited chat during setup → **rotate it** and update both `.env.local` and
+  Vercel with the fresh key (same `.com` base, same model).
+- `rerank.ts` also uses `EMBEDDING_BASE_URL`; the `.com` value serves it too.
 
 ## 4. Local `.env.local` (gitignored) for the one-time ingest
 Put the same `QDRANT_*` + `EMBEDDING_*` values in a local `.env.local` (never committed),
