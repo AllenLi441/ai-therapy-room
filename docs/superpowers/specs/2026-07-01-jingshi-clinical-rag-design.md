@@ -37,8 +37,8 @@
 |---|---|
 | 范围 | 完整临床/研究语料 + 真向量库 + **grounded 生成** |
 | 语气 | 温暖不变;事实揉进安屿口吻,非科普 |
-| 向量化 | **自托管 BGE-M3** (隐私: query 不出自有基础设施) |
-| 宿主 | BGE-M3 sidecar 跑 **小型云常驻容器**;向量库用**托管免费档** |
+| 向量化 | **走托管 embedding API**(复用 prod 已配的 `EMBEDDING_*`,很可能是 SiliconFlow;聊天本就用 DeepSeek/Kimi API,query 再走 embedding API 无额外泄露)。~~自托管 BGE-M3~~ 已否决(常驻机成本)。 |
+| 向量库 | **Qdrant Cloud 免费档**(dense 检索;语料很大时再加 sparse/混合)。无常驻机、无月租。 |
 | 语料语言 | **双语** (中 + 英权威源) |
 | 准入门 | **按来源分级信任**: 权威源整体授信 (仍逐字校验引用+域名白名单);研究摘要进复核队列 |
 | 排期 | 一个连贯后端,内部分里程碑 (不单独发诚实修复) |
@@ -54,11 +54,12 @@
 ### 4.3 查询链路 (线上, Vercel)
 `isInfoSeeking` 命中且非危机 → 调 sidecar 把 query 向量化 → 向量库**混合检索 (BGE-M3 dense + sparse)**,按 `lang/trustTier` 过滤 → 重排 (`rerank.ts` 复用) → top-k。出口: ① `sourceTitle/URL/quote` 走 `X-Knowledge` → 面板; ② **grounding**: 将 top-k 的真实 `content` + 出处摘要注入 prompt,模型据此生成 (更新 `formatKnowledge`;放宽 `prompts.ts:41` 的「禁引用」为「可用真实内容、但用自己口吻、不必念链接」)。KB 未命中且深度非危机 → Tavily 权威域名兜底。**危机轮整段绕开检索**;检索永远 fail-safe (报错返回 `[]`,不影响回复/安全)。
 
-### 4.4 基础设施
-- **sidecar**: 复用 `p4-rag-stream2` 的 `bge_m3_sidecar.py`,部到 **Fly.io 常驻小机** (≥2GB RAM 装 BGE-M3;不 scale-to-zero 免冷启动;region 对齐 Vercel 函数区)。约 $5/月。
-- **向量库**: **Qdrant Cloud 免费档 (1GB)** —— 原生 dense+sparse 混合 + payload 过滤 (lang/trustTier),比 pgvector 更贴 BGE-M3。
-- **Vercel env** (用户自行填,我只从 env 读): `SEARCH_API_KEY` (Tavily,**需 rotate 后填**)、`EMBEDDING_*` 指向 sidecar、Qdrant URL/key。
-- 地域注意: 海外托管服务国内直连可能慢;sidecar/向量库为服务端→服务端调用,应与 Vercel 函数同区以压低延迟 (设计时标注,实测校准)。
+### 4.4 基础设施(已修订 2026-07-01:走 API,不自托管)
+- **向量化**: 复用现有 `embeddings.ts` 的 `CloudEmbeddingProvider`(读 `EMBEDDING_API_KEY/MODEL/BASE_URL`,prod 6/27 已配)。dense-only。**不新建 sidecar**。
+- **向量库**: **Qdrant Cloud 免费档**。dense 向量 + payload 过滤(`clinicalStatus`/`lang`/`trustTier`)。upsert 与 query 用同一 embedding 模型,维度一致即可。
+- **重排**: 复用现有 `rerank.ts`(SiliconFlow,走 `EMBEDDING_BASE_URL`)。**快速模式跳过重排**。
+- **Vercel env**(用户自行填,我只从 env 读): `SEARCH_API_KEY`(Tavily,已更新)、`QDRANT_URL/QDRANT_API_KEY/QDRANT_COLLECTION`;`EMBEDDING_*` 已存(需确认/rotate)。**不要**把 `EMBEDDING_BASE_URL` 改指别处——`rerank.ts` 也用它。
+- 地域注意: 海外托管服务(Qdrant/embedding API)国内直连可能慢;为服务端→服务端调用,应与 Vercel 函数同区,并**给检索设硬超时**(见安全/性能:快速模式超时即退回关键词)。
 
 ## 5. 安全不变量 (全程保留)
 1. 可核验来源: 真 URL + **逐字**引用,绝不 AI 转述 (卡片契约 `knowledge-cards.ts:3-9`)。
@@ -82,11 +83,11 @@
 3. **扩库 + 治理**: 研究摘要 (PMC OA/Cochrane 摘要) 走复核队列;重爬/引用校验;接 `~/Desktop/jingshi-eval` 评测召回质量 (precision/recall/faithfulness)。
    - 验证: 评测分不劣化,召回覆盖提升;pending→approved 流程可用。
 
-## 8. 用户须操作的步骤 (助手无法代做)
-- rotate Tavily key;在 Vercel 填 `SEARCH_API_KEY`。
-- 创建 Fly.io 账号并部署 sidecar (助手给 Dockerfile/fly.toml + 步骤)。
-- 创建 Qdrant Cloud 账号,拿 URL/key 填 Vercel。
-- 上述完成后,助手负责代码 + 本地/dev 端到端证据 + 联调校准。
+## 8. 用户须操作的步骤 (助手无法代做) — 已修订
+- ✅ rotate Tavily key + 填 `SEARCH_API_KEY`(已完成)。
+- 创建 **Qdrant Cloud 免费账号**,拿 `QDRANT_URL` / `QDRANT_API_KEY`,连同 `QDRANT_COLLECTION` 填进 Vercel(值由你填,助手不碰)。
+- 确认/rotate prod 的 `EMBEDDING_API_KEY`(6/27 设的,可能失效);`EMBEDDING_MODEL/BASE_URL` 保持不变(rerank 也用)。
+- 上述完成后,助手负责代码 + 本地 mock 测试 + 联调校准;**不再需要 Fly.io / 自托管 sidecar**。
 
 ## 9. 开放项
 - Fly.io vs Render/Railway 最终选型 (默认 Fly.io,按实测延迟/费用可调)。
