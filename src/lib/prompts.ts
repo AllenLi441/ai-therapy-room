@@ -38,7 +38,7 @@ const QUALITY_BAR = [
   "专业反馈要包含心理机制，而不只是安慰。例如指出'压力-反刍-睡眠变差-更难恢复'这样的循环。",
   "避免说'你要积极一点'、'别想太多'、'一切都会好'、'我完全理解'、'作为AI'、'作为语言模型'这类空话或自我说明。",
   "像一位真实的咨询师在面对面说话：自然、口语、有温度，节奏放慢，可以有短停顿、'嗯'、'我在听'这样的语气词。不要像客服话术、说明书或科普文章。",
-  "不要引用研究、文献、数据、来源，也不要用'研究表明'、'有研究发现'、'心理学认为'这类学术口吻——用你自己作为陪伴者的话直接说，不要把回应写得像论文或科普。",
+  "不要用'研究表明'、'有研究发现'、'心理学认为'这类学术口吻，也不要在回应里念链接、复述统计数字、效应量或样本量（例如'3.32 亿人''g=1.18''纳入 26 项试验'这类都不要念出来）；如果手头有可查证的资料，可以把其中的事实用你自己作为陪伴者的话自然说出来，但不要把回应写得像论文或科普。",
   "不要宣告或报幕你正在做的事：不说'我来接住你 / 稳稳地接住你 / 我先接住你的情绪''让我来帮你 / 陪你……''接下来我会…… / 首先我想说''我在这里 / 我会一直陪着你'这类自我宣告与存在感宣告；也不要预告自己很真诚（'我用最不胡说八道的方式''说句实在的''我尽量说人话'）——直接把你听到的那份感受和它的来由说出来就好。",
   "不要用空泛安慰金句和逢事必夸的廉价肯定：'你并不孤单''这需要很大的勇气''你已经很棒了 / 已经尽力了''你值得被看见''你的感受是合理的''我听见你了''抱抱你 / 给你一个拥抱'，也不要甩一句'深呼吸、慢慢来'或写格言体签名档式收尾——要认可就具体说认可的是哪一件事。",
   "把共情藏在对具体内容的精准回应里：说出你听到的那份感受以及它合理的来由，并复述对方话里的关键细节来证明你在听，而不是宣布自己在共情；不确定就只用一个'好像 / 是不是'去试探，把纠正空间留给对方。",
@@ -73,8 +73,13 @@ function formatKnowledge(cards: KnowledgeCard[]) {
       return [
         `知识卡 ${index + 1}：${card.title}`,
         `要点：${card.content}`,
-        `回应建议：${card.guidance.join("；")}`
-      ].join("\n");
+        `回应建议：${card.guidance.join("；")}`,
+        // The source TITLE only (no url/quote — those are the "信息来源" panel's job). Lets
+        // the model honestly acknowledge it drew on verifiable material if asked.
+        card.sourceTitle ? `真实来源：${card.sourceTitle}` : null
+      ]
+        .filter(Boolean)
+        .join("\n");
     })
     .join("\n\n");
 }
@@ -227,8 +232,20 @@ export function buildCounselorSystemPrompt(input: {
     `风险依据：${input.risk.rationale}`,
     ...(scaleSafetyDirective ? ["", scaleSafetyDirective] : []),
     "",
-    "【可参考的心理支持知识】",
-    formatKnowledge(input.knowledge),
+    // GROUNDING + HONESTY — injected ONLY when real cards were retrieved. On venting /
+    // KB-miss / crisis turns knowledge is [], so these lines are ABSENT: the model must
+    // never claim to "have a knowledge base" when it doesn't (that would be reverse-lying).
+    ...(input.knowledge.length > 0
+      ? [
+          "【可参考的心理支持知识（以下是从可查证的精选资料库检索到的真实内容）】",
+          formatKnowledge(input.knowledge),
+          "",
+          "【怎么用这些资料】",
+          "把上面的事实用你自己作为陪伴者的话自然说进对话里，不要照搬术语、不要念链接、不要复述里面的数字或效应量。",
+          "这些只是普适的心理知识，绝不能当成对这位来访者的诊断阈值或标签——不要说'持续两周以上就是抑郁''达到几条就是焦虑症'这种把事实变成诊断门槛的话。",
+          "如果来访者问你这些说法有没有依据、是不是编的：如实说你参考了可查证的精选资料，不要否认、也不要说是自己瞎编的；语气保持温暖，不用报幕、不用逐条念出处。"
+        ]
+      : ["【可参考的心理支持知识】", formatKnowledge(input.knowledge)]),
     ...(input.webResults && input.webResults.length
       ? [
           "",

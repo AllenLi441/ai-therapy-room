@@ -110,4 +110,58 @@ describe("buildCounselorSystemPrompt", () => {
     // the old rigid 4-step is gone for everyone
     expect(deep).not.toContain("结构必须是");
   });
+
+  const groundedKnowledge = [
+    {
+      id: "who-depression",
+      title: "抑郁事实",
+      tags: [],
+      keywords: [],
+      content: "抑郁要点内容会被自然揉进回应",
+      guidance: ["先承接情绪"],
+      sourceTitle: "WHO 实况报道",
+      clinicalStatus: "approved" as const
+    }
+  ];
+
+  it("with retrieved knowledge: injects grounding + honesty, weaves facts in own voice, facts ≠ diagnostic thresholds", () => {
+    const prompt = buildCounselorSystemPrompt({
+      risk: assessRisk("我怎么缓解抑郁"),
+      knowledge: groundedKnowledge,
+      caseMap: null,
+      turnPlan: defaultTurnPlan()
+    });
+    expect(prompt).toContain("抑郁要点内容会被自然揉进回应"); // the real content is injected
+    expect(prompt).toContain("真实来源：WHO 实况报道");        // source title line (no url/quote)
+    expect(prompt).toContain("如实说你参考了可查证");          // honesty: don't deny sources
+    expect(prompt).toContain("不要否认");
+    expect(prompt).toContain("用你自己作为陪伴者的话");        // weave facts in 安屿's own voice
+    expect(prompt).toContain("诊断阈值");                     // guard ②: facts must NOT be thresholds
+  });
+
+  it("QUALITY_BAR: still bans academic tone + reciting numbers, but drops the blanket 'don't cite sources' ban", () => {
+    const prompt = buildCounselorSystemPrompt({
+      risk: assessRisk("还行"),
+      knowledge: [],
+      caseMap: null,
+      turnPlan: defaultTurnPlan()
+    });
+    expect(prompt).toContain("研究表明");        // academic phrasing still listed as forbidden
+    expect(prompt).toContain("复述统计数字");     // NEW: never recite numbers/effect sizes/sample sizes
+    // the old blanket ban that caused the model to deny having any sources is gone
+    expect(prompt).not.toContain("不要引用研究、文献、数据、来源");
+  });
+
+  it("safety guard ①: an empty-knowledge turn gets NEITHER grounding NOR honesty lines", () => {
+    const prompt = buildCounselorSystemPrompt({
+      risk: assessRisk("我今天很累，想找人说说话"),
+      knowledge: [],
+      caseMap: null,
+      turnPlan: defaultTurnPlan()
+    });
+    expect(prompt).toContain("没有命中特定知识卡"); // generic-support fallback preserved
+    expect(prompt).not.toContain("真实来源：");
+    expect(prompt).not.toContain("如实说你参考了可查证");
+    expect(prompt).not.toContain("怎么用这些资料");
+  });
 });
