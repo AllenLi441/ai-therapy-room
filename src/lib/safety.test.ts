@@ -34,7 +34,7 @@ describe("assessRisk", () => {
 
     expect(response).toContain("急救电话");
     expect(response).toContain("可信赖的人");
-    expect(response).toContain("1=我已经移开危险物品");
+    expect(response).not.toContain("只回一个数字");
   });
 
   it("escalates concrete preparation language", () => {
@@ -110,7 +110,7 @@ describe("assessRisk", () => {
 
     expect(response).toContain("认真对待");
     expect(response).toContain("现实中可信赖的人");
-    expect(response).toContain("只回一个数字");
+    expect(response).not.toContain("只回一个数字");
   });
 
   it("detects English passive suicidal ideation", () => {
@@ -150,7 +150,7 @@ describe("assessRisk", () => {
     const response = createSuicideConcernResponse();
     expect(response).toContain("110/120");
     expect(response).toContain("12356");
-    expect(response).toContain("只回一个数字");
+    expect(response).not.toContain("只回一个数字");
   });
 
   it("escalates the evaluation report medication-method second turn", () => {

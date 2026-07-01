@@ -487,11 +487,7 @@ export function createCrisisResponse(
       `1. If you already have a plan, a method nearby, or you worry you may lose control soon, call your local emergency number now (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada). For a crisis line: ${INTL_RESOURCES.usCrisis} (US Suicide & Crisis Lifeline), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/Ireland), Lifeline ${INTL_RESOURCES.auLifeline} (Australia), or find one near you at ${INTL_RESOURCES.finder}.`,
       "2. Try not to stay alone. Contact someone you trust in real life and say directly: I am not safe right now and need you to stay with me.",
       "3. Move anything you could use to hurt yourself or someone else out of reach, or ask someone else to hold it for you.",
-      "4. If you can, put both feet on the floor. Inhale for 4 seconds and exhale for 6 seconds, five rounds.",
-      "",
-      "If you can reply, send only one number: 1=I moved dangerous items away, 2=someone is with me, 3=I am about to call, 4=I cannot do this right now.",
-      "",
-      "I can stay with you for the next few minutes of stabilization, but this is not emergency rescue and cannot replace in-person help. Please prioritize real-world support and emergency resources."
+      "4. If you can, put both feet on the floor. Inhale for 4 seconds and exhale for 6 seconds, five rounds."
     ].join("\n");
   }
 
@@ -511,11 +507,7 @@ export function createCrisisResponse(
     "2. 现在尽量不要一个人待着。请马上联系一个现实中可信赖的人，直接说：我现在不安全，需要你陪我。",
     "3. 把可能伤害自己或他人的物品移到够不到的地方——请环顾一下周围，任何让你觉得不安全的东西，先拿开或请别人帮你保管。",
     "4. 如果可以，先把双脚踩在地面上，慢慢吸气 4 秒、呼气 6 秒，连续做 5 轮。",
-    "5. 先做一个今晚的安全约定：在联系到现实中的人之前，不去碰那些可能伤害自己的东西。",
-    "",
-    "如果你能回复，请只回一个数字：1=我已经移开危险物品，2=我身边有人，3=我准备打电话，4=我现在做不到。",
-    "",
-    "我可以继续陪你做眼前这几分钟的稳定化，但这不是紧急救援，也不能替代线下专业帮助。请优先联系现实中的人和紧急资源。"
+    "5. 先做一个今晚的安全约定：在联系到现实中的人之前，不去碰那些可能伤害自己的东西。"
   ].join("\n");
 }
 
@@ -596,27 +588,22 @@ export function createSuicideConcernResponse(language: AppLanguage = "zh") {
     return [
       "I am going to take that seriously. It sounds like part of you may be thinking about disappearing, not waking up, or not having to keep living. We should not treat that as a normal venting line.",
       "",
-      "Before analyzing why this feels so heavy, please check immediate safety first. If you have a plan, a method nearby, or you are worried you might act on it, contact emergency services now or ask someone nearby to stay with you. If there is no clear plan, please still do not carry this alone. Message someone you trust and say: I am not safe being alone with my thoughts tonight.",
-      "",
-      "You can reply with only one number: 1=I am safe but in a lot of pain, 2=I have thoughts of hurting myself but no plan, 3=I have a plan or method nearby, 4=I am not sure. If it is 3 or 4, please contact real-world help first while we keep this very practical."
+      "Before analyzing why this feels so heavy, please check immediate safety first. If you have a plan, a method nearby, or you are worried you might act on it, contact emergency services now or ask someone nearby to stay with you. If there is no clear plan, please still do not carry this alone. Message someone you trust and say: I am not safe being alone with my thoughts tonight."
     ].join("\n");
   }
 
   return [
     "这句话我会认真对待。它听起来不只是普通抱怨，而像是有一部分你在想消失、不醒来，或者不用继续活着。",
     "",
-    `先不急着分析为什么这么痛，先确认眼前安全。如果你已经有计划、工具在身边，或者担心自己会控制不住，请现在就联系急救服务，或者让身边可信赖的人过来陪你。中国大陆可拨打 ${CN_EMS}，也可以拨打全国心理援助热线 ${PSYCH}；北京心理援助热线 ${CN_SUPPLEMENTAL.beijing}、希望24热线 ${CN_SUPPLEMENTAL.hope24} 也可作为补充尝试。如果还没有明确计划，也不要一个人扛，给现实中可信赖的人发一句：我今晚不太安全，不想一个人待着。`,
-    "",
-    "你可以只回一个数字：1=我现在安全但很痛苦，2=我有伤害自己的念头但没有计划，3=我有计划或工具在身边，4=我不确定。如果是 3 或 4，请先联系现实帮助，我们先把当下安全放在第一位。"
+    `先不急着分析为什么这么痛，先确认眼前安全。如果你已经有计划、工具在身边，或者担心自己会控制不住，请现在就联系急救服务，或者让身边可信赖的人过来陪你。中国大陆可拨打 ${CN_EMS}，也可以拨打全国心理援助热线 ${PSYCH}；北京心理援助热线 ${CN_SUPPLEMENTAL.beijing}、希望24热线 ${CN_SUPPLEMENTAL.hope24} 也可作为补充尝试。如果还没有明确计划，也不要一个人扛，给现实中可信赖的人发一句：我今晚不太安全，不想一个人待着。`
   ].join("\n");
 }
 
 /**
  * Deterministic crisis resource block (③ AI-tailored crisis). Appended verbatim
- * AFTER an AI-generated crisis reply so the real hotlines + the structured safety
- * check are GUARANTEED present even if the model's words omit them. Every number and
- * the number-check are reused unchanged from the vetted templates above — no new
- * clinical wording is introduced here.
+ * AFTER an AI-generated crisis reply so the real hotlines are GUARANTEED present
+ * even if the model's words omit them. Every number is reused unchanged from the
+ * vetted templates above — no new clinical wording is introduced here.
  */
 export function createCrisisResourceBlock(
   mode: "crisis" | "suicide_concern",
@@ -628,14 +615,11 @@ export function createCrisisResourceBlock(
         ? [
             "━━━━━━━━",
             "Either way, these are here anytime:",
-            `· Immediate danger: call your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada). Crisis lines: ${INTL_RESOURCES.usCrisis} (US), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/IE), Lifeline ${INTL_RESOURCES.auLifeline} (AU), or ${INTL_RESOURCES.finder}.`,
-            "If you can reply, send only one number: 1=I moved dangerous items away, 2=someone is with me, 3=I am about to call, 4=I cannot do this right now.",
-            "I can stay with you for these few minutes, but this is not emergency rescue and cannot replace in-person help."
+            `· Immediate danger: call your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada). Crisis lines: ${INTL_RESOURCES.usCrisis} (US), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/IE), Lifeline ${INTL_RESOURCES.auLifeline} (AU), or ${INTL_RESOURCES.finder}.`
           ]
         : [
             "━━━━━━━━",
-            `Either way, these are here anytime: your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada), or a crisis line — ${INTL_RESOURCES.usCrisis} (US), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/IE), Lifeline ${INTL_RESOURCES.auLifeline} (AU), or ${INTL_RESOURCES.finder}.`,
-            "You can reply with only one number: 1=I am safe but in a lot of pain, 2=I have thoughts of hurting myself but no plan, 3=I have a plan or method nearby, 4=I am not sure. If it is 3 or 4, please contact real-world help first."
+            `Either way, these are here anytime: your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} in the US/Canada), or a crisis line — ${INTL_RESOURCES.usCrisis} (US), Samaritans ${INTL_RESOURCES.ukSamaritans} (UK/IE), Lifeline ${INTL_RESOURCES.auLifeline} (AU), or ${INTL_RESOURCES.finder}.`
           ];
     return lines.join("\n");
   }
@@ -646,14 +630,11 @@ export function createCrisisResourceBlock(
           "━━━━━━━━",
           "无论如何，这些随时可用：",
           `· 紧急危险：中国大陆拨 ${CN_EMS}；全国心理援助热线 ${PSYCH}。`,
-          `· 补充：北京心理援助 ${CN_SUPPLEMENTAL.beijing}、希望24 ${CN_SUPPLEMENTAL.hope24}。`,
-          "如果你能回复，请只回一个数字：1=我已移开危险物品，2=我身边有人，3=我准备打电话，4=我现在做不到。",
-          "我可以陪你眼前这几分钟，但这不是紧急救援，也不能替代线下专业帮助。"
+          `· 补充：北京心理援助 ${CN_SUPPLEMENTAL.beijing}、希望24 ${CN_SUPPLEMENTAL.hope24}。`
         ]
       : [
           "━━━━━━━━",
-          `无论如何，这些随时可用：中国大陆拨 ${CN_EMS}；全国心理援助热线 ${PSYCH}。补充：北京 ${CN_SUPPLEMENTAL.beijing}、希望24 ${CN_SUPPLEMENTAL.hope24}。`,
-          "如果你能回复，请只回一个数字：1=我现在安全但很痛苦，2=有伤害自己的念头但没计划，3=有计划或工具在身边，4=我不确定。如果是 3 或 4，请先联系现实帮助。"
+          `无论如何，这些随时可用：中国大陆拨 ${CN_EMS}；全国心理援助热线 ${PSYCH}。补充：北京 ${CN_SUPPLEMENTAL.beijing}、希望24 ${CN_SUPPLEMENTAL.hope24}。`
         ];
   return lines.join("\n");
 }
