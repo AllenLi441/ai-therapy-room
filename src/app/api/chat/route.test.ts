@@ -1,7 +1,23 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { assessImplicitRiskWithLLM } from "@/lib/implicit-risk";
 import { generateDeepSeekText } from "@/lib/deepseek";
+import { retrieveKnowledge } from "@/lib/knowledge";
+import { searchAuthoritative } from "@/lib/web-search";
+
+// Spy on retrieval + web-search so we can PROVE the safety guards: a crisis turn must
+// never call them, and web fallback is reached only on a cleared, KB-miss, deep turn.
+// isInfoSeeking stays REAL (the route's gate) — only the network-touching fns are stubbed.
+vi.mock("@/lib/knowledge", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/knowledge")>();
+  return { ...actual, retrieveKnowledge: vi.fn(async () => []) };
+});
+vi.mock("@/lib/web-search", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/web-search")>();
+  return { ...actual, searchAuthoritative: vi.fn(async () => []) };
+});
+const mockedRetrieve = vi.mocked(retrieveKnowledge);
+const mockedSearch = vi.mocked(searchAuthoritative);
 
 // The danger judge (Kimi) needs an API key, so it cannot run in unit tests. Mock it
 // to prove the reorder deterministically — when the JUDGE flags danger it must win
@@ -227,5 +243,64 @@ describe("chat route — safety branch ordering", () => {
     expect(text).toContain("我在这里"); // tailored AI words, not a fixed template
     expect(text).toContain("12356");   // the vetted hotline is appended regardless
     expect(res.headers.get("X-Crisis-Triggered")).toBe("1");
+  });
+});
+
+describe("chat route — RAG safety guards (P5)", () => {
+  beforeEach(() => {
+    mockedRetrieve.mockClear();
+    mockedSearch.mockClear();
+  });
+
+  function requestWith(
+    messages: Array<{ role: "user" | "assistant"; content: string }>,
+    pace: "fast" | "deep"
+  ) {
+    return new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, language: "zh", pace })
+    });
+  }
+
+  it("safety guard ①: a crisis turn NEVER calls retrieval or web search", async () => {
+    // Crisis returns at the deterministic floor, above the retrieval/web-search wiring, so
+    // embed/Qdrant/Tavily are never reached for a vulnerable user.
+    await bodyText([{ role: "user", content: "我想跳楼，活不下去了。" }]);
+    expect(mockedRetrieve).not.toHaveBeenCalled();
+    expect(mockedSearch).not.toHaveBeenCalled();
+  });
+
+  it("crisis in DEEP mode is still never web-searched", async () => {
+    const res = await POST(requestWith([{ role: "user", content: "我不想活了，想结束这一切。" }], "deep"));
+    await res.text();
+    expect(mockedSearch).not.toHaveBeenCalled();
+  });
+
+  it("non-crisis, info-seeking, deep, KB miss → web fallback IS reached (enhancement kept)", async () => {
+    mockedRetrieve.mockResolvedValueOnce([]); // KB miss
+    const res = await POST(requestWith([{ role: "user", content: "怎么缓解焦虑呢？" }], "deep"));
+    await res.text();
+    expect(mockedRetrieve).toHaveBeenCalled();
+    expect(mockedSearch).toHaveBeenCalled();
+  });
+
+  it("safety guard ①b: an ACTIVE crisis session does NOT call retrieval even on an info-seeking turn", async () => {
+    // crisisModeActive is set → a benign info-seeking follow-up ('该怎么办' is an INFO
+    // marker) must NOT pull grounded psychoeducation mid-crisis (symmetric with the
+    // web-search !crisisModeActive guard). Without the gate, retrieveKnowledge would fire.
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "失眠了我该怎么办？" }],
+        language: "zh",
+        pace: "deep",
+        crisisModeActive: true
+      })
+    });
+    await (await POST(req)).text();
+    expect(mockedRetrieve).not.toHaveBeenCalled();
+    expect(mockedSearch).not.toHaveBeenCalled();
   });
 });

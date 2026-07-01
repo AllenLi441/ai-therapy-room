@@ -242,7 +242,10 @@ export async function POST(request: Request) {
           ]
             .filter(Boolean)
             .join(" "),
-          4
+          4,
+          // Fast mode: skip rerank + hard-cap Tier-1 wall-clock so a slow retrieval never
+          // blows the ≤6s budget (timeout → keyword fallback inside retrieveKnowledge).
+          { fastMode: true }
         )
       : [];
     const fastRecent = takeRecentWithinBudget(messages);
@@ -409,21 +412,29 @@ export async function POST(request: Request) {
   const plan = body.turnPlan ?? defaultTurnPlan();
   const caseMap = body.caseMap ?? null;
 
-  const knowledge = infoSeeking
-    ? await retrieveKnowledge(
-        [
-          body.profile?.concern,
-          latestUserMessage.content,
-          caseMap?.presenting,
-          caseMap?.workingHypothesis,
-          ...(caseMap?.triggers ?? []),
-          ...(caseMap?.automaticThoughts ?? [])
-        ]
-          .filter(Boolean)
-          .join(" "),
-        4
-      )
-    : [];
+  // Retrieve only when info-seeking AND not in an active crisis window. Suppressing
+  // grounding mid-crisis (symmetric with the web-search guard below) keeps the reply
+  // focused on stabilization instead of pivoting to sourced psychoeducation; the
+  // deterministic crisis resources stay attached regardless.
+  const knowledge =
+    infoSeeking && !crisisModeActive
+      ? await retrieveKnowledge(
+          [
+            body.profile?.concern,
+            latestUserMessage.content,
+            caseMap?.presenting,
+            caseMap?.workingHypothesis,
+            ...(caseMap?.triggers ?? []),
+            ...(caseMap?.automaticThoughts ?? [])
+          ]
+            .filter(Boolean)
+            .join(" "),
+          4,
+          // Deep mode reranks + relaxes the Tier-1 timeout; fast turns skip rerank.
+          // retrieveKnowledge enforces the hard wall-clock budget either way.
+          { fastMode: resolveSessionPace(body.pace) === "fast" }
+        )
+      : [];
 
   // KB miss + DEEP mode + non-crisis → live web fallback, restricted to authoritative
   // medical/research domains (see web-search.ts). Fast mode skips it (would blow the ≤6s

@@ -140,8 +140,18 @@ export type KnowledgeCard = {
   sourceUrl?: string;
   sourceQuote?: string;
   // Clinical sign-off gate: only "approved" cards are retrieved (see knowledge.ts).
-  // Missing / "draft" = NOT approved = inert.
-  clinicalStatus?: "draft" | "approved";
+  // Missing / "draft" / "pending" = NOT approved = inert. "pending" is the review
+  // queue for research-tier chunks ingested by the M2 pipeline (design §4.1).
+  clinicalStatus?: "draft" | "approved" | "pending";
+  // Optional RAG-corpus metadata (P5 clinical RAG). All optional so the hand-written
+  // 17 cards and every existing test stay valid. Populated by the ingest pipeline and
+  // carried in the Qdrant payload; used for language/trust filtering and source tracing.
+  lang?: "zh" | "en";
+  trustTier?: "authoritative" | "research";
+  // Owning source (for re-crawl / take-down of a whole source) and the heading path
+  // of the chunk within that source (for provenance).
+  sourceId?: string;
+  chunkPath?: string;
 };
 
 export type TherapyModality =

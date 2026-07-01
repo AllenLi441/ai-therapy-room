@@ -3,6 +3,7 @@ import type { EmbeddingProvider } from "./embeddings";
 import { getEmbeddingProvider } from "./embeddings";
 import { KNOWLEDGE_CARDS, cardEmbedText } from "./knowledge-cards";
 import { rerankByRelevance, getRerankMinScore } from "./rerank";
+import { qdrantDenseSearch, isQdrantConfigured } from "./qdrant";
 import generated from "./knowledge-embeddings.generated.json";
 
 // Reranking pipeline (the "检索完先整理" step): pull a wider VECTOR recall set above a
@@ -11,6 +12,14 @@ import generated from "./knowledge-embeddings.generated.json";
 // recall stays broad and precision is the reranker's job.
 const RECALL_N = 8;
 const RECALL_FLOOR = 0.3;
+
+// Tier-1 (Qdrant dense) hard wall-clock budgets. Tier-1 = embed(API) + Qdrant, two
+// cross-border round-trips. Fast mode (reply target ≤6s) caps the WHOLE tier at ~2.5s
+// and skips rerank; on timeout we fall straight through to keyword so the reply is never
+// stalled by a slow/stale endpoint (the embed provider's own 15s timeout is not enough).
+// Deep mode may relax.
+const TIER1_FAST_TIMEOUT_MS = 2500;
+const TIER1_DEEP_TIMEOUT_MS = 8000;
 
 // Intent gate: only ground a reply in the KB when the user is actually ASKING for
 // information / methods — not merely venting about a topic. A relevant card retrieved for
@@ -300,13 +309,94 @@ async function rerankCards(
     .filter((c): c is KnowledgeCard => Boolean(c));
 }
 
-export async function retrieveKnowledge(query: string, limit = 4): Promise<KnowledgeCard[]> {
+/** Options for retrieveKnowledge. `fastMode` skips rerank and tightens the Tier-1
+ *  wall-clock budget (the chat route passes it based on session pace). */
+export type RetrieveOptions = { fastMode?: boolean; timeoutMs?: number };
+
+/**
+ * Race `p` against a hard deadline. Resolves to `null` on timeout OR rejection — never
+ * throws, never hangs the reply. The underlying embed/Qdrant work is abandoned (its own
+ * AbortController fires later); we don't await it.
+ */
+function withDeadline<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      }
+    );
+  });
+}
+
+/**
+ * Tier-1: embed the query with the SAME cloud provider used to build the corpus, then run
+ * a dense Qdrant search over the approved cards.
+ *   - deep mode: broad recall (RECALL_N) → rerank to true relevance (reused rerank.ts).
+ *   - fast mode: top-k straight from Qdrant, NO rerank (keeps the ≤6s budget).
+ * Returns the cards to use, or `null` when Tier-1 is unavailable / found nothing (embed
+ * provider unset, Qdrant unconfigured/empty/errored) so the caller falls through to the
+ * committed-vector path and then keyword. When Qdrant DID return hits, we commit to the
+ * (possibly reranked, possibly empty) Tier-1 answer rather than re-admitting keyword noise
+ * — mirroring the committed-vector path's "trust the reranker" contract.
+ */
+async function tier1QdrantRetrieve(
+  q: string,
+  limit: number,
+  fastMode: boolean
+): Promise<KnowledgeCard[] | null> {
+  // Skip BEFORE embedding when Qdrant isn't configured: no wasted embed API call, and
+  // retrieval stays fully inert until the vector store is stood up (the merge-safety
+  // property the runbook relies on). Also avoids double-embedding on the fall-through.
+  if (!isQdrantConfigured()) return null;
+
+  const provider = getEmbeddingProvider();
+  if (!provider) return null;
+
+  const [queryVec] = await provider.embed([q]);
+  if (!queryVec || queryVec.length === 0) return null;
+
+  const recall = fastMode ? limit : RECALL_N;
+  const candidates = await qdrantDenseSearch(queryVec, { limit: recall });
+  if (!candidates || candidates.length === 0) return null;
+
+  if (fastMode) return candidates.slice(0, limit);
+
+  const reranked = await rerankCards(q, candidates, limit);
+  if (reranked !== null) return reranked;
+  return candidates.slice(0, limit);
+}
+
+export async function retrieveKnowledge(
+  query: string,
+  limit = 4,
+  opts: RetrieveOptions = {}
+): Promise<KnowledgeCard[]> {
   try {
     const q = (query ?? "").trim();
     const cards = approvedCards();
     if (!q || limit <= 0 || cards.length === 0) {
       return keywordRetrieve(q, limit, cards);
     }
+
+    // Tier-1: Qdrant dense retrieval, ABOVE the committed-vector path. Hard-timeout
+    // bounded so a slow/stale endpoint can never stall the reply (fix: defence not
+    // env-assumption). A hit short-circuits; null/empty falls through unchanged.
+    const fastMode = opts.fastMode ?? false;
+    const tier1Budget = opts.timeoutMs ?? (fastMode ? TIER1_FAST_TIMEOUT_MS : TIER1_DEEP_TIMEOUT_MS);
+    const tier1 = await withDeadline(tier1QdrantRetrieve(q, limit, fastMode), tier1Budget);
+    if (tier1 !== null) return tier1;
+
+    // Fast mode (≤6s reply budget): do NOT run the committed-vector fallback — its embed
+    // uses the provider's own long timeout and it reranks (network), which could stack on
+    // top of the Tier-1 budget and blow the fast budget. Go straight to keyword. Deep mode
+    // keeps the full waterfall below.
+    if (fastMode) return keywordRetrieve(q, limit, cards);
 
     const provider = getEmbeddingProvider();
     if (provider && vectorsMatchProvider(provider, GENERATED)) {
