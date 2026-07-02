@@ -51,6 +51,8 @@ export function App() {
 
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); try { localStorage.setItem("js_theme", theme); } catch {} }, [theme]);
   useEffect(() => { document.documentElement.lang = lang; try { localStorage.setItem("js_lang", lang); } catch {} }, [lang]);
+  // 危机时刻:整个房间的光沉静下来,把注意力让给安全卡(纯呈现,不碰任何安全逻辑)。
+  useEffect(() => { document.documentElement.toggleAttribute("data-crisis", crisis); }, [crisis]);
 
   function pickGreeting(lg: Lang) {
     const hi = lg === "zh" ? `你好，我是${persona.name.zh}。` : `Hi, I'm ${persona.name.en}.`;

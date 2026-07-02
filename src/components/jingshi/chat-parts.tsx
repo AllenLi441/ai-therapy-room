@@ -112,21 +112,19 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
           // Only surface the safety step when the danger check ACTUALLY caught something
           // (e.g. fast-mode parallel judge late-flag). A "✓未见风险" badge on every normal
           // reply made the whole chat feel clinical/monitored — keep it warm by default.
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#c0563b", margin: "2px 0 4px" }}>
-            <Ic.shield style={{ width: 13, height: 13, opacity: 0.9 }} />
-            <span style={{ opacity: 0.9 }}>{STR[lang].safety_label} · ⚠ {STR[lang].safety_flagged}</span>
+          <div className="safety-flag">
+            <Ic.shield />
+            <span>{STR[lang].safety_label} · ⚠ {STR[lang].safety_flagged}</span>
           </div>
         )}
         {isAI && m.thinking && m.thinking.trim() && (
-          <details className="think-trace" open={!!m.streaming && m.content === ""} style={{ margin: "2px 0 6px", fontSize: 12.5, color: "rgba(120,120,120,0.95)" }}>
-            <summary style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "var(--tone, #3a8a78)", fontWeight: 500 }}>
-              <Ic.insight style={{ width: 14, height: 14, opacity: 0.9 }} />
+          <details className="think-trace" open={!!m.streaming && m.content === ""}>
+            <summary>
+              <Ic.insight />
               {STR[lang].think_label}{m.streaming && m.content === "" ? "…" : ""}
             </summary>
-            <div style={{ marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.6, maxHeight: 260, overflowY: "auto", padding: "8px 10px", borderLeft: "2px solid var(--tone, #3a8a78)", background: "rgba(127,127,127,0.06)", borderRadius: 6, opacity: 0.92 }}>
-              {m.thinking}
-            </div>
-            <div style={{ marginTop: 4, opacity: 0.6, fontSize: 11.5 }}>{STR[lang].think_hint}</div>
+            <div className="think-body">{m.thinking}</div>
+            <div className="think-hint">{STR[lang].think_hint}</div>
           </details>
         )}
         <div className={"bubble" + (hasMedia && !hasText ? " media-only" : "") + (m.errored ? " bubble-error" : "")}>
@@ -150,35 +148,31 @@ export function Bubble({ m, persona, lang, onRetry }: { m: Message; persona: Per
           )}
         </div>
         {isAI && m.refs && m.refs.length > 0 && (
-          <details className="kb-refs" style={{ marginTop: 8, fontSize: 12.5, color: "rgba(120,120,120,0.95)" }}>
-            <summary style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "var(--tone, #3a8a78)", fontWeight: 500 }}>
-              <Ic.clipboard style={{ width: 14, height: 14, opacity: 0.9 }} />
+          <details className="kb-refs">
+            <summary>
+              <Ic.clipboard />
               {lang === "zh"
                 ? `信息来源 · ${m.refs.length} 条（点开看原文出处）`
                 : `Sources · ${m.refs.length} (open to check)`}
             </summary>
-            <div style={{ marginTop: 8 }}>
-              <div style={{ opacity: 0.78, marginBottom: 8, lineHeight: 1.55 }}>
+            <div className="kb-body">
+              <div className="kb-note">
                 {lang === "zh"
                   ? "这条回应参考了下面这些权威来源的要点。点链接可核对原文——只用真实、可查证的资料,不替代专业诊疗。"
                   : "This reply drew on the authoritative sources below — open a link to verify the original. We use only real, checkable sources, never a substitute for professional care."}
               </div>
-              <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
+              <ol className="kb-list">
                 {m.refs.map((r, i) => (
-                  <li key={i} style={{ borderLeft: "2px solid var(--tone, #3a8a78)", paddingLeft: 10, lineHeight: 1.5 }}>
-                    <div style={{ fontWeight: 500, color: "inherit", opacity: 0.95, marginBottom: 2 }}>
+                  <li key={i} className="kb-item">
+                    <div className="kb-title">
                       {r.title}
-                      {r.kind === "web" && (
-                        <span style={{ marginLeft: 6, fontSize: 10, padding: "0 5px", borderRadius: 4, border: "1px solid currentColor", opacity: 0.6, verticalAlign: "middle" }}>
-                          {lang === "zh" ? "实时" : "live"}
-                        </span>
-                      )}
+                      {r.kind === "web" && <span className="kb-live">{lang === "zh" ? "实时" : "live"}</span>}
                     </div>
-                    {r.quote && <div style={{ fontStyle: "italic", opacity: 0.82, marginBottom: 3 }}>“{r.quote}”</div>}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      {r.source && <span style={{ opacity: 0.7 }}>{r.source}</span>}
+                    {r.quote && <div className="kb-quote">“{r.quote}”</div>}
+                    <div className="kb-meta">
+                      {r.source && <span className="kb-source">{r.source}</span>}
                       {r.url && (
-                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--tone, #3a8a78)", textDecoration: "underline", whiteSpace: "nowrap" }}>
+                        <a className="kb-link" href={r.url} target="_blank" rel="noopener noreferrer">
                           {lang === "zh" ? "查看来源 ↗" : "View source ↗"}
                         </a>
                       )}
