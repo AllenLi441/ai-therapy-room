@@ -3,4 +3,4 @@
 //   patch (0.0.x) — small fix / copy / prompt / KB-card tweak
 //   minor (0.x.0) — notable feature or behavior change
 //   major (x.0.0) — big release / milestone
-export const APP_VERSION = "0.5.5";
+export const APP_VERSION = "0.6.0";

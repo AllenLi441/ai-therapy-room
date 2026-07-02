@@ -21,6 +21,15 @@ const RECALL_FLOOR = 0.3;
 const TIER1_FAST_TIMEOUT_MS = 2500;
 const TIER1_DEEP_TIMEOUT_MS = 8000;
 
+// Fast-mode cosine floor over the Qdrant corpus. Default calibrated against the real
+// ingested corpus (on-topic queries score ≥ ~0.55, off-topic ≤ ~0.4 on Qwen3-Embedding);
+// RAG_FAST_SCORE_FLOOR overrides without a deploy.
+const FAST_SCORE_FLOOR_DEFAULT = 0.45;
+function fastScoreFloor(): number {
+  const raw = Number.parseFloat(process.env.RAG_FAST_SCORE_FLOOR ?? "");
+  return Number.isFinite(raw) && raw > 0 && raw < 1 ? raw : FAST_SCORE_FLOOR_DEFAULT;
+}
+
 // Intent gate: only ground a reply in the KB when the user is actually ASKING for
 // information / methods — not merely venting about a topic. A relevant card retrieved for
 // "睡不着好烦" (venting) produces a warm empathy reply that doesn't use the card, so the
@@ -362,7 +371,14 @@ async function tier1QdrantRetrieve(
   if (!queryVec || queryVec.length === 0) return null;
 
   const recall = fastMode ? limit : RECALL_N;
-  const candidates = await qdrantDenseSearch(queryVec, { limit: recall });
+  // Fast mode has NO rerank, so weak cosine hits would attach irrelevant sources on the
+  // most-trafficked path — apply a server-side floor there (calibrated on the real corpus,
+  // see scripts/ingest/calibrate-floor.mjs; env-tunable). Deep mode keeps the broad recall
+  // set and lets the reranker judge precision (floor would starve it).
+  const candidates = await qdrantDenseSearch(queryVec, {
+    limit: recall,
+    ...(fastMode ? { scoreThreshold: fastScoreFloor() } : {})
+  });
   if (!candidates || candidates.length === 0) return null;
 
   if (fastMode) return candidates.slice(0, limit);

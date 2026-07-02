@@ -33,6 +33,9 @@ export type QdrantSearchOptions = {
   trustTier?: "authoritative" | "research";
   /** Hard per-request timeout. Keeps a stale/slow endpoint from stalling the reply. */
   timeoutMs?: number;
+  /** Cosine floor applied SERVER-SIDE. Fast mode only (no rerank there) — deep mode
+   *  relies on the reranker for precision, so a floor would starve its recall set. */
+  scoreThreshold?: number;
 };
 
 const DEFAULT_TIMEOUT_MS = 3500;
@@ -135,7 +138,10 @@ export async function qdrantDenseSearch(
           query: vector,
           filter: { must },
           limit: opts.limit,
-          with_payload: true
+          with_payload: true,
+          ...(typeof opts.scoreThreshold === "number" && opts.scoreThreshold > 0
+            ? { score_threshold: opts.scoreThreshold }
+            : {})
         }),
         signal: controller.signal
       });

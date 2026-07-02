@@ -39,3 +39,4 @@ _recovered_frontend_reference/
 
 # safety-test ratchet: commit the baseline, not the raw vitest report
 /safety-ci/_raw.json
+scripts/ingest/.cache/
