@@ -48,3 +48,15 @@ scripts/ingest/.cache/
 
 # decision logs may contain raw user content (QUIET_ROOM_DECISION_LOG_RAW) — never commit
 /logs/
+
+# local working notes / private scratch — never publish
+_BATCH_PROMPT*
+_PLAN_*
+_RAG搭建*
+_SAFETY_v2_*
+_SAFETY_REARCH*
+_DEPLOY_LINE_PATCHES/
+jingshi-eval/
+.omc/
+logs/
+eval/.workdir/
