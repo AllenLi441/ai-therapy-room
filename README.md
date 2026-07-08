@@ -55,7 +55,7 @@ Deploys to Vercel out of the box; Docker/self-hosting works the same. Without ve
 
 ### License
 
-**Not yet licensed** — all rights reserved until the owner selects a license (planned: a permissive license plus a medical-disclaimer rider).
+[Apache License 2.0](./LICENSE), with a medical-disclaimer notice (see [NOTICE](./NOTICE)). Not a medical device; no clinical validation.
 
 ---
 
@@ -94,4 +94,4 @@ npm run dev                  # 或 npm run build
 
 ### 许可证
 
-**暂未授权** —— 在所有者选定许可证前保留所有权利(计划:宽松许可 + 医疗免责附加条款)。
+[Apache License 2.0](./LICENSE),附医疗免责声明(见 [NOTICE](./NOTICE))。非医疗器械,无临床验证。
