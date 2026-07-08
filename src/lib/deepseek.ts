@@ -1,0 +1,293 @@
+import type { ChatMessage } from "./types";
+import { REASONING_OPEN, REASONING_CLOSE } from "./stream-markers";
+import {
+  getPipelineMode,
+  isValidApiModel,
+  resolveApiModel,
+  resolveDeepSeekModel,
+  type DeepSeekModelId,
+  type SessionPaceId
+} from "./model-options";
+
+type DeepSeekMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+type DeepSeekPayload = {
+  model: string;
+  messages: DeepSeekMessage[];
+  temperature: number;
+  max_tokens: number;
+  stream: boolean;
+  // Thinking-mode toggle (DeepSeek defaults to enabled). We set it explicitly:
+  // deep tier (v4-pro) → enabled (reasons before answering); fast tier (v4-flash)
+  // → disabled (quicker, no chain-of-thought).
+  thinking?: {
+    type: "enabled" | "disabled";
+  };
+};
+
+const DEFAULT_BASE_URL = "https://api.deepseek.com";
+
+export function getDeepSeekConfig() {
+  return {
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseUrl: process.env.DEEPSEEK_BASE_URL || DEFAULT_BASE_URL,
+    model: resolveApiModel()
+  };
+}
+
+/**
+ * DeepSeek (like other OpenAI-compatible chat APIs) expects the messages after
+ * the system prompt to read as a real dialogue: begin with a user turn and
+ * strictly alternate user/assistant. Our UI history violates this in two ways
+ * that only surface once a conversation grows long — which is exactly when
+ * users report the assistant "已读乱回" (replies incoherently):
+ *
+ *   1. The history opens with an assistant greeting ("welcome-message"), and
+ *      once the route's slice(-16) window activates (conversation > 16 msgs)
+ *      the window itself can begin on an assistant turn.
+ *   2. Switching persona injects an unpaired assistant transition message,
+ *      producing two assistant turns back-to-back.
+ *
+ * A leading-assistant or consecutive same-role sequence makes the provider lose
+ * track of whose turn it is (some OpenAI-compatible backends 400, others just
+ * degrade). This normalizes the array so it always starts with a user turn and
+ * alternates: drop leading assistant turns, then merge consecutive same-role
+ * turns into one. The newest message is always the user's, so the result also
+ * ends on a user turn — ready for a completion.
+ */
+export function normalizeConversationForProvider(messages: ChatMessage[]) {
+  // 1. Drop leading assistant turns — the model should be answering a user.
+  let start = 0;
+  while (start < messages.length && messages[start].role === "assistant") {
+    start += 1;
+  }
+
+  // 2. Merge consecutive same-role turns so roles strictly alternate.
+  const normalized: { role: "user" | "assistant"; content: string }[] = [];
+  for (let i = start; i < messages.length; i += 1) {
+    const turn = messages[i];
+    const last = normalized[normalized.length - 1];
+    if (last && last.role === turn.role) {
+      last.content = `${last.content}\n${turn.content}`;
+    } else {
+      normalized.push({ role: turn.role, content: turn.content });
+    }
+  }
+
+  return normalized;
+}
+
+export function buildDeepSeekPayload(input: {
+  systemPrompt: string;
+  messages: ChatMessage[];
+  model?: DeepSeekModelId;        // legacy UI-label, ignored (kept for callers)
+  apiModel?: string;              // real API model: deepseek-v4-pro | deepseek-v4-flash
+  stream?: boolean;
+  maxTokens?: number;
+}) {
+  // The real API model: an explicit, VALID apiModel (the deep/fast → v4-pro/v4-flash
+  // choice) overrides the env default. Unknown values fall back to env so a bad
+  // value never 400s the provider.
+  const model = isValidApiModel(input.apiModel) ? input.apiModel : getDeepSeekConfig().model;
+  const isDeepThinking = model === "deepseek-v4-pro";
+
+  return {
+    model,
+    messages: [
+      { role: "system", content: input.systemPrompt },
+      ...normalizeConversationForProvider(input.messages)
+    ],
+    temperature: 0.5,
+    // The thinking tier spends tokens on the hidden chain-of-thought too (counts
+    // toward max_tokens), so give it room for CoT + a full answer.
+    max_tokens: input.maxTokens ?? (isDeepThinking ? 8192 : 900),
+    stream: input.stream ?? true,
+    // deep → think before answering; fast → no chain-of-thought, quicker reply.
+    thinking: { type: isDeepThinking ? "enabled" : "disabled" }
+  } satisfies DeepSeekPayload;
+}
+
+function withTimeout(ms: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return { controller, clear: () => clearTimeout(timer) };
+}
+
+function withPromiseTimeout<T>(promise: Promise<T>, ms: number, onTimeout?: () => void): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      onTimeout?.();
+      reject(new Error("DeepSeek response timed out"));
+    }, ms);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+async function requestDeepSeek(payload: DeepSeekPayload) {
+  const config = getDeepSeekConfig();
+
+  if (!config.apiKey) {
+    throw new Error("Missing DEEPSEEK_API_KEY");
+  }
+
+  // deepseek-v4-pro thinks before any token and can take tens of seconds; too short a
+  // cap aborts it mid-thought (→ fallback, reads as broken). Target: deep ≤ 30s (per
+  // product spec), fast tier far quicker. Both stay under the route maxDuration (60s).
+  const timeoutMs = payload.model === "deepseek-v4-pro" ? 30_000 : 20_000;
+  const { controller, clear } = withTimeout(timeoutMs);
+
+  try {
+    const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`DeepSeek API error ${response.status}: ${text.slice(0, 240)}`);
+    }
+
+    return response;
+  } finally {
+    clear();
+  }
+}
+
+/**
+ * Stream the assistant reply as raw text chunks. With `opts.includeReasoning`
+ * (deep tier only — the thinking model emits `reasoning_content` BEFORE the
+ * answer), the reasoning is forwarded as a leading block delimited by the
+ * REASONING_OPEN/REASONING_CLOSE control chars, so the caller can route it to a
+ * separate "思考过程" UI channel without it being mistaken for the answer. The
+ * default (no opts) is byte-for-byte the previous content-only behaviour, so
+ * fast-tier and crisis callers are unaffected.
+ */
+export async function createDeepSeekTextStream(
+  payload: DeepSeekPayload,
+  opts?: { includeReasoning?: boolean }
+) {
+  const includeReasoning = opts?.includeReasoning ?? false;
+  const response = await requestDeepSeek({ ...payload, stream: true });
+
+  if (!response.body) {
+    throw new Error("DeepSeek response body is empty");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = "";
+  const pendingTexts: string[] = [];
+  let isDone = false;
+  let reasoningOpen = false; // emitted REASONING_OPEN, still in the thinking phase
+  let contentSeen = false; // first answer token arrived → thinking phase closed
+
+  function drainLines(lines: string[]) {
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line.startsWith("data:")) {
+        continue;
+      }
+
+      const data = line.replace(/^data:\s*/, "");
+      if (data === "[DONE]") {
+        isDone = true;
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(data) as {
+          choices?: Array<{ delta?: { content?: string; reasoning_content?: string } }>;
+        };
+        const delta = parsed.choices?.[0]?.delta;
+        const reasoning = delta?.reasoning_content;
+        const content = delta?.content;
+
+        if (includeReasoning && reasoning && !contentSeen) {
+          if (!reasoningOpen) {
+            pendingTexts.push(REASONING_OPEN);
+            reasoningOpen = true;
+          }
+          pendingTexts.push(reasoning);
+        }
+
+        if (content) {
+          if (reasoningOpen && !contentSeen) {
+            pendingTexts.push(REASONING_CLOSE);
+          }
+          contentSeen = true;
+          pendingTexts.push(content);
+        }
+      } catch {
+        // Ignore malformed provider chunks and continue reading.
+      }
+    }
+  }
+
+  // Degenerate case: thinking arrived but the model never produced an answer —
+  // close the thinking block so the client doesn't hang in the思考过程 phase.
+  function closeReasoningIfDangling(controller: ReadableStreamDefaultController<Uint8Array>) {
+    if (reasoningOpen && !contentSeen) {
+      controller.enqueue(encoder.encode(REASONING_CLOSE));
+      contentSeen = true;
+    }
+  }
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      while (true) {
+        const pending = pendingTexts.shift();
+        if (pending) {
+          controller.enqueue(encoder.encode(pending));
+          return;
+        }
+
+        if (isDone) {
+          closeReasoningIfDangling(controller);
+          controller.close();
+          return;
+        }
+
+        const { done, value } = await reader.read();
+
+        if (done) {
+          closeReasoningIfDangling(controller);
+          controller.close();
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        drainLines(lines);
+      }
+    },
+    cancel() {
+      void reader.cancel();
+    }
+  });
+}
+
+export async function generateDeepSeekText(payload: DeepSeekPayload) {
+  const response = await requestDeepSeek({ ...payload, stream: false });
+  const json = (await withPromiseTimeout(response.json(), 30_000, () => {
+    void response.body?.cancel();
+  })) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  return json.choices?.[0]?.message?.content?.trim() ?? "";
+}

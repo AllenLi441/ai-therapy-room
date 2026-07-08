@@ -1,0 +1,50 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# env files — NEVER commit real keys (.env.example is the only one tracked)
+.env
+.env.*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# recovery scratch (reference only, not part of the app)
+_recovered_frontend_reference/
+
+# CI workflow needs the gh "workflow" token scope to push.
+# Re-enable later with: gh auth refresh -s workflow  (then un-ignore + git add)
+/.github/workflows/
+
+# design handoff (prototype) — integrated into src/, kept locally as reference
+/design_handoff_jingshi/
+
+# safety-test ratchet: commit the baseline, not the raw vitest report
+/safety-ci/_raw.json
+scripts/ingest/.cache/
+
+# eval suite: generated outputs + runtime workdir
+/eval/reports/*
+!/eval/reports/.gitkeep
+/eval/.workdir/
+
+# decision logs may contain raw user content (QUIET_ROOM_DECISION_LOG_RAW) — never commit
+/logs/

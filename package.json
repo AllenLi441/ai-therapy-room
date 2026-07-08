@@ -1,0 +1,45 @@
+{
+  "name": "ai-therapy-room",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "eval:therapy": "node scripts/eval-therapy.mjs",
+    "eval:find-fp-fn": "node scripts/find-fp-fn.mjs",
+    "w1:harvest-logs": "node scripts/harvest-decision-logs.mjs",
+    "w1:preannotate": "node scripts/preannotate-w1.mjs",
+    "w1:append-seeds": "node scripts/append-w1-seeds.mjs",
+    "w1:loop": "npm run eval:find-fp-fn && npm run w1:preannotate && npm run w1:append-seeds",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ratchet": "node scripts/ci/test-ratchet.mjs",
+    "kb:embed": "node scripts/build-knowledge-embeddings.mjs",
+    "eval:smoke": "tsx eval/adapters/smoke.ts",
+    "eval:validate": "tsx eval/validate-datasets.ts"
+  },
+  "dependencies": {
+    "lucide-react": "0.468.0",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "autoprefixer": "10.4.20",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "postcss": "8.5.10",
+    "tailwindcss": "3.4.17",
+    "tsx": "^4.23.0",
+    "typescript": "5.7.2",
+    "vitest": "4.1.5"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
+  }
+}

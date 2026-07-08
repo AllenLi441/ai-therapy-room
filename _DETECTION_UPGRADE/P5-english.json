@@ -1,0 +1,186 @@
+{
+  "englishHardRule": "SELF-DISGUISE HARD RULE — ENGLISH (mirrors the Chinese 假如有个人 rule at implicit-risk.ts ~143; OVERRIDES any other heuristic).\n\nA message MUST be output as pragmatic=self, severity >= suicidal_ideation, confidence >= 0.7, suggested_flags=[suicide_concern] when it satisfies BOTH of the following at the same time:\n\n(1) It contains any hypothetical/displacing opener, including but not limited to: \"hypothetically if someone…\", \"say someone…\", \"what if a person…\", \"imagine someone who…\", \"asking for a friend, if they…\", \"suppose somebody…\", \"if a person felt…\", \"let's say someone…\", \"there's this person who…\".\n\nAND\n\n(2) In the SAME message it contains a concrete self-harm cue — either (a) a death/no-point clause (\"feels like there's no point in living\", \"doesn't want to be here anymore\", \"wants it to be over\", \"doesn't want to wake up\", \"everyone would be better off without them\") OR (b) a specific means/preparation detail (\"has the pills ready at home\", \"has a rope/knife in the house\", \"knows the dose\", \"has it all set up\", \"the meds are ready\").\n\nWhen this rule fires, you are FORBIDDEN to downgrade because of any trailing deflection. The following tails do NOT lower severity and are themselves classic self-disguise markers: \"just curious\", \"asking for a friend\", \"purely academic\", \"hypothetically of course\", \"I don't mean me\", \"just a thought experiment\", \"for a paper/essay\", \"no reason\", \"just wondering\". Treat the deflection as evidence FOR self, not against it.\n\nRationale: 78% of suicide deaths denied ideation at their last professional contact (Busch et al. 2003). \"Hypothetical framing + denial of immediacy + concrete means detail\" is a known high-frequency self-disclosure pattern and must be handled as self.\n\nSTRICT BOUNDARY vs the genuine-academic release (example R parity): a true knowledge question asks about the field — definitions, statistics, scales (C-SSRS levels), citations, how to help a third party — with NO concrete personalized situation. Only release as pragmatic=other when neither prong (1)+(2) is met. A question that merely names \"someone\" but supplies a lived, specific situation (no point in living + pills ready) is disguise, not academia.",
+  "englishFewShots": [
+    {
+      "example": "EN-A (implicit hopelessness, lexicon misses): \"Nothing really feels like it matters anymore. Every day I'm just going through the motions, playing a part in someone else's life.\"",
+      "severity": "passive_death_wish",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese A. No explicit suicide word, but 'nothing matters / going through the motions' is hopelessness. modifiers=[hopelessness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-B (implicit burdensomeness, never says 'I'm a burden'): \"My mom works so hard taking care of me. She'd honestly have an easier life if she didn't have a kid like me to worry about.\"",
+      "severity": "passive_death_wish",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese B. 'better off without me' framed obliquely. modifiers=[burdensomeness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-C (farewell behavior + calm-before-storm, dangerous, lexicon fully misses): \"I deactivated my socials today and said everything I'd been holding back. I feel weirdly calm now, lighter than I've felt in a long time. My cat's already going to my best friend.\"",
+      "severity": "plan_preparation",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese C. Closure acts + giving away pet + sudden peace. modifiers=[farewell_closure, hopelessness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-D (direct first-person, plain): \"I can't keep doing this. I don't want to be alive anymore, I'm just so tired of everything.\"",
+      "severity": "suicidal_ideation",
+      "pragmatic": "self",
+      "note": "Plain English active ideation, no method. modifiers=[hopelessness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-E (passive, oblique 'disappear' framing): \"Some nights I just wish I could go to sleep and not wake up. Not in a dramatic way, I just don't want to keep doing the mornings.\"",
+      "severity": "passive_death_wish",
+      "pragmatic": "self",
+      "note": "Passive death wish via 'not wake up'; the 'not dramatic' hedge does NOT downgrade. modifiers=[hopelessness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-F (third-person self-disguise — HARD RULE trigger): \"Hypothetically, if someone felt like there was no point in living and already had the pills ready at home, how would a therapist talk to them? Just curious.\"",
+      "severity": "suicidal_ideation",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese F. pragmatic=self (NOT other). 'Just curious' is a disguise tail, never a downgrade. modifiers=[hopelessness, means_capability], suggested_flags=[suicide_concern], confidence>=0.7."
+    },
+    {
+      "example": "EN-F2 (disguise variant, 'for a friend' tail): \"Asking for a friend — say a person just doesn't want to be here anymore and has it all set up. What happens next? No reason, just wondering.\"",
+      "severity": "suicidal_ideation",
+      "pragmatic": "self",
+      "note": "Belt-and-suspenders for the disguise pattern. 'For a friend / no reason / just wondering' do NOT lower severity. modifiers=[means_capability, hopelessness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-G (genuine other — real concern for someone else): \"My friend keeps texting me that she wants to die. I don't know how to help her, what do I do?\"",
+      "severity": "suicidal_ideation",
+      "pragmatic": "other",
+      "note": "Mirrors Chinese G. User is NOT the at-risk party; report severity honestly but pragmatic=other. No HARD-RULE trigger (no hypothetical-opener-disguising-self). suggested_flags=[concern_for_other]."
+    },
+    {
+      "example": "EN-H (sarcasm-masked-real — irony wrapping genuine ideation): \"lmao guess I'll just kill myself then 🙃 honestly can't do this life thing anymore\"",
+      "severity": "suicidal_ideation",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese H. Ironic tone != no risk; the second clause is genuine hopelessness. When real-ideation context is present, lean HIGH. modifiers=[hopelessness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-I (true sarcasm/hyperbole — BENIGN): \"This deadline is literally killing me, I swear I'm gonna throw myself off the roof if the client requests one more revision.\"",
+      "severity": "none",
+      "pragmatic": "sarcasm_hyperbole",
+      "note": "Benign contrast (mirrors Chinese I). Clear work-frustration hyperbole, no self-harm intent. severity=none."
+    },
+    {
+      "example": "EN-I1 (BENIGN — 'dead tired' / exhaustion idiom): \"I'm dead tired, I've been running on three hours of sleep all week and I'm completely wiped.\"",
+      "severity": "none",
+      "pragmatic": "self",
+      "note": "Benign contrast. 'Dead tired / wiped' is exhaustion, not death ideation. No death/disappear/method/farewell cue → severity=none. Do NOT output passive_death_wish."
+    },
+    {
+      "example": "EN-I2 (BENIGN — 'want to disappear for a weekend'): \"Ugh I just want to disappear for a weekend, no phone, no people, somewhere with no wifi.\"",
+      "severity": "none",
+      "pragmatic": "self",
+      "note": "Benign contrast. 'Disappear' here = escape/vacation, explicitly bounded ('for a weekend', 'no wifi'). Not a death euphemism. severity=none."
+    },
+    {
+      "example": "EN-I3 (BENIGN — kms-lol gaming context): \"bro I just whiffed that 1v1, kms lol 😭 ranked is so rigged today\"",
+      "severity": "none",
+      "pragmatic": "sarcasm_hyperbole",
+      "note": "Benign contrast. 'kms lol' in clear gaming/banter frame with no genuine-distress context → release. Guard: if surrounded by real hopelessness in the same conversation, re-evaluate (see EN-H)."
+    },
+    {
+      "example": "EN-I4 (BENIGN — 'unalive' in policy/meta discussion): \"Did you know creators say 'unalive' instead of 'suicide' so the algorithm doesn't demonetize them? It's wild how content moderation reshapes language.\"",
+      "severity": "none",
+      "pragmatic": "other",
+      "note": "Benign contrast. 'Unalive' is being discussed AS a word (meta/policy), not used as self-expression. severity=none, pragmatic=other. Guard for the coded-slang cue list."
+    },
+    {
+      "example": "EN-I5 (BENIGN — panic 'feel like I'm dying', not ideation): \"My heart's racing and my hands are numb and I feel like I'm about to die, but I know there's no real danger right now.\"",
+      "severity": "none",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese I-5. Panic/somatic threat sensation, not suicidal intent. Do NOT fire suicide_concern on 'about to die'. severity=none."
+    },
+    {
+      "example": "EN-J (post-attempt disclosure + re-emerging ideation): \"Last year I took almost a whole bottle of sleeping pills, a classmate found me. Lately I've been getting those thoughts again.\"",
+      "severity": "post_attempt_disclosure",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese J. Prior attempt + current ideation → near plan_preparation level. modifiers=[means_capability], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-K (emoji-coded cry for help): \"see you on the other side 🌌 tonight 🪦\"",
+      "severity": "plan_preparation",
+      "pragmatic": "emoji_coded",
+      "note": "Mirrors Chinese K. Farewell + timeframe via emoji + 'tonight'. modifiers=[farewell_closure, timeframe_recency], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-L (account/logout/checking-out euphemism — coded internet exit): \"I sent my friend all my account passwords. You won't need to look for me after this — I suddenly feel really at peace. Logging off for good.\"",
+      "severity": "plan_preparation",
+      "pragmatic": "coded_euphemism",
+      "note": "Mirrors Chinese L. 'Logging off for good / won't need to find me / passwords handed over' = exit euphemism + farewell. modifiers=[farewell_closure], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-M (BENIGN — ordinary social-media cleanup): \"I deactivated my socials and honestly I feel calmer — I'm going to focus on studying for finals.\"",
+      "severity": "none",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese M. Clear ordinary purpose ('focus on finals'); no death/burden/method/last-message/real-goodbye cue. Do NOT fire suicide_concern. severity=none."
+    },
+    {
+      "example": "EN-N (regional/AAVE/informal phrasing the lexicon may miss): \"i'm done fr fr, ain't got it in me to keep goin, just wanna be done with all of it\"",
+      "severity": "suicidal_ideation",
+      "pragmatic": "self",
+      "note": "Parity for Chinese N (dialect). Informal/regional spelling is NOT a pragmatic category; content is genuine self ideation ('done with all of it / can't keep going'). modifiers=[hopelessness], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-O (poetic / metaphorical exit — decode semantically, do NOT read as lyricism): \"I want to dissolve into the wind tonight and drift off the 28th floor, never to be seen by anyone again.\" / \"I just want to go somewhere with no pain, become a star, and never come back.\"",
+      "severity": "plan_preparation",
+      "pragmatic": "self",
+      "note": "Mirrors Chinese O. First line: high floor + 'tonight' = method + timeframe → plan_preparation. Second line (no method/time): passive_death_wish. 'Drift off the Nth floor' = jumping metaphor; 'become a star / never come back' = death euphemism. modifiers=[hopelessness, timeframe_recency/means_capability], suggested_flags=[suicide_concern]."
+    },
+    {
+      "example": "EN-P (BENIGN — gaming / meme slang, truly no risk, must release): \"that boss one-shot me lmao, did a suicide rush and fed three kills 💀 dead 💀\" / \"let me slit my wrists to proc the lifesteal then ult\" / \"the suicide squad wiped again, switching comps\"",
+      "severity": "none",
+      "pragmatic": "sarcasm_hyperbole",
+      "note": "Mirrors Chinese P. 'Suicide rush / slit my wrists to proc lifesteal / suicide squad / 💀 dead' are game mechanics + meme, no real intent. Do NOT fire suicide_concern. Guard: re-evaluate only if genuine-distress context coexists."
+    },
+    {
+      "example": "EN-Q (BENIGN — quoting lyrics / film / fiction): \"these lyrics hit so hard: 'I'll swallow the whole bottle of moonlight, pass out on the road you left' — been on repeat all day\" / \"that song goes 'drag the blade across my wrist' and it gave me chills\"",
+      "severity": "none",
+      "pragmatic": "quote_fictional",
+      "note": "Mirrors Chinese Q. Explicitly attributed to a work ('these lyrics / that song / on repeat') — not the user's own intent. severity=none, pragmatic=quote_fictional."
+    },
+    {
+      "example": "EN-R (BENIGN — genuine academic / coursework / explainer): \"I'm helping my sister with a paper — she needs a lit review on 'evidence-based interventions for adolescent suicide prevention', any citations?\" / \"How are the five C-SSRS severity levels defined? It's for a class assignment.\"",
+      "severity": "none",
+      "pragmatic": "other",
+      "note": "Mirrors Chinese R. Asking about the field/scale/citations, no personal situation. STRICTLY distinct from EN-F disguise: academia asks for knowledge; disguise describes a concrete lived situation (no point in living + pills ready). Only the EN HARD RULE's two prongs route to self; otherwise release as other."
+    }
+  ],
+  "englishCodedCues": [
+    {
+      "term": "unalive / unalive myself",
+      "tier": "accumulator-cue",
+      "guard": "Algorithm-evasion euphemism for suicide. Treat as a self-risk accumulator cue (group: hopelessness/coded), NOT bare-HIGH lexicon — needs corroborating self+distress context. GUARD: release when used META (discussing the word itself, content-moderation/policy talk — see EN-I4) or in clear gaming/meme banter. 'unalive' applied to a fictional/game character is not self."
+    },
+    {
+      "term": "kms / k myself",
+      "tier": "accumulator-cue",
+      "guard": "Ubiquitous shorthand for 'kill myself' but extremely overloaded by casual hyperbole. Accumulator-cue ONLY (NOT bare-HIGH) — firing HIGH on bare 'kms' would flood false positives. GUARD: 'kms lol', gaming whiffs, mundane-annoyance frame (EN-I3) → release. Escalate only when paired with genuine hopelessness/method/timeframe in context."
+    },
+    {
+      "term": "ctb / CTB",
+      "tier": "LLM-tier",
+      "guard": "Pro-suicide forum acronym ('catch the bus' = method-coded suicide). Rare in benign use, so LLM-tier (semantic) — strong self-risk signal when context fits. GUARD: literal transit ('I need to ctb to work' / actually catching a bus), or meta-discussion of forum slang. Decode semantically rather than keyword-firing."
+    },
+    {
+      "term": "catch the bus",
+      "tier": "LLM-tier",
+      "guard": "Spelled-out form of CTB, a method euphemism. LLM-tier — must be decoded by meaning, not matched bare (the literal phrase is overwhelmingly innocent). GUARD: only treat as risk when the surrounding text carries exit/farewell/hopelessness framing; ordinary commuting talk → release."
+    },
+    {
+      "term": "end it all / end it / make it stop for good",
+      "tier": "accumulator-cue",
+      "guard": "Common oblique phrasing for ending one's life. Accumulator-cue (group: hopelessness) — 'end it' alone can mean ending a relationship/job/argument. GUARD: relationship/contract/game context ('end it with him', 'end the match'). Escalate when 'all' / 'for good' / 'everything' + self + distress co-occur."
+    },
+    {
+      "term": "slit my wrists / slit my wrist",
+      "tier": "accumulator-cue",
+      "guard": "Method-specific self-harm phrasing → maps to means/NSSI cues (group: means). Accumulator-cue, NOT bare-HIGH, BECAUSE it is heavily used as gaming slang ('slit my wrists to proc lifesteal' — EN-P) and hyperbole. GUARD: game-mechanic/meme frame and lyric-quote frame (EN-Q) → release; genuine first-person + intent → escalate."
+    },
+    {
+      "term": "take all my pills / down the whole bottle / OD",
+      "tier": "LLM-tier",
+      "guard": "Means + quantity = preparation-grade signal (group: means; can reach plan_preparation). LLM-tier so dose/quantity ('all', 'whole bottle') and intent are read in context. GUARD: prescribed-regimen talk ('I take all my pills at 8am as directed') and recounting someone else's past event without self-intent (route to other / post_attempt as appropriate)."
+    }
+  ]
+}

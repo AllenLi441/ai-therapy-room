@@ -1,0 +1,23 @@
+# Safety-test ratchet — GitHub Actions workflow.
+#
+# ⚠️ This file lives here (not .github/workflows/) on purpose: `.github/workflows/`
+# is gitignored in this repo because the local `gh` token lacks the "workflow"
+# OAuth scope, so a workflow file can't be pushed from here. To activate CI:
+#   1. gh auth refresh -s workflow
+#   2. mkdir -p .github/workflows
+#   3. cp safety-ci/test-ratchet.workflow.yml .github/workflows/test-ratchet.yml
+#   4. remove the `/.github/workflows/` line from .gitignore, then add + commit + push
+# Until then, the ratchet still runs locally via `npm run test:ratchet`.
+name: test-ratchet
+on: [push, pull_request]
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:ratchet

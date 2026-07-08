@@ -1,0 +1,15 @@
+{"t":0,"agent":"a09a72e","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a6809da","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"af9315d","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ab2868f","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ad1b843","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a2c262b","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ab2868f","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":198551}
+{"t":0,"agent":"af9315d","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":259122}
+{"t":0,"agent":"a6809da","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":328969}
+{"t":0,"agent":"a09a72e","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":344312}
+{"t":0,"agent":"a2c262b","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":453379}
+{"t":0,"agent":"ad1b843","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":591397}
+{"t":0,"agent":"aa9561a","agent_type":"codex:codex-rescue","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aa9561a","agent_type":"codex:codex-rescue","event":"agent_stop","success":true,"duration_ms":96243}
+{"t":0,"agent":"a40f34b","agent_type":"unknown","event":"agent_stop","success":true,"duration_ms":0}

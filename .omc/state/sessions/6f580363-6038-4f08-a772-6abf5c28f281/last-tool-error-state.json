@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"find /Users/allenli/Desktop/静室/app/node_modules/next/font -maxdepth 2 2>/dev/null\\necho \\\"---\\\"\\ncat /Users/allenli/Desktop/静室/app/node_modules/next/font/google.d.ts 2>/dev/null | head -5\\...",
+  "error": "Exit code 1\n/Users/allenli/Desktop/静室/app/node_modules/next/font\n/Users/allenli/Desktop/静室/app/node_modules/next/font/google\n/Users/allenli/Desktop/静室/app/node_modules/next/font/local\n/Users/allenli/Desktop/静室/app/node_modules/next/font/index.d.ts\n/Users/allenli/Desktop/静室/app/node_modules/next/font/google/target.css\n/Users/allenli/Desktop/静室/app/node_modules/next/font/google/index.js\n/Users/allenli/Desktop/静室/app/node_modules/next/font/google/index.d.ts\n/Users/allenli/Desktop/静室/app/node_module...",
+  "timestamp": "2026-07-05T07:18:38.284Z",
+  "retry_count": 1
+}

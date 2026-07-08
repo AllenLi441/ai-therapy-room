@@ -1,0 +1,7 @@
+{
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"/Users/allenli/Desktop/静室-原理与完整流程.pdf\",\"pages\":\"1-4\"}",
+  "error": "pdftoppm is not installed. Install poppler-utils (e.g. `brew install poppler` or `apt-get install poppler-utils`) to enable PDF page rendering.",
+  "timestamp": "2026-07-02T06:07:50.961Z",
+  "retry_count": 1
+}

@@ -1,0 +1,80 @@
+{
+  "agents": [
+    {
+      "agent_id": "a09a72e959f6ed61f",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-06T12:19:38.741Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-06T12:25:23.053Z",
+      "duration_ms": 344312
+    },
+    {
+      "agent_id": "a6809da939ebd89a4",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-06T12:19:39.242Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-06T12:25:08.211Z",
+      "duration_ms": 328969
+    },
+    {
+      "agent_id": "af9315d3adac8eb55",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-06T12:19:41.665Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-06T12:24:00.787Z",
+      "duration_ms": 259122
+    },
+    {
+      "agent_id": "ab2868fee40972966",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-06T12:19:41.867Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-06T12:23:00.418Z",
+      "duration_ms": 198551
+    },
+    {
+      "agent_id": "ad1b84377e64b7c06",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-06T12:19:43.645Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-06T12:29:35.042Z",
+      "duration_ms": 591397
+    },
+    {
+      "agent_id": "a2c262b88acb58d58",
+      "agent_type": "workflow-subagent",
+      "started_at": "2026-07-06T12:19:45.994Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-06T12:27:19.373Z",
+      "duration_ms": 453379
+    },
+    {
+      "agent_id": "aa9561a7eafa4613c",
+      "agent_type": "codex:codex-rescue",
+      "started_at": "2026-07-08T12:45:14.363Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-08T12:46:50.606Z",
+      "duration_ms": 96243
+    },
+    {
+      "agent_id": "a40f34b7bf83b4771",
+      "agent_type": "unknown",
+      "started_at": "2026-07-08T13:37:44.128Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-07-08T13:37:44.128Z",
+      "duration_ms": 0
+    }
+  ],
+  "total_spawned": 7,
+  "total_completed": 8,
+  "total_failed": 0,
+  "last_updated": "2026-07-08T13:37:44.231Z"
+}
