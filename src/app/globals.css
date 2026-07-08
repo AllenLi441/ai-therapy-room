@@ -864,16 +864,23 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* crisis check-in buttons (v0.9.0, D4) — the 1–4 scale question moved here from the
    resource-block text; retired once answered (see overlays.tsx CrisisBanner). */
-.crisis-q { max-width: calc(var(--maxw) + 40px); margin: 10px auto 0; padding: 0 18px; }
-.crisis-q-label { font-size: var(--fs-xs); color: var(--ink-3); margin-bottom: 8px; }
-.crisis-q-btns { display: flex; flex-wrap: wrap; gap: 8px; }
-.crisis-q-btn {
-  padding: 8px 14px; border-radius: var(--r-pill);
-  background: var(--surface); border: 1px solid var(--alert-line); color: var(--ink);
-  font-size: var(--fs-sm); transition: border-color .15s, background .15s;
+/* 2026-07-08: hotlines live directly in the crisis banner as tappable chips
+   (replaced the 1–4 check-in buttons + "see support" sheet). */
+.crisis-hotlines {
+  max-width: calc(var(--maxw) + 40px); margin: 10px auto 0; padding: 0 18px;
+  display: flex; flex-wrap: wrap; gap: 8px;
 }
-.crisis-q-btn:hover:not(:disabled) { border-color: var(--alert); background: var(--alert-soft); }
-.crisis-q-btn:disabled { opacity: .5; cursor: default; }
+.crisis-hotline {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: var(--r-pill);
+  background: var(--alert-soft); border: 1px solid var(--alert-line); color: var(--alert-deep);
+  text-decoration: none; transition: border-color .15s, background .15s, transform .12s var(--ease-spring);
+}
+.crisis-hotline:hover { border-color: var(--alert); background: var(--alert); color: var(--ink-on-accent); }
+.crisis-hotline:active { transform: scale(.96); }
+.crisis-hotline svg { width: 15px; height: 15px; flex: 0 0 auto; }
+.crisis-hotline .ch-num { font-weight: 700; font-size: var(--fs-sm); letter-spacing: .3px; }
+.crisis-hotline .ch-label { font-size: var(--fs-xs); color: inherit; opacity: .82; }
 
 /* ============================================================ 笺注:思考过程 + 信息来源
    回复边缘的小笺 —— 可核验,但不抢对话的注意力。 */

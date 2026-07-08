@@ -7,14 +7,14 @@ import { useEffect, useRef, useState } from "react";
 import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type Lang, type Message, type Media } from "./data";
 import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
-import { AboutSheet, ScaleModal, CrisisSheet, CrisisBanner, BreathingSheet, CaseDrawer, ConfirmSheet, ConsentGate } from "./overlays";
+import { AboutSheet, ScaleModal, CrisisBanner, CaseDrawer, ConfirmSheet, ConsentGate } from "./overlays";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { REASONING_OPEN, REASONING_CLOSE, EVENT_DELIM } from "@/lib/stream-markers";
 
 let _mid = 0;
 const uid = () => "m" + ++_mid;
 
-type Overlay = "about" | "crisis" | "breathing" | "case" | null;
+type Overlay = "about" | "case" | null;
 
 export function App() {
   const [lang, setLang] = useState<Lang>("zh");
@@ -372,10 +372,7 @@ export function App() {
       {crisis && (
         <CrisisBanner
           lang={lang}
-          busy={busy || sendCooldown}
-          onOpen={() => setOverlay("crisis")}
-          onDismiss={() => { setCrisis(false); exitedCrisisRef.current = true; setOverlay((o) => (o === "crisis" ? null : o)); }}
-          onSend={(digit) => void send(digit, [])}
+          onDismiss={() => { setCrisis(false); exitedCrisisRef.current = true; }}
         />
       )}
 
@@ -405,8 +402,6 @@ export function App() {
 
       {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} />}
       {scaleId && <ScaleModal lang={lang} scaleId={scaleId} onClose={() => setScaleId(null)} onComplete={(r) => setScaleResults((prev) => [...prev, r])} />}
-      {overlay === "crisis" && <CrisisSheet lang={lang} onClose={() => setOverlay(null)} onBreathe={() => setOverlay("breathing")} />}
-      {overlay === "breathing" && <BreathingSheet lang={lang} onClose={() => setOverlay(null)} />}
       {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} onClose={() => setOverlay(null)} />}
       {confirmingDelete && <ConfirmSheet lang={lang} onConfirm={doDeleteAll} onClose={() => setConfirmingDelete(false)} />}
       {hydrated && !consented && (

@@ -13,3 +13,9 @@
 {"t":0,"agent":"aa9561a","agent_type":"codex:codex-rescue","event":"agent_start","parent_mode":"none"}
 {"t":0,"agent":"aa9561a","agent_type":"codex:codex-rescue","event":"agent_stop","success":true,"duration_ms":96243}
 {"t":0,"agent":"a40f34b","agent_type":"unknown","event":"agent_stop","success":true,"duration_ms":0}
+{"t":0,"agent":"a6514bf","agent_type":"unknown","event":"agent_stop","success":true,"duration_ms":0}
+{"t":0,"agent":"a02bc8c","agent_type":"unknown","event":"agent_stop","success":true,"duration_ms":0}
+{"t":0,"agent":"a11d58f","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"abd8771","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a11d58f","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":146879}
+{"t":0,"agent":"abd8771","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":161353}

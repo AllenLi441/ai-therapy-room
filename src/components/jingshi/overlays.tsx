@@ -5,7 +5,7 @@ import { Ic } from "./icons";
 import { Presence, Avatar } from "./chat-parts";
 import { STR, SCALES, SCALE_OPTS, type Lang, type Persona } from "./data";
 import { isCaseMapPopulated, type CaseMap, type ScaleResult, type ScaleId } from "@/lib/types";
-import { CN_PRIMARY_HOTLINES, type CrisisHotline } from "@/lib/crisis-resources";
+import { CN_PRIMARY_HOTLINES, INTL_RESOURCES } from "@/lib/crisis-resources";
 import { scoreScale } from "@/lib/scales";
 import { APP_VERSION } from "@/lib/version";
 
@@ -151,37 +151,27 @@ export function AboutSheet({ lang, companion, onClose }: { lang: Lang; companion
   );
 }
 
-export function CrisisBanner({ lang, busy, onOpen, onDismiss, onSend }: {
-  lang: Lang; busy: boolean; onOpen: () => void; onDismiss: () => void; onSend: (digit: string) => void;
-}) {
+export function CrisisBanner({ lang, onDismiss }: { lang: Lang; onDismiss: () => void }) {
   const t = STR[lang];
-  // 1–4 check-in buttons (2026-07-05, product owner directive, D4). The resource
-  // block used to ASK this question in text on every crisis episode — the owner
-  // called that out as "口头禅感" (D1 removed it from createCrisisResourceBlock).
-  // The question now lives here instead: tapping a button sends the bare digit
-  // through the normal send() path — equivalent to the user typing "1".."4" — which
-  // classifyCrisisCheckReply (safety.ts D2, route.ts D3, assumeAsked:true) still
-  // reads exactly as before. Answering collapses the row (this round is done).
-  //
-  // ⚠ These labels are written on the crisis-ACTION scale (1=moved items away …
-  // 4=can't do this right now), but the server falls back to the SEVERITY scale by
-  // default once the resource block no longer carries a scale marker in its text —
-  // so "3 · 我准备打电话" (good news on the action scale) reads server-side as
-  // "escalate" (bad news on the severity scale). This is an intentional, ACCEPTED
-  // mismatch in the conservative direction: pushing one more step toward real-world
-  // help on a false alarm costs little; under-escalating a real one costs a lot.
-  // Do not "fix" this by trying to realign the two scales.
-  const [answered, setAnswered] = useState(false);
-  const qs: Array<{ digit: string; label: string }> = [
-    { digit: "1", label: t.crisis_q1 },
-    { digit: "2", label: t.crisis_q2 },
-    { digit: "3", label: t.crisis_q3 },
-    { digit: "4", label: t.crisis_q4 }
-  ];
-  const tap = (digit: string) => {
-    setAnswered(true);
-    onSend(digit);
-  };
+  // 2026-07-08 (product owner directive): the 1–4 check-in buttons and the "See
+  // support" sheet (breathing / grounding steps) are removed. The banner now carries
+  // the hotlines DIRECTLY as tappable links so the safety floor stays one tap away
+  // with nothing to open. Numbers come from crisis-resources.ts (single source of
+  // truth) so the UI can never drift from the server-side templates.
+  //   zh → China: 12356 / 110 / 120.
+  //   en → international lines (US 988, Samaritans 116 123) + a global finder.
+  const lines: Array<{ num: string; label: string; href: string }> =
+    lang === "zh"
+      ? CN_PRIMARY_HOTLINES.map((h) => ({
+          num: h.number,
+          label: h.id === "psych" ? t.h_psy : h.id === "police" ? t.h_police : t.h_med,
+          href: "tel:" + h.tel
+        }))
+      : [
+          { num: INTL_RESOURCES.usCrisis, label: t.h_us988, href: "tel:" + INTL_RESOURCES.usCrisis },
+          { num: INTL_RESOURCES.ukSamaritans, label: t.h_samaritans, href: "tel:" + INTL_RESOURCES.ukSamaritans.replace(/\s/g, "") },
+          { num: INTL_RESOURCES.finder, label: t.h_finder, href: "https://" + INTL_RESOURCES.finder }
+        ];
   return (
     <div className="crisis-banner">
       <div className="crisis-banner-inner">
@@ -190,108 +180,31 @@ export function CrisisBanner({ lang, busy, onOpen, onDismiss, onSend }: {
           <b>{t.crisis_banner_t}</b>
           <span className="hide-sm">{t.crisis_banner_s}</span>
         </div>
-        <button className="open-btn" onClick={onOpen}>{t.crisis_open}</button>
         {/* explicit one-click exit — the user can always leave safety mode */}
         <button className="crisis-dismiss" onClick={onDismiss} title={t.crisis_exit}>{t.crisis_exit}</button>
       </div>
-      {!answered && (
-        <div className="crisis-q" role="group" aria-label={t.crisis_q_label}>
-          <div className="crisis-q-label">{t.crisis_q_label}</div>
-          <div className="crisis-q-btns">
-            {qs.map((q) => (
-              <button key={q.digit} className="crisis-q-btn" disabled={busy} onClick={() => tap(q.digit)}>
-                {q.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="crisis-hotlines" role="group" aria-label={t.hotline_label}>
+        {lines.map((l) => (
+          <a
+            key={l.num}
+            className="crisis-hotline"
+            href={l.href}
+            {...(l.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          >
+            <Ic.phone />
+            <span className="ch-num">{l.num}</span>
+            <span className="ch-label">{l.label}</span>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
 
-export function CrisisSheet({ lang, onClose, onBreathe }: { lang: Lang; onClose: () => void; onBreathe: () => void }) {
-  const t = STR[lang];
-  // Numbers come from the single source of truth (crisis-resources.ts) so the UI
-  // can never drift from the server-side safety templates. Labels stay in i18n.
-  const HOTLINE_UI: Record<CrisisHotline["id"], { label: string; ico: ReactNode; primary?: boolean }> = {
-    psych: { label: t.h_psy, ico: <Ic.heart />, primary: true },
-    police: { label: t.h_police, ico: <Ic.shield /> },
-    medical: { label: t.h_med, ico: <Ic.phone /> }
-  };
-  const lines = CN_PRIMARY_HOTLINES.map((h) => ({ num: h.number, tel: h.tel, ...HOTLINE_UI[h.id] }));
-  const steps = [t.safety_1, t.safety_2, t.safety_3, t.safety_4];
-  return (
-    <Sheet onClose={onClose} className="crisis-sheet">
-      <div className="sheet-head">
-        <div><h2>{t.crisis_title}</h2></div>
-        <button className="icon-btn sheet-x" onClick={onClose} aria-label="close"><Ic.close /></button>
-      </div>
-      <div className="real-human"><b>{t.real_human}</b></div>
-      <div className="sheet-body scroll" style={{ paddingTop: 0 }}>
-        <h3 style={{ fontSize: "var(--fs-sm)", color: "var(--ink-2)", margin: "4px 0 10px", fontWeight: 600 }}>{t.hotline_label}</h3>
-        <div className="hotline-list" style={{ padding: 0 }}>
-          {lines.map((l) => (
-            <a key={l.num} className={"hotline" + (l.primary ? " primary" : "")} href={"tel:" + l.tel}>
-              <div className="h-ico">{l.ico}</div>
-              <div className="h-text"><div className="h-num">{l.num}</div><div className="h-sub">{l.label}</div></div>
-              <span className="h-call">{lang === "zh" ? "拨打" : "Call"}</span>
-            </a>
-          ))}
-          <a className="hotline" href="tel:" onClick={(e) => e.preventDefault()}>
-            <div className="h-ico"><Ic.user /></div>
-            <div className="h-text"><div className="h-num" style={{ fontSize: "var(--fs-md)" }}>{t.emergency_contact}</div><div className="h-sub">{t.emergency_contact_d}</div></div>
-            <span className="h-call">{lang === "zh" ? "联系" : "Reach"}</span>
-          </a>
-        </div>
-        <div className="safety-steps">
-          <h3>{t.safety_title}</h3>
-          {steps.map((s: string, i: number) => (
-            <div className="safety-step" key={i}>
-              <span className="s-n">{i === 0 ? <Ic.hand style={{ width: 14, height: 14 }} /> : i + 1}</span>
-              <span>{s}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ padding: "8px 0 4px" }}>
-          <button className="btn solid" style={{ width: "100%" }} onClick={onBreathe}>{t.calm_breathe}</button>
-        </div>
-      </div>
-    </Sheet>
-  );
-}
-
-export function BreathingSheet({ lang, onClose }: { lang: Lang; onClose: () => void }) {
-  const t = STR[lang];
-  const phases = [
-    { k: "in", label: t.breathe_in, ms: 4000 },
-    { k: "hold", label: t.breathe_hold, ms: 2000 },
-    { k: "out", label: t.breathe_out, ms: 6000 }
-  ];
-  const [pi, setPi] = useState(0);
-  const [cycles, setCycles] = useState(0);
-  useEffect(() => {
-    const ph = phases[pi];
-    const tm = setTimeout(() => {
-      const next = (pi + 1) % phases.length;
-      if (next === 0) setCycles((c) => c + 1);
-      setPi(next);
-    }, ph.ms);
-    return () => clearTimeout(tm);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pi]);
-  const ph = phases[pi];
-  return (
-    <Sheet onClose={onClose}>
-      <div className="sheet-head"><div><h2>{t.breathing}</h2></div>
-        <button className="icon-btn sheet-x" onClick={onClose} aria-label="close"><Ic.close /></button></div>
-      <div className="breath-stage">
-        <div className={"breath-orb " + ph.k}>{ph.label}</div>
-        <div className="breath-phase">{cycles >= 3 ? t.breathe_done : `${ph.label} · ${Math.round(ph.ms / 1000)}″`}</div>
-      </div>
-    </Sheet>
-  );
-}
+// (BreathingSheet + CrisisSheet removed 2026-07-08 — product owner directive: the
+// "See support" panel with the breathing exercise / grounding steps and the 1–4
+// check-in buttons are gone. Hotlines now live directly in CrisisBanner as tappable
+// links, localized by language. crisis-resources.ts stays the single source of truth.)
 
 export function ScalePicker({ lang, onPick, onClose }: { lang: Lang; onPick: (id: string) => void; onClose: () => void }) {
   const t = STR[lang];
