@@ -418,6 +418,77 @@ function withPromiseTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+/** Why the DeepSeek backup judge answered instead of Kimi (recorded on the result). */
+type FallbackReason = NonNullable<ImplicitRiskAssessment["fallbackReason"]>;
+
+/**
+ * Classify a failed Kimi judge attempt so the retry / circuit policy can act on it.
+ * Exported for tests. Error strings come from kimi.ts: HTTP failures look like
+ * `Kimi API error <status>: <body…>` (kimi.ts:98); a local timeout is either
+ * withPromiseTimeout's "Kimi response timed out" or the AbortController abort
+ * ("This operation was aborted"). Anything unrecognized is non-retryable so an
+ * unknown failure can never widen the latency envelope.
+ */
+export function classifyKimiJudgeError(message: string): {
+  /** Billing / auth — Kimi keeps failing until a human intervenes. Trips the circuit. */
+  permanent: boolean;
+  retryable: boolean;
+  /** Backoff before the single retry (rate limits need a longer breath than blips). */
+  backoffMs: number;
+  fallbackReason: FallbackReason;
+} {
+  if (
+    /suspended|insufficient balance|billing|欠费/i.test(message) ||
+    /Kimi API error (401|403|404)/.test(message)
+  ) {
+    return { permanent: true, retryable: false, backoffMs: 0, fallbackReason: "kimi_billing" };
+  }
+  // Local timeout: the budget is already spent — a retry would double the wait.
+  if (/Kimi response timed out/i.test(message) || /abort/i.test(message)) {
+    return { permanent: false, retryable: false, backoffMs: 0, fallbackReason: "kimi_timeout" };
+  }
+  // Any non-permanent 429 (rate-limit markers or a bare 429) → retryable after a beat.
+  if (/Kimi API error 429/.test(message)) {
+    return { permanent: false, retryable: true, backoffMs: 1000, fallbackReason: "kimi_rate" };
+  }
+  if (/Kimi API error 5\d\d/.test(message) || /fetch failed|ECONNRESET|network/i.test(message)) {
+    return { permanent: false, retryable: true, backoffMs: 400, fallbackReason: "kimi_transient" };
+  }
+  // Unknown shape → fall to the backup judge quickly rather than wait longer.
+  return { permanent: false, retryable: false, backoffMs: 0, fallbackReason: "kimi_transient" };
+}
+
+// Circuit breaker for PERMANENT Kimi failures (billing / auth). While open we skip
+// the doomed Kimi call and hand the turn straight to the DeepSeek backup judge —
+// only the Kimi call is skipped; the fail-safe ladder in decideImplicitIntercept
+// is untouched.
+const KIMI_CIRCUIT_OPEN_MS = 10 * 60 * 1000;
+let kimiDownUntil = 0;
+
+function tripKimiCircuit(reason: string) {
+  const alreadyOpen = Date.now() < kimiDownUntil;
+  kimiDownUntil = Date.now() + KIMI_CIRCUIT_OPEN_MS;
+  if (!alreadyOpen) {
+    // Single-line JSON, logged once per trip, so ops can alert on it.
+    console.error(
+      JSON.stringify({
+        event: "kimi_judge_circuit_open",
+        reason: reason.slice(0, 200),
+        until: new Date(kimiDownUntil).toISOString()
+      })
+    );
+  }
+}
+
+/** Test-only: reset the module-level circuit-breaker state between cases. */
+export function __resetKimiJudgeCircuitForTests() {
+  kimiDownUntil = 0;
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 export async function assessImplicitRiskWithLLM(
   messages: ChatMessage[],
   // Raised 5s→12s after a live eval: real classifier calls (300-line prompt + JSON,
@@ -453,26 +524,59 @@ export async function assessImplicitRiskWithLLM(
     jsonMode: true
   });
 
-  // Single bounded attempt — this gate blocks the user's first token, so latency
-  // matters. On any failure we drop to the fail-safe ladder (lexicon-none → release,
-  // lexicon-low → conservative suicide_concern). (Previously retried once, which
-  // doubled worst-case wait before the reply started.)
+  // Error-aware Kimi attempt — this gate blocks the user's first token, so latency
+  // matters. classifyKimiJudgeError sorts failures: retry Kimi exactly once, and
+  // only when (a) the failure is retryable, (b) the first attempt failed FAST
+  // (elapsed ≤ 2.5s — a slow failure has already eaten the budget), and (c) this is
+  // the deep blocking tier (timeoutMs ≥ 10s; the fast 5s tail judge stays single-shot).
+  // Worst-case budget accounting (must stay ≤ the pre-change worst of 12s Kimi +
+  // 6s backup = 18s):
+  //   retry path:        2.5s fail + 1s backoff + min(8, 12−2.5−1)=8s retry + 6s backup = 17.5s
+  //   no-retry path:     12s + 6s = 18s (unchanged)
+  //   circuit-open path: 0s Kimi + min(12, 12)=12s backup
   let lastReason = "unknown error";
-  {
+  let fallbackReason: FallbackReason | undefined;
+  if (Date.now() < kimiDownUntil) {
+    // Circuit open → Kimi is known-down (billing/auth); don't burn latency on it.
+    lastReason = "kimi circuit open";
+    fallbackReason = "kimi_circuit_open";
+  } else {
+    const startedAt = Date.now();
     try {
       const raw = await generateKimiText(payload, timeoutMs);
       const parsed = parseImplicitOutput(raw);
       if (parsed) return { kind: "ok", result: { ...parsed, judgedBy: "kimi" } };
       lastReason = "parse failed";
+      fallbackReason = "kimi_parse"; // non-JSON output → same fall-to-backup as before
     } catch (err) {
       lastReason = err instanceof Error ? err.message : "unknown error";
+      const failure = classifyKimiJudgeError(lastReason);
+      fallbackReason = failure.fallbackReason;
+      if (failure.permanent) tripKimiCircuit(lastReason);
+      const elapsed = Date.now() - startedAt;
+      if (failure.retryable && elapsed <= 2500 && timeoutMs >= 10_000) {
+        await sleep(failure.backoffMs);
+        try {
+          const retryTimeoutMs = Math.min(8000, timeoutMs - elapsed - failure.backoffMs);
+          const raw = await generateKimiText(payload, retryTimeoutMs);
+          const parsed = parseImplicitOutput(raw);
+          if (parsed) return { kind: "ok", result: { ...parsed, judgedBy: "kimi" } };
+          lastReason = "parse failed";
+          fallbackReason = "kimi_parse";
+        } catch (retryErr) {
+          lastReason = retryErr instanceof Error ? retryErr.message : "unknown error";
+          const retryFailure = classifyKimiJudgeError(lastReason);
+          fallbackReason = retryFailure.fallbackReason;
+          if (retryFailure.permanent) tripKimiCircuit(lastReason);
+        }
+      }
     }
   }
 
-  // Kimi failed (threw or produced unparseable output). If DeepSeek is configured,
-  // give it one bounded attempt as a backup judge before falling to the fail-safe
-  // ladder — this is strictly an EXTRA chance to get a real classification, never a
-  // downgrade of the existing fail-safe behavior below.
+  // Kimi failed (threw, produced unparseable output, or is circuit-skipped). If
+  // DeepSeek is configured, give it one bounded attempt as a backup judge before
+  // falling to the fail-safe ladder — this is strictly an EXTRA chance to get a real
+  // classification, never a downgrade of the existing fail-safe behavior below.
   if (getDeepSeekConfig().apiKey) {
     try {
       const backupPayload = buildDeepSeekPayload({
@@ -482,11 +586,15 @@ export async function assessImplicitRiskWithLLM(
         stream: false,
         maxTokens: 320
       });
-      const raw = await withPromiseTimeout(generateDeepSeekText(backupPayload), backupTimeoutMs);
+      // Circuit open → Kimi consumed none of this turn's budget, so the backup may
+      // use the wider min(timeoutMs, 12s) instead of the tight 6s default.
+      const backupBudgetMs =
+        fallbackReason === "kimi_circuit_open" ? Math.min(timeoutMs, 12_000) : backupTimeoutMs;
+      const raw = await withPromiseTimeout(generateDeepSeekText(backupPayload), backupBudgetMs);
       const parsed = parseImplicitOutput(raw);
       if (parsed) {
         console.warn(`[implicit-risk] Kimi failed (${lastReason}); DeepSeek backup judge answered.`);
-        return { kind: "ok", result: { ...parsed, judgedBy: "deepseek" } };
+        return { kind: "ok", result: { ...parsed, judgedBy: "deepseek", fallbackReason } };
       }
     } catch {
       /* 备胎也挂 → 走原 fail-safe */
