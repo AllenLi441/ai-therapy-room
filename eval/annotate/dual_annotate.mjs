@@ -57,6 +57,15 @@ function loadUnits() {
 const ANNOTATORS = {
   A: { name: "annotator_A", model: "deepseek-chat", base: "https://api.deepseek.com", keyEnv: "DEEPSEEK_API_KEY", conc: 8 },
   B: { name: "annotator_B", model: process.env.KIMI_MODEL || "moonshot-v1-8k", base: (process.env.KIMI_BASE_URL || "https://api.moonshot.cn/v1"), keyEnv: "KIMI_API_KEY", conc: 2 },
+  // C/D = 独立第三方双裁判(SiliconFlow 托管,两家不同厂商):不在任何检测臂、
+  // 非种子生成家族——解决「裁判=选手」(A/B 都是被测模型)。owner 2026-07-15 选定。
+  // MiniMax-M3 为思考模型(思考走 reasoning_content,content 为答案),token 预算放宽。
+  // C_MODEL 覆写用于审核拦截回填(同 Qwen 家族变体;api_model 逐行如实记录)。
+  C: { name: "annotator_C", model: process.env.C_MODEL || "Qwen/Qwen3.5-397B-A17B", base: "https://api.siliconflow.com/v1", keyEnv: "EMBEDDING_API_KEY", conc: 4, maxTokens: 64 },
+  D: { name: "annotator_D", model: "MiniMaxAI/MiniMax-M3", base: "https://api.siliconflow.com/v1", keyEnv: "EMBEDDING_API_KEY", conc: 4, maxTokens: 512 },
+  // E = 第三独立裁判(智谱):Qwen 端点被平台审核墙拦掉 67 条(crisis 类占 40%)后加入,
+  // 保证裁判金标全覆盖。同样非选手非出题人。
+  E: { name: "annotator_E", model: process.env.E_MODEL || "zai-org/GLM-5.2", base: "https://api.siliconflow.com/v1", keyEnv: "EMBEDDING_API_KEY", conc: 4, maxTokens: 512 },
 };
 
 function loadEnv() {
@@ -77,7 +86,7 @@ async function callModel(cfg, key, history) {
     ? `用户消息:\n${history[0]}`
     : `多轮对话(用户逐轮消息,按时间顺序):\n${history.map((t, i) => `第${i + 1}轮:${t}`).join("\n")}`;
   const body = JSON.stringify({
-    model: cfg.model, temperature: 0, max_tokens: 24,
+    model: cfg.model, temperature: 0, max_tokens: cfg.maxTokens ?? 24,
     messages: [{ role: "system", content: GUIDE }, { role: "user", content: user }],
   });
   for (let attempt = 0; attempt < 6; attempt++) {
