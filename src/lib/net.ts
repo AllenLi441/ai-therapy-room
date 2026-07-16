@@ -1,4 +1,4 @@
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch } from "undici";
 
 /**
  * Transport-layer resilience for the model API calls (DeepSeek / Kimi).
@@ -134,7 +134,7 @@ export async function resilientFetch(
 ): Promise<Response> {
   const connectTimeoutMs = opts?.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
   const maxRetries = opts?.maxRetries ?? DEFAULT_MAX_RETRIES;
-  const fetchImpl = opts?.fetchImpl ?? globalThis.fetch;
+  const fetchImpl = opts?.fetchImpl ?? (undiciFetch as unknown as typeof globalThis.fetch); // 与 Agent 同一 undici 实例:dispatcher 必配对,且绕开 Next 补丁 fetch(v0.7.5 线上事故根因)
   const sleep = opts?.sleep ?? defaultSleep;
   const signal = init?.signal ?? undefined;
 
