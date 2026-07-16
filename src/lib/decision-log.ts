@@ -56,7 +56,7 @@ export type DecisionLogEntry = {
     rationale: string;
   };
   implicit:
-    | { kind: "ok"; level: string; severity: string; pragmatic: string; modifiers: string[]; confidence: number; evidence: string[] }
+    | { kind: "ok"; level: string; severity: string; pragmatic: string; modifiers: string[]; confidence: number; evidence: string[]; judgedBy?: string; fallbackReason?: string }
     | { kind: "not_configured" }
     | { kind: "error"; reason: string };
   implicitDecision: ImplicitDecision;
@@ -140,6 +140,10 @@ export function buildDecisionLogEntry(input: {
           pragmatic: input.implicit.result.pragmatic,
           modifiers: input.implicit.result.modifiers,
           confidence: input.implicit.result.confidence,
+          // Which judge actually answered (kimi | deepseek) + why the backup ran —
+          // written only when present so older entries keep their exact shape.
+          ...(input.implicit.result.judgedBy ? { judgedBy: input.implicit.result.judgedBy } : {}),
+          ...(input.implicit.result.fallbackReason ? { fallbackReason: input.implicit.result.fallbackReason } : {}),
           // evidence holds verbatim user quotes (see implicit-risk.ts) — redact unless opted in.
           evidence: persistRaw ? input.implicit.result.evidence : []
         }

@@ -1,4 +1,5 @@
 import type { ChatMessage } from "./types";
+import { resilientFetch } from "./net";
 import { REASONING_OPEN, REASONING_CLOSE } from "./stream-markers";
 import {
   getPipelineMode,
@@ -145,7 +146,7 @@ async function requestDeepSeek(payload: DeepSeekPayload) {
   const { controller, clear } = withTimeout(timeoutMs);
 
   try {
-    const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    const response = await resilientFetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.apiKey}`,

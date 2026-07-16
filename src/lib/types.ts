@@ -108,6 +108,15 @@ export type ImplicitRiskAssessment = {
    *  DeepSeek backup judge invoked when Kimi failed. Optional so existing
    *  callers/tests that build an ImplicitRiskAssessment literal stay valid. */
   judgedBy?: "kimi" | "deepseek";
+  /** Why the DeepSeek backup judge answered instead of Kimi. Set only when
+   *  judgedBy="deepseek"; categories from classifyKimiJudgeError (implicit-risk.ts). */
+  fallbackReason?:
+    | "kimi_billing"
+    | "kimi_rate"
+    | "kimi_transient"
+    | "kimi_timeout"
+    | "kimi_parse"
+    | "kimi_circuit_open";
 };
 
 export type RiskAssessment = {

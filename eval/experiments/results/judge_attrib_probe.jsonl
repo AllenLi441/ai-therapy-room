@@ -1,0 +1,10 @@
+{"id":"sft-0501","gold":"active_ideation","prediction":"active_ideation","judgedBy":"deepseek","fallbackReason":"kimi_billing","error":null,"ms":2659,"ranAt":"2026-07-14T06:05:34.793Z"}
+{"id":"sft-0502","gold":"active_ideation","prediction":"active_ideation","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":2254,"ranAt":"2026-07-14T06:05:37.047Z"}
+{"id":"sft-0503","gold":"active_ideation","prediction":"active_ideation","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":1577,"ranAt":"2026-07-14T06:05:38.625Z"}
+{"id":"sft-0504","gold":"active_ideation","prediction":"active_ideation","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":2093,"ranAt":"2026-07-14T06:05:40.718Z"}
+{"id":"sft-0001","gold":"none","prediction":"none","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":1572,"ranAt":"2026-07-14T06:05:42.291Z"}
+{"id":"sft-0002","gold":"none","prediction":"none","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":1651,"ranAt":"2026-07-14T06:05:43.943Z"}
+{"id":"sft-0003","gold":"none","prediction":"none","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":1696,"ranAt":"2026-07-14T06:05:45.640Z"}
+{"id":"sft-0401","gold":"passive_ideation","prediction":"passive_ideation","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":2025,"ranAt":"2026-07-14T06:05:47.665Z"}
+{"id":"sft-0402","gold":"passive_ideation","prediction":"passive_ideation","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":1712,"ranAt":"2026-07-14T06:05:49.377Z"}
+{"id":"sft-0403","gold":"passive_ideation","prediction":"passive_ideation","judgedBy":"deepseek","fallbackReason":"kimi_circuit_open","error":null,"ms":1828,"ranAt":"2026-07-14T06:05:51.205Z"}

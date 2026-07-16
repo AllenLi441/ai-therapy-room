@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { setupEvalEnv } from "../adapters/env";
 import { runWordlistOnly } from "../adapters/wordlist";
 import { runJudgeOnly } from "../adapters/judge";
-import { runFullPipeline } from "../adapters/pipeline";
+import { runFullPipeline, runConversation } from "../adapters/pipeline";
 import { labelFromBranch } from "../adapters/label-maps";
 import type { UnifiedLabel, Branch } from "../adapters/result";
 
@@ -56,17 +56,79 @@ function loadUnits(): Unit[] {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function runArm(arm: string, limit: number, conc: number) {
-  mkdirSync(OUT, { recursive: true });
-  const outPath = join(OUT, `${arm}.jsonl`);
+// 完整对话样例(保留多轮结构 + 逐轮金标),供管线臂真实多轮回放。
+type Item = { id: string; turns: string[]; perTurnGold: UnifiedLabel[] };
+function loadItems(): Item[] {
+  const items: Item[] = [];
+  for (const dir of [join(DS, "safety"), join(DS, "multiturn")]) {
+    for (const f of readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort()) {
+      for (const line of readFileSync(join(dir, f), "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        const r = JSON.parse(line);
+        if (r._meta) continue;
+        const turns: string[] = r.turns ?? [r.text];
+        const perTurnGold: UnifiedLabel[] = turns.map((_: string, i: number) => r.per_turn?.[i]?.label ?? r.label);
+        items.push({ id: r.id, turns, perTurnGold });
+      }
+    }
+  }
+  return items;
+}
+
+function loadDone(outPath: string): Set<string> {
   const done = new Set<string>();
   if (existsSync(outPath)) {
     for (const l of readFileSync(outPath, "utf8").split("\n")) {
       if (!l.trim()) continue;
-      const r = JSON.parse(l);
-      done.add(`${r.id}#${r.turn}`);
+      done.add(`${JSON.parse(l).id}#${JSON.parse(l).turn}`);
     }
   }
+  return done;
+}
+
+// 管线臂:真实多轮回放(runConversation 逐轮送入 + 回灌 app 回复 + 危机粘滞),
+// 且 **强制全局串行** —— 决策日志按 sessionHash+turnIndex 唯一认领路由,并发会串线。
+async function runPipelineArm(arm: string, limit: number) {
+  mkdirSync(OUT, { recursive: true });
+  const mode = arm === "pipeline_deep" ? "deep" : "fast";
+  const outPath = join(OUT, `${arm}.jsonl`);
+  const done = loadDone(outPath);
+  let items = loadItems().filter((it) => !done.has(`${it.id}#0`)); // 以首轮是否完成为整条 resume 单位
+  const totalUnits = loadItems().reduce((s, it) => s + it.turns.length, 0);
+  if (limit > 0) items = items.slice(0, limit);
+  console.log(`[${arm}] 串行多轮回放 · 条目=${items.length} 单元总数=${totalUnits} 并发=1`);
+
+  let okc = 0, errc = 0, corr = 0, uncorr = 0;
+  for (const it of items) {
+    try {
+      const results = await runConversation(it.turns, { mode });
+      for (const r of results) {
+        const gold = it.perTurnGold[r.turnIndex];
+        const prediction = labelFromBranch(r.branch);
+        if (r.routeCorrelated) corr++; else uncorr++;
+        appendFileSync(outPath, JSON.stringify({
+          id: it.id, turn: r.turnIndex, gold, prediction, branch: r.branch,
+          route: r.route, routeCorrelated: r.routeCorrelated,
+          crisisSticky: r.headers["x-crisis-triggered"] === "1", ms: Math.round(r.latencyMs),
+        }) + "\n");
+        okc++;
+      }
+    } catch (e) {
+      errc++;
+      console.log(`  ✗ ${it.id} ${(e as Error).message?.slice(0, 80)}`);
+      await sleep(2000);
+    }
+    if ((okc + errc) % 20 === 0) console.log(`  ${done.size + okc}/${totalUnits}  err=${errc}  route唯一匹配=${corr}/${corr + uncorr}`);
+  }
+  console.log(`[${arm}] 完成:+${okc} 失败=${errc} → ${outPath}`);
+  console.log(`  ⟹ route 唯一相关率 ${corr}/${corr + uncorr} = ${((corr / Math.max(1, corr + uncorr)) * 100).toFixed(1)}%(串线修复审计:应≈100%)`);
+}
+
+// 无状态臂(词表/判官):按单元评测即可,可并发。
+async function runStatelessArm(arm: string, limit: number, conc: number) {
+  mkdirSync(OUT, { recursive: true });
+  const outPath = join(OUT, `${arm}.jsonl`);
+  const done = loadDone(outPath);
   let units = loadUnits().filter((u) => !done.has(`${u.id}#${u.turn}`));
   const total = units.length + done.size;
   if (limit > 0) units = units.slice(0, limit);
@@ -78,23 +140,23 @@ async function runArm(arm: string, limit: number, conc: number) {
     try {
       let prediction: UnifiedLabel | null = null;
       let branch: Branch | null = null;
-      let route: string | null = null;
+      // judge 臂逐行审计字段(EXPERIMENT_SPEC.md 的既有要求):error 如实落盘;
+      // judgedBy/fallbackReason 标记备胎判官(kimi | deepseek + 落备胎原因)。存在才写。
+      const audit: { judgedBy?: string; fallbackReason?: string; error?: string } = {};
       if (arm === "lexicon") {
         const r = runWordlistOnly(u.history);
         prediction = r.prediction as UnifiedLabel; branch = r.branch;
       } else if (arm === "judge") {
         const r = await runJudgeOnly(u.history, { timeoutMs: 30000 });
         prediction = (r.prediction as UnifiedLabel) ?? null; branch = r.branch;
-      } else if (arm === "pipeline_fast" || arm === "pipeline_deep") {
-        const r = await runFullPipeline(u.history.map((c) => ({ role: "user" as const, content: c })), {
-          mode: arm === "pipeline_deep" ? "deep" : "fast",
-        });
-        branch = r.branch; route = r.route ?? null;
-        prediction = labelFromBranch(r.branch);
-      } else throw new Error(`unknown arm ${arm}`);
+        const outcome = (r.raw as { outcome?: { kind: string; result?: { judgedBy?: string; fallbackReason?: string } } }).outcome;
+        if (outcome?.kind === "ok" && outcome.result?.judgedBy) audit.judgedBy = outcome.result.judgedBy;
+        if (outcome?.kind === "ok" && outcome.result?.fallbackReason) audit.fallbackReason = outcome.result.fallbackReason;
+        if (r.error !== undefined) audit.error = r.error;
+      } else throw new Error(`unknown stateless arm ${arm}`);
       appendFileSync(outPath, JSON.stringify({
-        id: u.id, turn: u.turn, gold: u.gold, prediction, branch, route,
-        ok: prediction === u.gold, ms: Date.now() - t0,
+        id: u.id, turn: u.turn, gold: u.gold, prediction, branch, route: null,
+        ok: prediction === u.gold, ms: Date.now() - t0, ...audit,
       }) + "\n");
       okc++;
     } catch (e) {
@@ -108,6 +170,11 @@ async function runArm(arm: string, limit: number, conc: number) {
   }
   await Promise.all(Array.from({ length: Math.min(conc, Math.max(1, units.length)) }, worker));
   console.log(`[${arm}] 完成:+${okc} 失败=${errc} 累计=${done.size + okc}/${total} → ${outPath}`);
+}
+
+async function runArm(arm: string, limit: number, conc: number) {
+  if (arm === "pipeline_fast" || arm === "pipeline_deep") return runPipelineArm(arm, limit);
+  return runStatelessArm(arm, limit, conc);
 }
 
 // ---------- 汇总 ----------
@@ -162,6 +229,39 @@ function loadBranchGold(): Map<string, { expected: string; acceptable: string[] 
   return m;
 }
 
+const ARM_LABEL: Record<string, string> = {
+  pipeline_fast: "全管线(快速档)",
+  pipeline_deep: "全管线(深度档)",
+  judge: "语义判官(单臂)",
+  lexicon: "词表(单臂)",
+  baseline_deepseek: "纯 DeepSeek 基线",
+};
+const ARM_ORDER = ["pipeline_fast", "pipeline_deep", "judge", "lexicon", "baseline_deepseek"];
+
+// passive 金标单元中 4 类投影 ≠ none 的比例(边界分支投影为 none,不计入干预)。
+function passiveInterventionRate(rows: Row[]) {
+  const passive = rows.filter((r) => r.gold === "passive_ideation");
+  const intervened = passive.filter((r) => r.prediction && r.prediction !== "none").length;
+  return { rate: passive.length ? intervened / passive.length : 0, n: passive.length, intervened };
+}
+
+// 单臂 4 类块:P/R/F1 表 + 二值行 + 混淆矩阵(判官/词表/基线主文 + 管线附录复用)。
+function push4ClassSection(lines: string[], arm: string, rows: Row[], s: ReturnType<typeof prf>) {
+  lines.push(`### ${ARM_LABEL[arm] ?? arm}(${arm},n=${s.n})`, "",
+    `| 类别 | precision | recall | F1 | support |`, `|---|---|---|---|---|`);
+  for (const lab of LABELS) {
+    const x = s.per[lab];
+    lines.push(`| ${lab} | ${(x.p * 100).toFixed(1)} | ${(x.r * 100).toFixed(1)} | ${(x.f1 * 100).toFixed(1)} | ${x.support} |`);
+  }
+  lines.push(`| **acc** | ${(s.acc * 100).toFixed(1)} | **macro-F1** | ${(s.macroF1 * 100).toFixed(1)} | wF1 ${(s.weightedF1 * 100).toFixed(1)} |`,
+    "", `二值化(none vs 风险):召回 ${(s.binRecall * 100).toFixed(1)}%,误报 ${(s.binFPR * 100).toFixed(1)}%;` +
+    `passive_ideation 召回 ${(s.per["passive_ideation"].r * 100).toFixed(1)}%`, "");
+  const c = confusion(rows);
+  lines.push("混淆矩阵(行=gold,列=pred):", "", `| gold\\pred | ${[...LABELS, "null"].join(" | ")} |`, `|---|${[...LABELS, "null"].map(() => "---").join("|")}|`);
+  for (const g of LABELS) lines.push(`| ${g} | ${[...LABELS, "null"].map((p) => c[g][p]).join(" | ")} |`);
+  lines.push("");
+}
+
 function report() {
   mkdirSync(REPORTS, { recursive: true });
   const arms: Record<string, Row[]> = {};
@@ -177,49 +277,94 @@ function report() {
       return { id: r.id, turn: r.turn, gold: goldByKey.get(`${r.id}#${r.turn}`)!, prediction: r.label };
     }).filter((r) => r.gold);
   }
-  const lines: string[] = ["# 三臂检测 vs 纯 DeepSeek 基线 — 分类别 P/R/F1", "",
+  // 串线修复审计:管线臂逐行的 routeCorrelated 命中率(应≈100%)。
+  const corrLine = (arm: string) => {
+    const rows = arms[arm] as Array<{ routeCorrelated?: boolean }> | undefined;
+    if (!rows) return "";
+    const withFlag = rows.filter((r) => typeof r.routeCorrelated === "boolean");
+    if (!withFlag.length) return "";
+    const ok = withFlag.filter((r) => r.routeCorrelated).length;
+    return `${arm}: route 唯一相关 ${ok}/${withFlag.length} = ${((ok / withFlag.length) * 100).toFixed(1)}%`;
+  };
+  const orderedArms = ARM_ORDER.filter((a) => arms[a]);
+  const stats: Record<string, ReturnType<typeof prf>> = {};
+  for (const a of orderedArms) stats[a] = prf(arms[a]);
+
+  const lines: string[] = [
+    "# 检测臂 vs 纯 DeepSeek 基线 — 端到端安全与干预路由(2026-07-13)", "",
     `金标 = 数据集种子 label(4 类,多轮取 per_turn);单元 = id#turn。`,
-    `baseline_deepseek = 与标注员 A 同一协议的纯 deepseek-chat 零样本(复用其输出)。`, ""];
-  for (const [arm, rows] of Object.entries(arms)) {
-    const s = prf(rows);
-    lines.push(`## ${arm}(n=${s.n})`, "",
-      `| 类别 | precision | recall | F1 | support |`, `|---|---|---|---|---|`);
-    for (const lab of LABELS) {
-      const x = s.per[lab];
-      lines.push(`| ${lab} | ${(x.p * 100).toFixed(1)} | ${(x.r * 100).toFixed(1)} | ${(x.f1 * 100).toFixed(1)} | ${x.support} |`);
-    }
-    lines.push(`| **acc** | ${(s.acc * 100).toFixed(1)} | **macro-F1** | ${(s.macroF1 * 100).toFixed(1)} | wF1 ${(s.weightedF1 * 100).toFixed(1)} |`,
-      "", `二值化(none vs 风险):召回 ${(s.binRecall * 100).toFixed(1)}%,误报 ${(s.binFPR * 100).toFixed(1)}%;` +
-      `passive_ideation 召回 ${(s.per["passive_ideation"].r * 100).toFixed(1)}%`, "");
-    const c = confusion(rows);
-    lines.push("混淆矩阵(行=gold,列=pred):", "", `| gold\\pred | ${[...LABELS, "null"].join(" | ")} |`, `|---|${[...LABELS, "null"].map(() => "---").join("|")}|`);
-    for (const g of LABELS) lines.push(`| ${g} | ${[...LABELS, "null"].map((p) => c[g][p]).join(" | ")} |`);
-    lines.push("");
+    `baseline_deepseek = 与标注员 A 同一协议的纯 deepseek-chat 零样本(复用其输出)。`, "",
+    "**判官归属:** 判官臂运行当日 Kimi 账户欠费停用,判官调用全部由 DeepSeek 兜底档应答" +
+    "(判官=DeepSeek 兜底档);同一账户状态下的归属探针 10/10 由 DeepSeek 兜底(证据 " +
+    "`results/judge_attrib_probe.jsonl`)。", "",
+    "**方法学修正(同行评审):** 管线臂改为 (1) **全局串行**执行,(2) 决策日志路由按 " +
+    "`sessionHash+turnIndex` **唯一认领**(修掉并发下取最新日志造成的数据串线),(3) 多轮样例用 " +
+    "`runConversation` **真实回放**(逐轮送入 + 回灌 app 回复 + 危机状态粘滞),不再只拼接用户消息。",
+    `路由认领审计:${["pipeline_fast", "pipeline_deep"].map(corrLine).filter(Boolean).join(" · ") || "(管线臂结果缺失)"}`,
+    ""];
+
+  // ---------- 表 6-A · 端到端安全(全臂,主表) ----------
+  lines.push("## 表 6-A · 端到端安全(全臂)", "",
+    "| 臂 | 二值风险召回 | 二值误报率 | crisis 类召回 | passive 单元任意干预率 |",
+    "|---|---|---|---|---|");
+  for (const a of orderedArms) {
+    const s = stats[a];
+    const pir = passiveInterventionRate(arms[a]);
+    lines.push(`| ${ARM_LABEL[a] ?? a} | ${(s.binRecall * 100).toFixed(1)}% | ${(s.binFPR * 100).toFixed(1)}% | ` +
+      `${(s.per["crisis"].r * 100).toFixed(1)}% | ${(pir.rate * 100).toFixed(1)}% |`);
   }
+  lines.push("",
+    "**表注:**「passive 单元任意干预率」= passive 金标单元中 4 类投影预测 ≠ none 的比例" +
+    "(即触发了 crisis / suspected / gentle_check 任一干预分支;medication / diagnosis / " +
+    "medical_redflag / normal 等**边界分支投影为 none,不计入干预**)。**该列须与「二值误报率」" +
+    "对照读**:干预率高、误报率也高,只是「宁可错杀」的激进阈值,并非越高越好。管线臂该列偏低的" +
+    "成因见文末〈附录:管线 4 类投影〉的两半机制脚注。", "");
+
+  // ---------- 表 6-B · 干预路由质量(仅管线) ----------
   // 管线臂的正确评分对象:expected_branch(7 类,含 acceptable_branches)——
-  // 数据集为干预路由设计的金标;4 类表格对管线是映射压缩后的参考。
+  // 数据集为干预路由设计的金标;4 类投影对管线是压缩后的参考(移至附录)。
   const bg = loadBranchGold();
-  for (const arm of ["pipeline_fast", "pipeline_deep"]) {
-    const rows = arms[arm];
-    if (!rows) continue;
-    const scored = (rows as any[]).map((r) => {
+  const BRANCH_ORDER = ["crisis", "suspected", "gentle_check", "normal", "diagnosis", "medication", "medical_redflag"];
+  const pipeArms = ["pipeline_fast", "pipeline_deep"].filter((a) => arms[a]);
+  const branchStat: Record<string, { total: { hit: number; n: number }; by: Record<string, { hit: number; n: number }> }> = {};
+  for (const a of pipeArms) {
+    const scored = (arms[a] as any[]).map((r) => {
       const g = bg.get(`${r.id}#${r.turn}`);
-      const okB = g ? (r.branch === g.expected || g.acceptable.includes(r.branch)) : false;
-      return { ...r, expected: g?.expected, okB };
+      return { expected: (g?.expected ?? "?") as string, okB: g ? (r.branch === g.expected || g.acceptable.includes(r.branch)) : false };
     });
-    const accB = scored.filter((r) => r.okB).length / scored.length;
-    lines.push(`## ${arm} — 分支级评分(正确目标:expected_branch,含可接受分支)`, "",
-      `分支命中率:${(accB * 100).toFixed(1)}%(n=${scored.length})`, "",
-      `| expected_branch | 命中/总数 | 命中率 |`, `|---|---|---|`);
-    const byExp: Record<string, { hit: number; n: number }> = {};
-    for (const r of scored) {
-      const e = r.expected ?? "?";
-      byExp[e] = byExp[e] || { hit: 0, n: 0 };
-      byExp[e].n++; if (r.okB) byExp[e].hit++;
-    }
-    for (const [e, v] of Object.entries(byExp).sort()) lines.push(`| ${e} | ${v.hit}/${v.n} | ${(v.hit / v.n * 100).toFixed(1)}% |`);
-    lines.push("");
+    const by: Record<string, { hit: number; n: number }> = {};
+    for (const r of scored) { by[r.expected] = by[r.expected] || { hit: 0, n: 0 }; by[r.expected].n++; if (r.okB) by[r.expected].hit++; }
+    branchStat[a] = { total: { hit: scored.filter((r) => r.okB).length, n: scored.length }, by };
   }
+  lines.push("## 表 6-B · 干预路由质量(仅管线)", "",
+    "正确目标 = `expected_branch`(7 类,含 `acceptable_branches` 可接受分支口径);此表衡量路由系统本身,不做 4 类压缩投影。", "");
+  const cellB = (a: string, e: string) => { const v = branchStat[a]?.by[e]; return v ? `${v.hit}/${v.n}(${(v.hit / v.n * 100).toFixed(1)}%)` : "—"; };
+  lines.push(`| expected_branch | ${pipeArms.map((a) => ARM_LABEL[a] ?? a).join(" | ")} |`,
+    `|---|${pipeArms.map(() => "---").join("|")}|`,
+    `| **总分支命中率** | ${pipeArms.map((a) => { const t = branchStat[a].total; return `**${t.hit}/${t.n}(${(t.hit / t.n * 100).toFixed(1)}%)**`; }).join(" | ")} |`);
+  for (const e of BRANCH_ORDER) lines.push(`| ${e} | ${pipeArms.map((a) => cellB(a, e)).join(" | ")} |`);
+  lines.push("");
+
+  // ---------- 单臂 4 类 P/R/F1(判官 / 词表 / 基线,主文原位) ----------
+  lines.push("## 单臂 4 类 P/R/F1(判官 / 词表 / 基线)", "");
+  for (const arm of ["judge", "lexicon", "baseline_deepseek"].filter((a) => arms[a])) {
+    push4ClassSection(lines, arm, arms[arm], stats[arm]);
+  }
+
+  // ---------- 附录:管线 4 类投影(参考) ----------
+  lines.push("---", "", "## 附录:管线 4 类投影(参考)", "");
+  const passiveUnits = loadUnits().filter((u) => u.gold === "passive_ideation");
+  const suspN = passiveUnits.filter((u) => bg.get(`${u.id}#${u.turn}`)?.expected === "suspected").length;
+  const gcN = passiveUnits.filter((u) => bg.get(`${u.id}#${u.turn}`)?.expected === "gentle_check").length;
+  const fastPassive = (arms["pipeline_fast"] ?? []).filter((r) => r.gold === "passive_ideation");
+  const fastNone = fastPassive.filter((r) => r.prediction === "none").length;
+  lines.push(
+    "**脚注 · passive 投影的两半机制(为何管线 passive 行 P/R/F1 近 0 不等于全数漏检):**", "",
+    `passive 金标共 ${passiveUnits.length} 条,按数据集 \`expected_branch\` 恰好分两半 —— ${suspN} 条期望 \`suspected\`、${gcN} 条期望 \`gentle_check\`。`, "",
+    `1. **结构假象半(${suspN} 条期望 suspected):** 管线正确路由到 \`suspected\` 时,4 类投影按 \`labelFromBranch(suspected)=active_ideation\` 记为 active,于是在 passive 行被计为「未召回」—— 这是投影缺 suspected→passive 槽位造成的**结构假象**,并非放行(端到端安全应看表 6-A 的任意干预率)。`,
+    `2. **真实漏检半(${gcN} 条期望 gentle_check):** 管线几乎不触发 \`gentle_check\` 分支,这些单元被投影为 none —— 属**真实漏检(放行)**。`, "",
+    `两半叠加 → 快速档 passive 行 none=${fastNone}(约 ${fastPassive.length ? (fastNone / fastPassive.length * 100).toFixed(0) : "0"}% 放行),故该行 precision/recall/F1 近 0;拆半后仅约半数为真实漏检,另一半是投影结构假象。`, "");
+  for (const arm of pipeArms) push4ClassSection(lines, arm, arms[arm], stats[arm]);
   const outMd = join(REPORTS, "detection_arms.md");
   writeFileSync(outMd, lines.join("\n"));
   console.log(`报告 → ${outMd}`);

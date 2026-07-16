@@ -1,6 +1,6 @@
 import { POST } from "@/app/api/chat/route";
 import type { ChatMessage } from "@/lib/types";
-import type { DecisionRoute } from "@/lib/decision-log";
+import { deriveSessionHash, type DecisionRoute } from "@/lib/decision-log";
 import { getEvalPaths } from "./env";
 import { snapshotCursor, readNewEntries } from "./decision-log-reader";
 import { parseChatStream, type ChatEvent } from "./stream-parse";
@@ -11,6 +11,7 @@ export type PipelineOpts = { mode: "fast" | "deep"; language?: "zh" | "en"; cris
 export type PipelineResult = AdapterResult & {
   assistantText: string;                       // 事件/思考剥离后的正文(供多轮回灌历史)
   headers: Record<string, string | null>;     // x-crisis-triggered/x-crisis-source/x-pace/x-safety/x-knowledge
+  routeCorrelated: boolean;                    // route 是否经 sessionHash+turnIndex 唯一匹配(串线修复审计)
 };
 
 /** 决策日志缺失(写失败)时的模板指纹回退表 —— 按序匹配正文,见 §3.8 步骤 6。 */
@@ -73,7 +74,23 @@ export async function runFullPipeline(messages: ChatMessage[], opts: PipelineOpt
 
   const parsed = parseChatStream(fullText);
   const entries = await readNewEntries(logsDir, cursor);
-  const route = (entries.at(-1)?.route as string | undefined) ?? null;
+
+  // 2026-07-10 CORRECTNESS FIX (peer-review finding): do NOT blindly take the newest
+  // log entry — under concurrency it may belong to another in-flight request (this
+  // was the "数据串线" cross-linking bug). Correlate by the entry's own request key
+  // = deriveSessionHash(first 3 msgs) + turnIndex (# of user turns). Same salt + same
+  // process ⇒ the hash reproduces exactly. Only accept a UNIQUE match; else fall back
+  // to headers/template and flag routeCorrelated=false so the caller can report the rate.
+  const expectHash = deriveSessionHash(
+    messages.slice(0, 3).map((m) => `${m.role}:${m.content.slice(0, 80)}`).join("\n")
+  );
+  const expectTurn = messages.filter((m) => m.role === "user").length;
+  const matched = entries.filter(
+    (e) => (e as { sessionHash?: string }).sessionHash === expectHash &&
+      (e as { turnIndex?: number }).turnIndex === expectTurn
+  );
+  const routeCorrelated = matched.length === 1;
+  const route = routeCorrelated ? (matched[0].route as string) : null;
 
   let branch: Branch;
   if (route) {
@@ -121,6 +138,7 @@ export async function runFullPipeline(messages: ChatMessage[], opts: PipelineOpt
     prediction: labelFromBranch(branch),
     branch,
     route,
+    routeCorrelated,
     interventionTiming,
     tailEvent: lastSafetyEvent
       ? { type: lastSafetyEvent.type, status: String(lastSafetyEvent.status ?? "") }

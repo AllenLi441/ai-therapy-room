@@ -45,6 +45,7 @@ Deploys to Vercel out of the box; Docker/self-hosting works the same. Without ve
 ### Reproducible evaluation
 
 - `../datasets/eval-suite/` — 19 zero-shot tasks over 8 public mental-health benchmarks (EmoBench, CPsyExam, IMHI×9, PsySUICIDE, MentalManip, CBT-Bench, MDD-5k, EATD): strict closed-set parsing, per-row `api_model` + `system_fingerprint` provenance, resume, plus audit scripts (`audit_results.py`, `paired_model_audit.py`, `compare_runs.py`).
+- [`eval/reports/imhi_zero_shot_v3.md`](eval/reports/imhi_zero_shot_v3.md) — audited IMHI prompt-protocol correction for dreaddit and MultiWD, including before/after weighted-F1, confusion changes, exact decision criteria, and result-file hashes.
 - `eval/` (in-repo) — a 256-seed adversarial safety set with a four-level annotation guide (C-SSRS-aligned), dual-model annotation with Cohen's κ, and a detection-arms experiment (lexicon / judge / full pipeline / plain-LLM baseline). Headline finding: most detection loss happens in the **routing layer**, not the model.
 
 ### Honest limitations

@@ -1,4 +1,5 @@
 import type { ChatMessage } from "./types";
+import { resilientFetch } from "./net";
 
 type KimiMessage = {
   role: "system" | "user" | "assistant";
@@ -83,7 +84,7 @@ export async function generateKimiText(payload: KimiPayload, timeoutMs = 25_000)
   const { controller, clear } = withTimeout(timeoutMs);
 
   try {
-    const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    const response = await resilientFetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
@@ -137,7 +138,7 @@ export async function describeImageWithKimi(
   const { controller, clear } = withTimeout(timeoutMs);
 
   try {
-    const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    const response = await resilientFetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
