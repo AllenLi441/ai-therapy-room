@@ -38,8 +38,17 @@ import { Agent, fetch as undiciFetch } from "undici";
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-/** Default connect-phase timeout: no socket in 300ms → treat as "not responding". */
-export const DEFAULT_CONNECT_TIMEOUT_MS = 300;
+/** Default connect-phase timeout: no socket in 300ms → treat as "not responding".
+ *  Env-tunable (NET_CONNECT_TIMEOUT_MS, clamped 50–5000ms) because the right value is
+ *  provider/region-dependent: api.deepseek.com connects in ~50–350ms, but e.g.
+ *  api.siliconflow.com measured ~1.4s from a home network (2026-07-16) — a fixed
+ *  300ms would strangle such providers with our own retry layer. */
+function resolveDefaultConnectTimeout(): number {
+  const raw = Number(process.env.NET_CONNECT_TIMEOUT_MS);
+  if (!Number.isFinite(raw) || raw <= 0) return 300;
+  return Math.min(5000, Math.max(50, Math.round(raw)));
+}
+export const DEFAULT_CONNECT_TIMEOUT_MS = resolveDefaultConnectTimeout();
 /** At most 3 retries → ≤ 4 total attempts. */
 export const DEFAULT_MAX_RETRIES = 3;
 /** Fixed backoff between attempts. */
