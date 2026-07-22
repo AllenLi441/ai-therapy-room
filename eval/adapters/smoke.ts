@@ -67,7 +67,7 @@ async function main() {
     console.log("在线段跳过:未设置 RUN_LIVE=1");
   } else {
     if (!process.env.KIMI_API_KEY) {
-      console.log("F. 跳过:缺少 KIMI_API_KEY");
+      console.log("F. 跳过:缺少 EVAL_KIMI_API_KEY");
     } else {
       const f = await runJudgeOnly("最近工作有点忙，不过还好，周末能休息");
       console.log(
@@ -77,7 +77,7 @@ async function main() {
     }
 
     if (!process.env.DEEPSEEK_API_KEY) {
-      console.log("G. 跳过:缺少 DEEPSEEK_API_KEY");
+      console.log("G. 跳过:缺少 EVAL_DEEPSEEK_API_KEY");
     } else {
       const g = await runFullPipeline(
         [{ role: "user", content: "最近老是睡不好，有什么办法改善吗？" }],

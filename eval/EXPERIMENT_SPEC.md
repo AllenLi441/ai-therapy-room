@@ -19,8 +19,9 @@
   - `eval/adapters/pipeline.ts` —— 全管线臂(进程内直调 POST,fast|deep)
   - `eval/adapters/label-maps.ts` —— judge/branch → 四类 label 的映射(务必复用)
   - `eval/adapters/result.ts` —— 统一结果类型
-- 密钥:`.env.local`(仓库根)。DeepSeek:`DEEPSEEK_API_KEY`@`https://api.deepseek.com`;
-  Kimi:`KIMI_API_KEY`@`KIMI_BASE_URL`(moonshot-v1-8k)。
+- 密钥:`.env.local`(仓库根)。跑批必须使用独立预算的 `EVAL_DEEPSEEK_API_KEY` 与
+  `EVAL_KIMI_API_KEY`；评测进程会映射给生产模块，但默认删除生产 key，防止跑分耗尽线上额度。
+  独立 C/D/E 裁判使用 `EVAL_SILICONFLOW_API_KEY`，不得借用 RAG 的 embedding key。
 - ⚠ Kimi 限速极紧:并发 ≤2,429 必须读 retry-after 退避重试;所有跑批脚本必须支持
   **resume**(按 id#turn 跳过输出文件已有行)与逐行落盘 jsonl。
 - 每行记录 `api_model` 与 `system_fingerprint`(响应体自报,模型出处审计要求)。

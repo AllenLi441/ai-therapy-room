@@ -1,5 +1,7 @@
 import { isKimiConfigured } from "@/lib/kimi";
 import { getChatLlmHealth } from "@/lib/chat-monitoring";
+import { DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_MAX_RETRIES } from "@/lib/net";
+import { APP_VERSION } from "@/lib/version";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,10 +36,15 @@ export function GET() {
       : "DEGRADED: KIMI_API_KEY missing — implicit-risk LLM layer OFF (lexicon/regex fail-closed layer still active)";
 
   const body = {
+    appVersion: APP_VERSION,
     ok: okStatus,
     implicitRiskLayerActive: kimiConfigured,
     models: { deepseekConfigured, kimiConfigured },
     conversationLlm,
+    transport: {
+      connectTimeoutMs: DEFAULT_CONNECT_TIMEOUT_MS,
+      maxAttempts: DEFAULT_MAX_RETRIES + 1,
+    },
     degraded,
     note
   };

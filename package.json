@@ -18,7 +18,13 @@
     "test:ratchet": "node scripts/ci/test-ratchet.mjs",
     "kb:embed": "node scripts/build-knowledge-embeddings.mjs",
     "eval:smoke": "tsx eval/adapters/smoke.ts",
-    "eval:validate": "tsx eval/validate-datasets.ts"
+    "eval:validate": "tsx eval/validate-datasets.ts",
+    "eval:provenance-audit": "node eval/provenance-audit.mjs",
+    "eval:referee-audit": "node eval/metrics/referee-audit.mjs",
+    "eval:human-prepare": "node eval/human-study/prepare.mjs",
+    "eval:human-selftest": "node eval/human-study/analyze.mjs --selftest",
+    "eval:human-apply": "node eval/human-study/apply-human-gold.mjs --apply",
+    "eval:remediation-check": "node eval/verify-remediation.mjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",

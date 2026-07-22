@@ -44,6 +44,7 @@ scripts/ingest/.cache/
 # eval suite: generated outputs + runtime workdir
 /eval/reports/*
 !/eval/reports/.gitkeep
+!/eval/reports/referee_gold_v1.audit.json
 /eval/.workdir/
 
 # decision logs may contain raw user content (QUIET_ROOM_DECISION_LOG_RAW) — never commit
@@ -60,3 +61,16 @@ jingshi-eval/
 .omc/
 logs/
 eval/.workdir/
+# Human-study operational records are local/private until ethics and publication review.
+eval/human-study/annotator_*.csv
+eval/human-study/human_gold.jsonl
+eval/human-study/human_gold.audit.json
+eval/human-study/HUMAN_GOLD_REPORT.md
+eval/human-study/CALIBRATION_REPORT.md
+eval/human-study/adjudication_*.csv
+eval/human-study/RECRUITMENT_LOG.csv
+eval/human-study/signed-consent/
+# Hidden scoring key must remain local or blinding is broken.
+eval/human-study/sheets/KEY_mapping_*.jsonl
+# Blind annotation sheets can contain licensed or sensitive source text.
+eval/human-study/sheets/*.csv

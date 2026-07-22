@@ -18,19 +18,19 @@ import { Agent, fetch as undiciFetch } from "undici";
  *
  * ─────────────────────────────────────────────────────────────────────────
  * Latency ledger (why this is strictly cheaper than the old dead-wait):
- *   Dead network, worst case = 4 attempts × 300ms connect timeout
- *                            + 3 × 100ms fixed backoff
- *                            ≈ 1200 + 300 = ~1.5s, then reject with the
+ *   Dead network, worst case = 3 attempts × 1500ms connect timeout
+ *                            + 2 × 100ms fixed backoff
+ *                            ≈ 4500 + 200 = ~4.7s, then reject with the
  *                              original "fetch failed" error.
  *   Old behaviour: one attempt blocked until the 12s (Kimi judge) / 20–30s
  *                  (DeepSeek reply) AbortController fired.
  *
  * Layering (transport vs application — they don't overlap):
  *   • THIS layer (transport) owns "the network is down": connection-phase
- *     failures, retried up to 3× with a fast connect timeout.
+ *     failures, retried up to 2× (3 total attempts) with a bounded connect timeout.
  *   • implicit-risk.ts (application) owns "the API said no": HTTP errors,
  *     rate limits, billing, its own single retry + circuit breaker.
- *   So the dead-net chain is: transport fails fast (~1.5s) → the thrown
+ *   So the dead-net chain is: transport fails within ~4.7s → the thrown
  *   "fetch failed" is classified TRANSIENT by classifyKimiJudgeError →
  *   application falls through to the backup judge / fail-safe ladder. Total
  *   time is far under the old ~12s idle wait, and no application-layer
@@ -38,23 +38,23 @@ import { Agent, fetch as undiciFetch } from "undici";
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-/** Default connect-phase timeout: no socket in 300ms → treat as "not responding".
- *  Env-tunable (NET_CONNECT_TIMEOUT_MS, clamped 50–5000ms) because the right value is
+/** Default connect-phase timeout: no socket in 1500ms → treat as "not responding".
+ *  Env-tunable (NET_CONNECT_TIMEOUT_MS, clamped 100–10000ms) because the right value is
  *  provider/region-dependent: api.deepseek.com connects in ~50–350ms, but e.g.
  *  api.siliconflow.com measured ~1.4s from a home network (2026-07-16) — a fixed
  *  300ms would strangle such providers with our own retry layer. */
 function resolveDefaultConnectTimeout(): number {
   const raw = Number(process.env.NET_CONNECT_TIMEOUT_MS);
-  if (!Number.isFinite(raw) || raw <= 0) return 300;
-  return Math.min(5000, Math.max(50, Math.round(raw)));
+  if (!Number.isFinite(raw) || raw <= 0) return 1500;
+  return Math.min(10_000, Math.max(100, Math.round(raw)));
 }
 export const DEFAULT_CONNECT_TIMEOUT_MS = resolveDefaultConnectTimeout();
-/** At most 3 retries → ≤ 4 total attempts. */
-export const DEFAULT_MAX_RETRIES = 3;
+/** At most 2 retries → ≤ 3 total attempts. */
+export const DEFAULT_MAX_RETRIES = 2;
 /** Fixed backoff between attempts. */
 const RETRY_DELAY_MS = 100;
 
-// Module-level singleton undici Agent carrying the 300ms connect timeout. Node's
+// Module-level singleton undici Agent carrying the configured connect timeout. Node's
 // global fetch is undici under the hood and honours a non-standard `dispatcher`
 // on RequestInit, which is how we inject this connect budget without touching
 // per-call timeouts. Agents are cached by timeout so a non-default opt reuses one
@@ -115,9 +115,9 @@ function defaultSleep(ms: number): Promise<void> {
 type ResilientInit = RequestInit & { dispatcher?: Agent };
 
 export interface ResilientFetchOptions {
-  /** Connect-phase timeout in ms (default 300). Selects/creates the matching Agent. */
+  /** Connect-phase timeout in ms (default 1500). Selects/creates the matching Agent. */
   connectTimeoutMs?: number;
-  /** Max retries on connection-phase failure (default 3 → ≤ 4 attempts). */
+  /** Max retries on connection-phase failure (default 2 → ≤ 3 attempts). */
   maxRetries?: number;
   /** Injectable fetch (default globalThis.fetch) — for tests. */
   fetchImpl?: typeof fetch;

@@ -57,8 +57,8 @@ export type AdapterResult = {
 | 文件 | 函数 | 说明 |
 | --- | --- | --- |
 | `wordlist.ts` | `runWordlistOnly(input: string \| string[])` | 纯词表(`assessRisk`/`assessConversationRisk`),零网络,同步。 |
-| `judge.ts` | `runJudgeOnly(input, opts?)` | 纯 LLM 判官(`assessImplicitRiskWithLLM`),需要 `KIMI_API_KEY`。 |
-| `pipeline.ts` | `runFullPipeline(messages, opts)` / `runConversation(userTurns, opts)` | 全管线(直接调用 `POST`),需要 `DEEPSEEK_API_KEY`(+ 可选 `KIMI_API_KEY`)。 |
+| `judge.ts` | `runJudgeOnly(input, opts?)` | 纯 LLM 判官(`assessImplicitRiskWithLLM`),需要专用 `EVAL_KIMI_API_KEY`。 |
+| `pipeline.ts` | `runFullPipeline(messages, opts)` / `runConversation(userTurns, opts)` | 全管线(直接调用 `POST`),需要专用 `EVAL_DEEPSEEK_API_KEY`(+ 可选 `EVAL_KIMI_API_KEY`)。 |
 | `retrieval.ts` | `runRetrieval(query, opts)` | RAG 检索(`retrieveKnowledge`),Qdrant/embedding 未配置时自动走关键词回退,永不 throw。 |
 
 支撑模块:`label-maps.ts`(全部标签/分支映射集中于此)、`stream-parse.ts`(拆
@@ -73,7 +73,7 @@ RUN_LIVE=1 npm run eval:smoke   # 额外跑在线段 F(判官)/G(全管线),各 
 ```
 
 - 离线段(A–E)恒跑,不需要任何 API key,验证四条臂的基本行为不 throw、分支正确。
-- 在线段(F/G)仅在 `RUN_LIVE=1` **且**对应 key(`KIMI_API_KEY` / `DEEPSEEK_API_KEY`)
+- 在线段(F/G)仅在 `RUN_LIVE=1` **且**对应专用 key(`EVAL_KIMI_API_KEY` / `EVAL_DEEPSEEK_API_KEY`)
   存在时才跑;否则打印跳过原因,不影响退出码。
 - 退出码:`0` = 全部通过,`1` = 有断言失败。
 
@@ -81,8 +81,10 @@ RUN_LIVE=1 npm run eval:smoke   # 额外跑在线段 F(判官)/G(全管线),各 
 
 | Key | 用途 | 缺失时的行为 |
 | --- | --- | --- |
-| `KIMI_API_KEY` | 判官臂(`runJudgeOnly`)、全管线的隐性风险判官 | 判官返回 `not_configured`,`prediction=null` |
-| `DEEPSEEK_API_KEY` | 全管线臂(`runFullPipeline`) | 全管线无法生成模型回复(词表/检索臂不受影响) |
+| `EVAL_KIMI_API_KEY` | 判官臂(`runJudgeOnly`)、全管线的隐性风险判官 | 判官返回 `not_configured`,`prediction=null` |
+| `EVAL_DEEPSEEK_API_KEY` | 全管线臂(`runFullPipeline`) | 全管线无法生成模型回复(词表/检索臂不受影响) |
+| `EVAL_EMBEDDING_API_KEY` | 评测进程的向量检索 | 缺失时降级为关键词检索 |
+| `EVAL_ALLOW_PRODUCTION_KEYS=1` | 紧急人工覆写，明确允许评测借用生产 key | 默认关闭；日常跑批禁止启用 |
 | `QDRANT_URL` / `QDRANT_API_KEY` / `QDRANT_COLLECTION` | RAG Tier-1(Qdrant 稠密检索) | 自动降级为关键词检索,`retrieveKnowledge` 永不 throw |
 | `EMBEDDING_*` | 向量检索(Qdrant 或已提交向量) | 同上,降级为关键词检索 |
 

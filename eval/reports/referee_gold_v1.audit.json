@@ -1,0 +1,232 @@
+{
+  "generated": "2026-07-22T10:01:31.210Z",
+  "invariant": "referee_gold equals the C/D agreement set",
+  "pool": {
+    "n": 344,
+    "seedDistribution": {
+      "none": 177,
+      "passive_ideation": 60,
+      "active_ideation": 60,
+      "crisis": 47
+    }
+  },
+  "coverage": {
+    "C": 277,
+    "D": 343,
+    "common": 276,
+    "agreed": 228,
+    "commonSeedDistribution": {
+      "none": 160,
+      "passive_ideation": 50,
+      "active_ideation": 46,
+      "crisis": 20
+    },
+    "agreedSeedDistribution": {
+      "none": 146,
+      "passive_ideation": 43,
+      "active_ideation": 28,
+      "crisis": 11
+    },
+    "refereeDistribution": {
+      "none": 144,
+      "passive_ideation": 51,
+      "active_ideation": 20,
+      "crisis": 13
+    }
+  },
+  "interReferee": {
+    "n": 276,
+    "agree": 228,
+    "po": 0.8260869565217391,
+    "pe": 0.40726738080235253,
+    "kappa": 0.706591070163005
+  },
+  "seedVsReferee": {
+    "n": 228,
+    "correct": 215,
+    "accuracy": 0.9429824561403509,
+    "risky": 84,
+    "binaryRecall": 0.9642857142857143,
+    "benign": 144,
+    "binaryFpr": 0.006944444444444444
+  },
+  "systems": {
+    "judge": {
+      "fullSeed": {
+        "n": 344,
+        "correct": 279,
+        "accuracy": 0.811046511627907,
+        "risky": 167,
+        "binaryRecall": 0.9700598802395209,
+        "benign": 177,
+        "binaryFpr": 0.1694915254237288
+      },
+      "coveredSeed": {
+        "n": 228,
+        "correct": 202,
+        "accuracy": 0.8859649122807017,
+        "risky": 82,
+        "binaryRecall": 0.9512195121951219,
+        "benign": 146,
+        "binaryFpr": 0.10273972602739725
+      },
+      "coveredReferee": {
+        "n": 228,
+        "correct": 207,
+        "accuracy": 0.9078947368421053,
+        "risky": 84,
+        "binaryRecall": 0.9404761904761905,
+        "benign": 144,
+        "binaryFpr": 0.09722222222222222
+      }
+    },
+    "pipeline_fast": {
+      "fullSeed": {
+        "n": 344,
+        "correct": 210,
+        "accuracy": 0.6104651162790697,
+        "risky": 167,
+        "binaryRecall": 0.6586826347305389,
+        "benign": 177,
+        "binaryFpr": 0.1751412429378531
+      },
+      "coveredSeed": {
+        "n": 228,
+        "correct": 148,
+        "accuracy": 0.6491228070175439,
+        "risky": 82,
+        "binaryRecall": 0.5365853658536586,
+        "benign": 146,
+        "binaryFpr": 0.11643835616438356
+      },
+      "coveredReferee": {
+        "n": 228,
+        "correct": 146,
+        "accuracy": 0.6403508771929824,
+        "risky": 84,
+        "binaryRecall": 0.5595238095238095,
+        "benign": 144,
+        "binaryFpr": 0.09722222222222222
+      }
+    },
+    "pipeline_deep": {
+      "fullSeed": {
+        "n": 344,
+        "correct": 209,
+        "accuracy": 0.6075581395348837,
+        "risky": 167,
+        "binaryRecall": 0.5389221556886228,
+        "benign": 177,
+        "binaryFpr": 0.10734463276836158
+      },
+      "coveredSeed": {
+        "n": 228,
+        "correct": 146,
+        "accuracy": 0.6403508771929824,
+        "risky": 82,
+        "binaryRecall": 0.5,
+        "benign": 146,
+        "binaryFpr": 0.1095890410958904
+      },
+      "coveredReferee": {
+        "n": 228,
+        "correct": 144,
+        "accuracy": 0.631578947368421,
+        "risky": 84,
+        "binaryRecall": 0.5119047619047619,
+        "benign": 144,
+        "binaryFpr": 0.09722222222222222
+      }
+    },
+    "lexicon": {
+      "fullSeed": {
+        "n": 344,
+        "correct": 170,
+        "accuracy": 0.4941860465116279,
+        "risky": 167,
+        "binaryRecall": 0.24550898203592814,
+        "benign": 177,
+        "binaryFpr": 0.0903954802259887
+      },
+      "coveredSeed": {
+        "n": 228,
+        "correct": 141,
+        "accuracy": 0.618421052631579,
+        "risky": 82,
+        "binaryRecall": 0.2682926829268293,
+        "benign": 146,
+        "binaryFpr": 0.08904109589041095
+      },
+      "coveredReferee": {
+        "n": 228,
+        "correct": 142,
+        "accuracy": 0.6228070175438597,
+        "risky": 84,
+        "binaryRecall": 0.2857142857142857,
+        "benign": 144,
+        "binaryFpr": 0.0763888888888889
+      }
+    },
+    "player_A": {
+      "fullSeed": {
+        "n": 344,
+        "correct": 286,
+        "accuracy": 0.8313953488372093,
+        "risky": 167,
+        "binaryRecall": 0.9700598802395209,
+        "benign": 177,
+        "binaryFpr": 0.07344632768361582
+      },
+      "coveredSeed": {
+        "n": 228,
+        "correct": 212,
+        "accuracy": 0.9298245614035088,
+        "risky": 82,
+        "binaryRecall": 0.975609756097561,
+        "benign": 146,
+        "binaryFpr": 0.0273972602739726
+      },
+      "coveredReferee": {
+        "n": 228,
+        "correct": 224,
+        "accuracy": 0.9824561403508771,
+        "risky": 84,
+        "binaryRecall": 0.9880952380952381,
+        "benign": 144,
+        "binaryFpr": 0.006944444444444444
+      }
+    },
+    "player_B": {
+      "fullSeed": {
+        "n": 344,
+        "correct": 241,
+        "accuracy": 0.7005813953488372,
+        "risky": 167,
+        "binaryRecall": 0.9880239520958084,
+        "benign": 177,
+        "binaryFpr": 0.24858757062146894
+      },
+      "coveredSeed": {
+        "n": 228,
+        "correct": 182,
+        "accuracy": 0.7982456140350878,
+        "risky": 82,
+        "binaryRecall": 0.9878048780487805,
+        "benign": 146,
+        "binaryFpr": 0.18493150684931506
+      },
+      "coveredReferee": {
+        "n": 228,
+        "correct": 192,
+        "accuracy": 0.8421052631578947,
+        "risky": 84,
+        "binaryRecall": 1,
+        "benign": 144,
+        "binaryFpr": 0.16666666666666666
+      }
+    }
+  },
+  "judgeAttribution": {
+    "missing": 344
+  }
+}

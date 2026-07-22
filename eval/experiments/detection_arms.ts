@@ -178,7 +178,7 @@ async function runArm(arm: string, limit: number, conc: number) {
 }
 
 // ---------- 汇总 ----------
-type Row = { id: string; turn: number; gold: UnifiedLabel; prediction: UnifiedLabel | null };
+type Row = { id: string; turn: number; gold: UnifiedLabel; prediction: UnifiedLabel | null; branch?: string | null };
 function prf(rows: Row[]) {
   const per: Record<string, { p: number; r: number; f1: number; support: number }> = {};
   let mf = 0, wf = 0;
@@ -294,9 +294,9 @@ function report() {
     "# 检测臂 vs 纯 DeepSeek 基线 — 端到端安全与干预路由(2026-07-13)", "",
     `金标 = 数据集种子 label(4 类,多轮取 per_turn);单元 = id#turn。`,
     `baseline_deepseek = 与标注员 A 同一协议的纯 deepseek-chat 零样本(复用其输出)。`, "",
-    "**判官归属:** 判官臂运行当日 Kimi 账户欠费停用,判官调用全部由 DeepSeek 兜底档应答" +
-    "(判官=DeepSeek 兜底档);同一账户状态下的归属探针 10/10 由 DeepSeek 兜底(证据 " +
-    "`results/judge_attrib_probe.jsonl`)。", "",
+    "**判官归属证据边界:** 历史 `judge.jsonl` 没有逐行 `judgedBy`。同一账户状态下的归属探针" +
+    " 10/10 由 DeepSeek 兜底(证据 `results/judge_attrib_probe.jsonl`)，只能证明探针当时状态，不能反推" +
+    "全部 344 条历史行。该臂在正文中应标为“供应商逐行归属缺失的历史结果”；新运行已在代码中落盘 `judgedBy`。", "",
     "**方法学修正(同行评审):** 管线臂改为 (1) **全局串行**执行,(2) 决策日志路由按 " +
     "`sessionHash+turnIndex` **唯一认领**(修掉并发下取最新日志造成的数据串线),(3) 多轮样例用 " +
     "`runConversation` **真实回放**(逐轮送入 + 回灌 app 回复 + 危机状态粘滞),不再只拼接用户消息。",
@@ -317,8 +317,8 @@ function report() {
     "**表注:**「passive 单元任意干预率」= passive 金标单元中 4 类投影预测 ≠ none 的比例" +
     "(即触发了 crisis / suspected / gentle_check 任一干预分支;medication / diagnosis / " +
     "medical_redflag / normal 等**边界分支投影为 none,不计入干预**)。**该列须与「二值误报率」" +
-    "对照读**:干预率高、误报率也高,只是「宁可错杀」的激进阈值,并非越高越好。管线臂该列偏低的" +
-    "成因见文末〈附录:管线 4 类投影〉的两半机制脚注。", "");
+    "对照读**:干预率高、误报率也高,只是「宁可错杀」的激进阈值,并非越高越好。管线臂的" +
+    "实际放行/分支分布见文末〈附录:passive 实际路由〉。", "");
 
   // ---------- 表 6-B · 干预路由质量(仅管线) ----------
   // 管线臂的正确评分对象:expected_branch(7 类,含 acceptable_branches)——
@@ -351,19 +351,37 @@ function report() {
     push4ClassSection(lines, arm, arms[arm], stats[arm]);
   }
 
-  // ---------- 附录:管线 4 类投影(参考) ----------
-  lines.push("---", "", "## 附录:管线 4 类投影(参考)", "");
+  // ---------- 附录:passive 实际路由 + 管线 4 类投影 ----------
+  lines.push("---", "", "## 附录:passive 实际路由与管线 4 类投影", "");
   const passiveUnits = loadUnits().filter((u) => u.gold === "passive_ideation");
   const suspN = passiveUnits.filter((u) => bg.get(`${u.id}#${u.turn}`)?.expected === "suspected").length;
   const gcN = passiveUnits.filter((u) => bg.get(`${u.id}#${u.turn}`)?.expected === "gentle_check").length;
-  const fastPassive = (arms["pipeline_fast"] ?? []).filter((r) => r.gold === "passive_ideation");
-  const fastNone = fastPassive.filter((r) => r.prediction === "none").length;
+  const passiveBreakdown = (arm: string) => {
+    const rows = (arms[arm] ?? []).filter((r) => r.gold === "passive_ideation");
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const expected = bg.get(`${row.id}#${row.turn}`)?.expected ?? "unknown";
+      const actual = row.branch ?? "missing";
+      const key = `${expected}→${actual}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const released = rows.filter((r) => !r.prediction || r.prediction === "none").length;
+    const intervened = rows.length - released;
+    return { rows, counts, released, intervened };
+  };
+  const passiveByArm = Object.fromEntries(pipeArms.map((arm) => [arm, passiveBreakdown(arm)]));
   lines.push(
-    "**脚注 · passive 投影的两半机制(为何管线 passive 行 P/R/F1 近 0 不等于全数漏检):**", "",
-    `passive 金标共 ${passiveUnits.length} 条,按数据集 \`expected_branch\` 恰好分两半 —— ${suspN} 条期望 \`suspected\`、${gcN} 条期望 \`gentle_check\`。`, "",
-    `1. **结构假象半(${suspN} 条期望 suspected):** 管线正确路由到 \`suspected\` 时,4 类投影按 \`labelFromBranch(suspected)=active_ideation\` 记为 active,于是在 passive 行被计为「未召回」—— 这是投影缺 suspected→passive 槽位造成的**结构假象**,并非放行(端到端安全应看表 6-A 的任意干预率)。`,
-    `2. **真实漏检半(${gcN} 条期望 gentle_check):** 管线几乎不触发 \`gentle_check\` 分支,这些单元被投影为 none —— 属**真实漏检(放行)**。`, "",
-    `两半叠加 → 快速档 passive 行 none=${fastNone}(约 ${fastPassive.length ? (fastNone / fastPassive.length * 100).toFixed(0) : "0"}% 放行),故该行 precision/recall/F1 近 0;拆半后仅约半数为真实漏检,另一半是投影结构假象。`, "");
+    `passive 金标共 ${passiveUnits.length} 条；数据设计中 ${suspN} 条期望 \`suspected\`、${gcN} 条期望 \`gentle_check\`。这个 30/30 是**预设分层**，不能直接当作模型错误成因。下面按实际输出计数：`, "",
+    `| 臂 | 实际干预 | 实际放行 | 期望→实际分支 |`,
+    `|---|---:|---:|---|`);
+  for (const arm of pipeArms) {
+    const x = passiveByArm[arm];
+    lines.push(`| ${ARM_LABEL[arm]} | ${x.intervened}/${x.rows.length}(${(x.intervened / x.rows.length * 100).toFixed(1)}%) | ${x.released}/${x.rows.length}(${(x.released / x.rows.length * 100).toFixed(1)}%) | ${[...x.counts].sort().map(([key, n]) => `${key} ${n}`).join("；")} |`);
+  }
+  lines.push("",
+    "4 类投影中没有 `passive_ideation` 输出，是因为当前分支映射没有 passive 专用槽位；" +
+    "这会让 passive 的四分类 recall 变成 0。可是**是否放行必须依据实际 branch/prediction 逐行统计**，" +
+    "不能把 30 条 expected=suspected 自动称为“结构假象”，也不能把 30 条 expected=gentle_check 自动称为“真实漏检”。", "");
   for (const arm of pipeArms) push4ClassSection(lines, arm, arms[arm], stats[arm]);
   const outMd = join(REPORTS, "detection_arms.md");
   writeFileSync(outMd, lines.join("\n"));

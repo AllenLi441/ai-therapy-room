@@ -13,6 +13,7 @@
 | `DEEPSEEK_BASE_URL` | 默认 api.deepseek.com | |
 | `KIMI_API_KEY` | 可选 | 后台"督导/个案概念化"。缺失则退化为单模型。 |
 | `KIMI_MODEL` / `KIMI_BASE_URL` | 可选 | |
+| `NET_CONNECT_TIMEOUT_MS` | 建议 `1500` | 连接阶段超时；代码限制 100–10000ms，最多 3 次总尝试。 |
 | `QUIET_ROOM_SESSION_SALT` / `QUIET_ROOM_RATE_LIMIT_SALT` | 建议设 | 生产环境用于哈希,设一个随机串。 |
 
 ## 路线 A(推荐):连 Git 仓库,根因修复
@@ -36,4 +37,6 @@ npx vercel --prod       # 部署
 
 ## 部署后自检
 - 打开站点,发一句话,确认有流式回复(若返回兜底文案 → 检查 DEEPSEEK_API_KEY)。
-- `/api/health` 应返回 JSON(配置/降级状态)。
+- `/api/health` 应返回 JSON(配置/降级状态)。本次 v0.7.8 发布必须看到
+  `appVersion="0.7.8"`、`transport.connectTimeoutMs=1500`、`transport.maxAttempts=3`；
+  否则仍是旧运行时，不能把本地源码修复写成已上线。
