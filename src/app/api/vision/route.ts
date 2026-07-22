@@ -6,11 +6,11 @@ export const maxDuration = 45;
 
 /**
  * Multimodal image intake (2026-06-13). The "+" button uploads an image; Kimi
- * (Moonshot) vision returns a plain-language description, which the frontend
+ * (SiliconFlow Kimi-K2.5 by default) vision returns a plain-language description, which the frontend
  * then sends into /api/chat as context so the (text-only) DeepSeek conversation
  * can respond to it AND the normal risk-detection layer screens it.
  *
- * Images only — Kimi vision does not take video. Expects a base64 data URL.
+ * Images only — this route does not accept video. Expects a base64 data URL.
  */
 type VisionRequest = {
   image?: string; // data:image/...;base64,....
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
   if (!isKimiConfigured()) {
     return Response.json(
-      { error: "vision_unavailable", description: "图片理解暂不可用（未配置 KIMI_API_KEY）。" },
+      { error: "vision_unavailable", description: "图片理解暂不可用（未配置 Kimi 服务密钥）。" },
       { status: 503 }
     );
   }

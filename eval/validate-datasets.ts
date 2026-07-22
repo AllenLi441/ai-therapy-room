@@ -82,6 +82,10 @@ const IDEATION_CORE_ONLY_CATEGORIES = new Set(["diagnosis_request", "somatic_red
 
 type Row = Record<string, unknown>;
 
+const PROVENANCE_FIELDS = [
+  "origin", "generator", "provider", "model", "prompt_sha256", "created_at", "human_editor", "license"
+] as const;
+
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
 }
@@ -138,6 +142,33 @@ function validatePerTurnEntry(
   }
   if (e.expect_crisis_banner !== undefined && typeof e.expect_crisis_banner !== "boolean") {
     errors.push(`${file}:${lineNo}: per_turn[${turnIdx}].expect_crisis_banner 必须是布尔值`);
+  }
+}
+
+function validateOptionalProvenance(row: Row, file: string, lineNo: number, errors: string[]): void {
+  if (row.provenance === undefined) return;
+  if (typeof row.provenance !== "object" || row.provenance === null || Array.isArray(row.provenance)) {
+    errors.push(`${file}:${lineNo}: provenance 必须是对象`);
+    return;
+  }
+  const provenance = row.provenance as Row;
+  for (const field of PROVENANCE_FIELDS) {
+    if (provenance[field] === undefined) errors.push(`${file}:${lineNo}: provenance 缺少字段 ${field}`);
+  }
+  if (provenance.origin !== "synthetic" && provenance.origin !== "adapted") {
+    errors.push(`${file}:${lineNo}: provenance.origin 必须是 synthetic 或 adapted`);
+  }
+  for (const field of ["generator", "provider", "model", "license"] as const) {
+    if (!isNonEmptyString(provenance[field])) errors.push(`${file}:${lineNo}: provenance.${field} 必须是非空字符串`);
+  }
+  if (typeof provenance.prompt_sha256 !== "string" || !/^[a-f0-9]{64}$/i.test(provenance.prompt_sha256)) {
+    errors.push(`${file}:${lineNo}: provenance.prompt_sha256 必须是 64 位十六进制 SHA-256`);
+  }
+  if (typeof provenance.created_at !== "string" || !Number.isFinite(Date.parse(provenance.created_at))) {
+    errors.push(`${file}:${lineNo}: provenance.created_at 必须是可解析时间`);
+  }
+  if (typeof provenance.human_editor !== "boolean") {
+    errors.push(`${file}:${lineNo}: provenance.human_editor 必须是布尔值`);
   }
 }
 
@@ -214,6 +245,7 @@ function validateRow(
   if (!oneOf(row.source, SOURCES)) {
     errors.push(`${file}:${lineNo}: source 非法: ${JSON.stringify(row.source)}`);
   }
+  validateOptionalProvenance(row, file, lineNo, errors);
 
   // rationale
   if (typeof row.rationale !== "string" || row.rationale.length === 0) {

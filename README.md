@@ -27,7 +27,7 @@ Next.js (App Router, node runtime)
  ├─ /api/chat   dual-pace reply engine
  │    ├─ fast   flash tier + parallel safety judge (trailing event), ~6s replies
  │    └─ deep   pro tier + blocking judge + visible reasoning panel
- ├─ safety      lexicon floor → LLM judge (Kimi; DeepSeek fallback) → routing policy
+ ├─ safety      lexicon floor → Kimi-K2.5 via SiliconFlow (DeepSeek fallback) → routing policy
  ├─ RAG         tier-1 Qdrant dense (+rerank in deep) → committed vectors → keyword
  └─ UI          crisis banner / support sheet / per-reply feedback / zh+en / light+dark
 ```
@@ -36,7 +36,7 @@ Next.js (App Router, node runtime)
 
 ```bash
 npm install
-cp .env.example .env.local   # DEEPSEEK_API_KEY, KIMI_API_KEY (judge); optional QDRANT_* / EMBEDDING_*
+cp .env.example .env.local   # DEEPSEEK_API_KEY + SiliconFlow EMBEDDING_API_KEY (Kimi/RAG); optional QDRANT_*
 npm run dev                  # or: npm run build
 ```
 
@@ -76,7 +76,7 @@ Deploys to Vercel out of the box; Docker/self-hosting works the same. Without ve
 
 ```bash
 npm install
-cp .env.example .env.local   # 填 DEEPSEEK_API_KEY、KIMI_API_KEY(判官);可选 QDRANT_*/EMBEDDING_*
+cp .env.example .env.local   # 填 DEEPSEEK_API_KEY、SiliconFlow EMBEDDING_API_KEY(Kimi/RAG);QDRANT_* 可选
 npm run dev                  # 或 npm run build
 ```
 

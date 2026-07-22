@@ -14,19 +14,62 @@ type KimiPayload = {
   response_format?: { type: "json_object" };
 };
 
-const DEFAULT_BASE_URL = "https://api.moonshot.cn/v1";
-const DEFAULT_MODEL = "moonshot-v1-32k";
+export type KimiProvider = "siliconflow" | "moonshot";
+
+const DEFAULT_SILICONFLOW_BASE_URL = "https://api.siliconflow.com/v1";
+const DEFAULT_SILICONFLOW_MODEL = "moonshotai/Kimi-K2.5";
+const DEFAULT_MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1";
+const DEFAULT_MOONSHOT_MODEL = "moonshot-v1-32k";
+
+function isSiliconFlowUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === "api.siliconflow.com" || hostname === "api.siliconflow.cn";
+  } catch {
+    return false;
+  }
+}
+
+function resolveKimiProvider(): KimiProvider {
+  const explicit = process.env.KIMI_PROVIDER?.trim().toLowerCase();
+  if (explicit === "moonshot") return "moonshot";
+  if (explicit === "siliconflow") return "siliconflow";
+
+  const hasDedicatedSiliconFlowKey = Boolean(process.env.SILICONFLOW_API_KEY?.trim());
+  const hasSiliconFlowEmbeddingAccount =
+    Boolean(process.env.EMBEDDING_API_KEY?.trim()) && isSiliconFlowUrl(process.env.EMBEDDING_BASE_URL);
+  return hasDedicatedSiliconFlowKey || hasSiliconFlowEmbeddingAccount ? "siliconflow" : "moonshot";
+}
 
 export function getKimiConfig() {
+  const provider = resolveKimiProvider();
+  if (provider === "siliconflow") {
+    const embeddingBaseUrl = process.env.EMBEDDING_BASE_URL;
+    const canReuseEmbeddingKey = isSiliconFlowUrl(embeddingBaseUrl);
+    return {
+      provider,
+      apiKey:
+        process.env.SILICONFLOW_API_KEY ||
+        (canReuseEmbeddingKey ? process.env.EMBEDDING_API_KEY : undefined),
+      baseUrl:
+        process.env.SILICONFLOW_BASE_URL ||
+        (canReuseEmbeddingKey ? embeddingBaseUrl : undefined) ||
+        DEFAULT_SILICONFLOW_BASE_URL,
+      model: process.env.SILICONFLOW_KIMI_MODEL || DEFAULT_SILICONFLOW_MODEL,
+    };
+  }
+
   return {
+    provider,
     apiKey: process.env.KIMI_API_KEY,
-    baseUrl: process.env.KIMI_BASE_URL || DEFAULT_BASE_URL,
-    model: process.env.KIMI_MODEL || DEFAULT_MODEL
+    baseUrl: process.env.KIMI_BASE_URL || DEFAULT_MOONSHOT_BASE_URL,
+    model: process.env.KIMI_MODEL || DEFAULT_MOONSHOT_MODEL,
   };
 }
 
 export function isKimiConfigured() {
-  return Boolean(process.env.KIMI_API_KEY);
+  return Boolean(getKimiConfig().apiKey);
 }
 
 export function buildKimiPayload(input: {
@@ -78,7 +121,7 @@ export async function generateKimiText(payload: KimiPayload, timeoutMs = 25_000)
   const config = getKimiConfig();
 
   if (!config.apiKey) {
-    throw new Error("Missing KIMI_API_KEY");
+    throw new Error(`Missing ${config.provider} Kimi API key`);
   }
 
   const { controller, clear } = withTimeout(timeoutMs);
@@ -111,14 +154,18 @@ export async function generateKimiText(payload: KimiPayload, timeoutMs = 25_000)
   }
 }
 
-const DEFAULT_VISION_MODEL = "moonshot-v1-8k-vision-preview";
+const DEFAULT_MOONSHOT_VISION_MODEL = "moonshot-v1-8k-vision-preview";
 
 export function getKimiVisionModel() {
-  return process.env.KIMI_VISION_MODEL || DEFAULT_VISION_MODEL;
+  const config = getKimiConfig();
+  if (config.provider === "siliconflow") {
+    return process.env.SILICONFLOW_KIMI_VISION_MODEL || config.model;
+  }
+  return process.env.KIMI_VISION_MODEL || DEFAULT_MOONSHOT_VISION_MODEL;
 }
 
 /**
- * Multimodal (2026-06-13): describe an uploaded image via Kimi (Moonshot)
+ * Multimodal: describe an uploaded image via SiliconFlow Kimi-K2.5 by default
  * vision so the image's content can enter the text conversation that DeepSeek
  * drives. Returns a plain-language, non-judgmental Chinese description. The
  * caller feeds this back into /api/chat as context, where the normal
@@ -132,7 +179,7 @@ export async function describeImageWithKimi(
 ): Promise<string> {
   const config = getKimiConfig();
   if (!config.apiKey) {
-    throw new Error("Missing KIMI_API_KEY");
+    throw new Error(`Missing ${config.provider} Kimi API key`);
   }
 
   const { controller, clear } = withTimeout(timeoutMs);

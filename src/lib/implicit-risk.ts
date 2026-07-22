@@ -382,7 +382,7 @@ function formatConversation(messages: ChatMessage[]) {
     // trajectories aren't truncated away before the classifier can add them up.
     // Per-message cap kept lean (800) on purpose: the classifier is latency-bound
     // (see the 12s timeout) and a fat window can overflow an 8k model — set
-    // KIMI_MODEL=moonshot-v1-32k in prod for real headroom.
+    // SiliconFlow Kimi-K2.5 has ample context headroom for this bounded window.
     .slice(-14)
     .map((message) => {
       const speaker = message.role === "user" ? "来访者" : "AI";

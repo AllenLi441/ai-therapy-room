@@ -1,0 +1,17 @@
+.git/
+.omc/
+.next/
+node_modules/
+coverage/
+
+# Evaluation data and local experiment artifacts are never deployment inputs.
+eval/
+*.jsonl
+*.jsonl.bak
+*.csv
+
+# Local credentials and editor/system files.
+.env*
+!.env.example
+.DS_Store
+*.bak

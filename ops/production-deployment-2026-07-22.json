@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "event": "production_deployment",
+  "date": "2026-07-22",
+  "source": {
+    "repository": "AllenLi441/ai-therapy-room",
+    "branch": "codex/app-0.7.8-production",
+    "commit": "2d6bf89bad11c1eec4f5cdc4b55ec8936c77d7cc",
+    "tree": "f6288ce6a54f6d1f0acda7b798647f3df063493b",
+    "git_archive_sha256": "6949ea13e240d1db256d4977ae57d1d4318a8d23f5f501f696b6fa3ff2dbc98d",
+    "app_version": "0.7.8"
+  },
+  "deployment": {
+    "provider": "vercel",
+    "project": "ai-therapy-room",
+    "project_id": "prj_abauKjVlzV0DdEZOKk2zjPiJJKDy",
+    "deployment_id": "dpl_8xabqFhgnfSytwu2HCgx2xT2hyNN",
+    "deployment_url": "https://ai-therapy-room-6sdgabroa-as-projects-f6d94759.vercel.app",
+    "canonical_alias": "https://ai-therapy-room.vercel.app",
+    "target": "production",
+    "ready_state": "READY",
+    "ready_substate": "PROMOTED",
+    "created_at": "2026-07-22T03:36:41-07:00",
+    "ready_at": "2026-07-22T03:37:15-07:00",
+    "source": "cli_clean_git_archive"
+  },
+  "validation": {
+    "canonical_alias_resolved_to_deployment_id": true,
+    "rendered_ui_version": "0.7.8",
+    "neutral_no_personal_data_canary_received_model_reply": true,
+    "expected_transport_connect_timeout_ms": 1500,
+    "expected_transport_max_attempts": 3
+  },
+  "evidence_boundary": {
+    "vercel_metadata_contains_git_sha": false,
+    "source_linkage": "The source commit, tree, and reproducible git-archive digest are recorded alongside the Vercel deployment ID; Vercel metadata alone does not prove the Git commit.",
+    "credentials_included": false
+  }
+}

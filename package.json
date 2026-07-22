@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dataset:studio": "next dev -p 3020",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -18,7 +19,13 @@
     "test:ratchet": "node scripts/ci/test-ratchet.mjs",
     "kb:embed": "node scripts/build-knowledge-embeddings.mjs",
     "eval:smoke": "tsx eval/adapters/smoke.ts",
-    "eval:validate": "tsx eval/validate-datasets.ts"
+    "eval:validate": "tsx eval/validate-datasets.ts",
+    "eval:provenance-audit": "node eval/provenance-audit.mjs",
+    "eval:referee-audit": "node eval/metrics/referee-audit.mjs",
+    "eval:human-prepare": "node eval/human-study/prepare.mjs",
+    "eval:human-selftest": "node eval/human-study/analyze.mjs --selftest",
+    "eval:human-apply": "node eval/human-study/apply-human-gold.mjs --apply",
+    "eval:remediation-check": "node eval/verify-remediation.mjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",
@@ -31,6 +38,7 @@
     "@types/node": "25.6.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@vitest/coverage-v8": "^4.1.5",
     "autoprefixer": "10.4.20",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",

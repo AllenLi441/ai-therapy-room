@@ -3,6 +3,33 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v0.7.9] - 2026-07-22
+
+- Route the production Kimi text judge and image understanding through the existing SiliconFlow embedding account, using `moonshotai/Kimi-K2.5` for both modalities.
+- Keep direct Moonshot credentials only as an explicit evaluation/emergency fallback, so an evaluation embedding key cannot silently replace the dedicated judge key.
+- Expose the effective Kimi provider/model in `/api/health` without exposing credentials.
+
+## [v0.7.8] - 2026-07-22
+
+- Correct the connection policy to at most three total transport attempts and raise the default connect timeout from 300ms to 1500ms so normal cross-region handshakes are not self-induced failures.
+- Add deterministic referee, v4-pro reconciliation, passive-route, human-study, and publication-readiness audit gates.
+- Keep human annotation explicitly pending until real annotators, ethics review, calibration, and adjudication are complete.
+- Isolate batch-evaluation credentials from production API keys and expose the effective version/transport policy in `/api/health` for post-deploy proof.
+
+## [v0.7.7] - 2026-07-16
+
+- Added the `NET_CONNECT_TIMEOUT_MS` deployment knob while retaining the then-current 300ms default.
+- Documented that `KIMI_API_KEY` is safety-critical because removing it bypasses the semantic judge instead of reaching its DeepSeek failure fallback.
+
+## [v0.7.6] - 2026-07-16
+
+- Switched resilient transport to undici's matching `fetch` implementation after the Next.js patched global fetch rejected a foreign dispatcher in v0.7.5.
+
+## [v0.7.5] - 2026-07-16
+
+- Added Kimi judge retry classification, a ten-minute circuit breaker, and DeepSeek backup.
+- Added connection-phase retry and the first dual-referee/detection-arm evidence package.
+
 ## [v0.7.4] - 2026-07-08
 
 - Put localized crisis hotlines directly in the always-visible crisis banner.
@@ -126,6 +153,10 @@ original commit history. Versions that were never released are not backfilled.
 - This tag marks the first explicitly versioned build; earlier commits remain
   available in Git history as pre-version development.
 
+[v0.7.8]: https://github.com/AllenLi441/ai-therapy-room/compare/v0.7.7...v0.7.8
+[v0.7.7]: https://github.com/AllenLi441/ai-therapy-room/commit/f0fc273
+[v0.7.6]: https://github.com/AllenLi441/ai-therapy-room/commit/ea4b27f
+[v0.7.5]: https://github.com/AllenLi441/ai-therapy-room/commit/2f25dbd
 [v0.7.4]: https://github.com/AllenLi441/ai-therapy-room/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/AllenLi441/ai-therapy-room/compare/v0.6.0...v0.7.3
 [v0.6.0]: https://github.com/AllenLi441/ai-therapy-room/compare/v0.5.5...v0.6.0

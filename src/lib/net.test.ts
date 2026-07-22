@@ -26,7 +26,7 @@ describe("resilientFetch — connection-phase retry", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
-  it("② 4 consecutive connection failures → throws, fetchImpl called exactly 4 times", async () => {
+  it("② 3 consecutive connection failures → throws, fetchImpl called exactly 3 times", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(connErr("ECONNREFUSED"));
     const sleep = vi.fn(noSleep);
 
@@ -34,8 +34,8 @@ describe("resilientFetch — connection-phase retry", () => {
       resilientFetch("https://api.example/chat", { method: "POST" }, { fetchImpl, sleep })
     ).rejects.toThrow("fetch failed");
 
-    expect(fetchImpl).toHaveBeenCalledTimes(4); // 1 + 3 retries
-    expect(sleep).toHaveBeenCalledTimes(3); // one backoff between each pair
+    expect(fetchImpl).toHaveBeenCalledTimes(3); // 1 + 2 retries
+    expect(sleep).toHaveBeenCalledTimes(2); // one backoff between each pair
   });
 
   it("③ HTTP 500 response → NOT retried at this layer (fetchImpl called once)", async () => {

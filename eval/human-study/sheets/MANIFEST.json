@@ -1,0 +1,31 @@
+{
+  "version": "human-study-v0.2-seed-20260721",
+  "generated": "2026-07-22T10:04:54.409Z",
+  "datasetPool": 344,
+  "calibration": {
+    "n": 12,
+    "distribution": {
+      "none": 3,
+      "passive_ideation": 3,
+      "active_ideation": 3,
+      "crisis": 3
+    }
+  },
+  "main": {
+    "rows": 142,
+    "focal": 100,
+    "context": 42,
+    "focalDistribution": {
+      "none": 25,
+      "passive_ideation": 25,
+      "active_ideation": 25,
+      "crisis": 25
+    }
+  },
+  "totalRows": 154,
+  "noConversationOverlapBetweenCalibrationAndMain": true,
+  "sha256": {
+    "key": "256d1dc1966d583eca3838c86b7eb2283c985ef21503414c6decaf591b113a39",
+    "blindCsv": "c80a4cc3089e75b3a9b6f0b643c55b734c13c63bdc9fc8120004a48bc0131638"
+  }
+}
