@@ -74,3 +74,7 @@ eval/human-study/signed-consent/
 eval/human-study/sheets/KEY_mapping_*.jsonl
 # Blind annotation sheets can contain licensed or sensitive source text.
 eval/human-study/sheets/*.csv
+# Dataset-expansion author/reviewer operational files stay local until explicit review.
+eval/dataset-expansion/KEY_mapping_*.jsonl
+eval/dataset-expansion/annotator_*.csv
+eval/dataset-expansion/private/

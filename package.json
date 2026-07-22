@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dataset:studio": "next dev -p 3020",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
