@@ -7,11 +7,13 @@ describe("evaluation credential isolation", () => {
       DEEPSEEK_API_KEY: "production-deepseek",
       KIMI_API_KEY: "production-kimi",
       EMBEDDING_API_KEY: "production-embedding",
+      SILICONFLOW_API_KEY: "production-siliconflow",
     };
     const sources = isolateEvalCredentials(env);
     expect(env.DEEPSEEK_API_KEY).toBeUndefined();
     expect(env.KIMI_API_KEY).toBeUndefined();
     expect(env.EMBEDDING_API_KEY).toBeUndefined();
+    expect(env.SILICONFLOW_API_KEY).toBeUndefined();
     expect(sources.DEEPSEEK_API_KEY).toBe("disabled-no-dedicated-eval-key");
   });
 
@@ -34,9 +36,11 @@ describe("evaluation credential isolation", () => {
     const env: NodeJS.ProcessEnv = {
       EVAL_ALLOW_PRODUCTION_KEYS: "1",
       DEEPSEEK_API_KEY: "production-deepseek",
+      SILICONFLOW_API_KEY: "production-siliconflow",
     };
     const sources = isolateEvalCredentials(env);
     expect(env.DEEPSEEK_API_KEY).toBe("production-deepseek");
+    expect(env.SILICONFLOW_API_KEY).toBe("production-siliconflow");
     expect(sources.DEEPSEEK_API_KEY).toBe("explicit-production-override");
   });
 });

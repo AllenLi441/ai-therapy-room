@@ -3,6 +3,12 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v0.7.9] - 2026-07-22
+
+- Route the production Kimi text judge and image understanding through the existing SiliconFlow embedding account, using `moonshotai/Kimi-K2.5` for both modalities.
+- Keep direct Moonshot credentials only as an explicit evaluation/emergency fallback, so an evaluation embedding key cannot silently replace the dedicated judge key.
+- Expose the effective Kimi provider/model in `/api/health` without exposing credentials.
+
 ## [v0.7.8] - 2026-07-22
 
 - Correct the connection policy to at most three total transport attempts and raise the default connect timeout from 300ms to 1500ms so normal cross-region handshakes are not self-induced failures.

@@ -31,6 +31,22 @@ export function isolateEvalCredentials(
       sources[runtimeName] = "disabled-no-dedicated-eval-key";
     }
   }
+  // The unified production Kimi path may use a dedicated SiliconFlow key.
+  // Never let that key bypass the EVAL_* budget boundary.
+  if (allowProduction) {
+    sources.SILICONFLOW_API_KEY = env.SILICONFLOW_API_KEY ? "explicit-production-override" : "missing";
+  } else {
+    delete env.SILICONFLOW_API_KEY;
+    sources.SILICONFLOW_API_KEY = "disabled-production-key";
+  }
+  // EVAL_KIMI_API_KEY retains the historical direct-Moonshot contract. Pinning
+  // the provider prevents an independently supplied EVAL_EMBEDDING_API_KEY from
+  // being mistaken for the production SiliconFlow Kimi account.
+  if (sources.KIMI_API_KEY === "EVAL_KIMI_API_KEY") {
+    env.KIMI_PROVIDER = "moonshot";
+  } else if (!allowProduction) {
+    delete env.KIMI_PROVIDER;
+  }
   return sources;
 }
 

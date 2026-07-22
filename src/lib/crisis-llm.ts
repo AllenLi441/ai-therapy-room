@@ -202,7 +202,7 @@ function parseClassifierOutput(raw: string): LlmCrisisResult | null {
  * we care about for the fail-safe policy. */
 export type ClassifierOutcome =
   | { kind: "ok"; result: LlmCrisisResult }
-  | { kind: "not_configured" } // no KIMI_API_KEY — dev mode, fall through
+  | { kind: "not_configured" } // no configured Kimi provider key — dev mode, fall through
   | { kind: "error"; reason: string }; // configured but failed — fail-safe to crisis
 
 export async function classifyCrisisWithLLM(
