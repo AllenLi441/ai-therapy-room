@@ -5,7 +5,8 @@ import { assessImplicitRiskWithLLM } from "@/lib/implicit-risk";
 import { recordChatLlmFallback } from "@/lib/chat-monitoring";
 import { resetRateLimitForTests } from "@/lib/rate-limit";
 import { EVENT_DELIM, REASONING_OPEN, REASONING_CLOSE } from "@/lib/stream-markers";
-import { createMedicalRedFlagResponse, createMedicationBoundaryResponse } from "@/lib/safety";
+import { createCrisisReplyResponse, createMedicalRedFlagResponse, createMedicationBoundaryResponse } from "@/lib/safety";
+import { SUPPORT_REGION_CODES, SUPPORT_REGIONS } from "@/lib/support-regions";
 
 vi.mock("@/lib/deepseek", async (original) => ({ ...await original<typeof import("@/lib/deepseek")>(), createDeepSeekTextStream: vi.fn(), generateDeepSeekText: vi.fn() }));
 vi.mock("@/lib/implicit-risk", async (original) => ({ ...await original<typeof import("@/lib/implicit-risk")>(), assessImplicitRiskWithLLM: vi.fn() }));
@@ -39,6 +40,42 @@ beforeEach(() => {
 });
 
 describe("chat failures and product context", () => {
+  for (const language of ["zh", "en"] as const) {
+    it.each([
+      { region: "FR" as const, expected: ["3114", "112"] },
+      { region: "CA" as const, expected: ["9-8-8", "911"] },
+      { region: "JP" as const, expected: ["https://www.mhlw.go.jp/mamorouyokokoro/", "119"] },
+      { region: "OTHER" as const, expected: ["findahelpline.com"] },
+    ])(`keeps current-region resources on deterministic numeric crisis replies in ${language}: $region`, async ({ region, expected }) => {
+      const stabilize = await POST(request({ supportRegion: region, language, crisisModeActive: true, messages: [{ role: "user", content: "1" }] }));
+      expect(stabilize.headers.get("X-Crisis-Source")).toBe("check_reply_stabilize");
+      expect(await stabilize.text()).toBe(createCrisisReplyResponse("stabilize", language, region));
+      const escalate = await POST(request({ supportRegion: region, language, crisisModeActive: true, messages: [{ role: "user", content: "3" }] }));
+      expect(escalate.headers.get("X-Crisis-Source")).toBe("check_reply_escalate");
+      const text = await escalate.text();
+      for (const entry of expected) expect(text).toContain(entry);
+      expect(text).not.toMatch(/12356|116 123|13 11 14/);
+      if (region !== "CA") expect(text).not.toMatch(/988|9-8-8|911/);
+      if (region === "OTHER") expect(text).not.toMatch(/3114|112|119/);
+      expect(createDeepSeekTextStream).not.toHaveBeenCalled();
+      expect(assessImplicitRiskWithLLM).not.toHaveBeenCalled();
+    });
+  }
+
+  it.each(SUPPORT_REGION_CODES)("accepts region %s and gives the selected region to the model independently of English UI", async (region) => {
+    const response = await POST(request({ supportRegion: region, language: "en" }));
+    expect(response.status).toBe(200);
+    await response.text();
+    const payload = vi.mocked(createDeepSeekTextStream).mock.calls[0][0];
+    expect(JSON.stringify(payload)).toContain(`用户选择的支持地区：${SUPPORT_REGIONS[region].label.zh}`);
+  });
+
+  it("rejects unknown support regions before contacting a model", async () => {
+    const response = await POST(request({ supportRegion: "unknown-region" }));
+    expect(response.status).toBe(400);
+    expect(createDeepSeekTextStream).not.toHaveBeenCalled();
+  });
+
   it("returns a retryable localized 503 without exposing provider details", async () => {
     vi.mocked(createDeepSeekTextStream).mockRejectedValueOnce(new Error("private-provider-error"));
     const response = await POST(request());

@@ -83,15 +83,13 @@ describe("classifyCrisisCheckReply — scale-aware 1–4 parsing", () => {
 });
 
 describe("createCrisisReplyResponse — tiered follow-up", () => {
-  it("escalate pushes hard to real-world help with multi-region hotlines", () => {
-    const en = createCrisisReplyResponse("escalate", "en");
+  it("escalate uses only the explicitly selected region in either language", () => {
+    const en = createCrisisReplyResponse("escalate", "en", "US");
     expect(en).toContain("988");
-    expect(en).toContain("116 123");
-    expect(en).toContain("13 11 14");
-    expect(en).toContain("findahelpline.com");
-    const zh = createCrisisReplyResponse("escalate", "zh");
+    expect(en).not.toMatch(/116 123|13 11 14|12356/);
+    const zh = createCrisisReplyResponse("escalate", "zh", "CN");
     expect(zh).toContain("12356");
-    expect(zh).toContain("116 123");
+    expect(zh).not.toMatch(/988|116 123|13 11 14/);
   });
 
   it("stabilize affirms the step and keeps the escalation path open", () => {
@@ -164,6 +162,6 @@ describe("2026-07-08 owner-directed removal — no in-text block, legend, or dis
   });
 
   it("the 1–4 button escalate reply still carries real hotlines (targeted moment, kept)", () => {
-    expect(createCrisisReplyResponse("escalate", "zh")).toContain("12356");
+    expect(createCrisisReplyResponse("escalate", "zh", "CN")).toContain("12356");
   });
 });

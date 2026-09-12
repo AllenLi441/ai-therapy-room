@@ -6,7 +6,8 @@ import { Ic } from "./icons";
 import { Presence, Avatar } from "./chat-parts";
 import { STR, SCALES, SCALE_OPTS, type Lang, type Persona, type SupportRegion, type AgeRange } from "./data";
 import { emptyCaseMap, isCaseMapPopulated, type CaseMap, type ScaleResult, type ScaleId } from "@/lib/types";
-import { CN_PRIMARY_HOTLINES, INTL_RESOURCES } from "@/lib/crisis-resources";
+import { INTL_RESOURCES } from "@/lib/crisis-resources";
+import { normalizeSupportRegion, SUPPORT_REGION_CODES, SUPPORT_REGIONS, supportResources } from "@/lib/support-regions";
 import { scoreScale } from "@/lib/scales";
 import { APP_VERSION } from "@/lib/version";
 
@@ -257,28 +258,26 @@ export function SupportResources({ lang, region, onRegionChange }: ResourceProps
   const t = STR[lang];
   const [localRegion, setLocalRegion] = useState<SupportRegion>("OTHER");
   const selected = region ?? localRegion;
-  const lines: Array<{ num: string; label: string; href: string }> = selected === "CN"
-    ? CN_PRIMARY_HOTLINES.map((h) => ({ num: h.number, label: h[lang], href: "tel:" + h.tel }))
-    : selected === "US"
-      ? [
-          { num: INTL_RESOURCES.usCrisis, label: t.h_us988, href: "tel:" + INTL_RESOURCES.usCrisis },
-          { num: INTL_RESOURCES.usEmergency, label: lang === "zh" ? "美国紧急服务" : "US emergency services", href: "tel:" + INTL_RESOURCES.usEmergency }
-        ]
-      : selected === "UK_IE"
-        ? [{ num: INTL_RESOURCES.ukSamaritans, label: t.h_samaritans, href: "tel:" + INTL_RESOURCES.ukSamaritans.replace(/\s/g, "") }]
-        : [];
+  const resources = supportResources(selected);
+  const sources = resources.filter((resource, index) => resource.kind !== "directory" && resource.sourceUrl && resources.findIndex((item) => item.sourceUrl === resource.sourceUrl) === index);
   return <section className="support-resources" aria-label={t.support_title}>
     <label className="support-select"><span>{t.support_region}</span><select value={selected} onChange={(event) => {
-      const next = event.target.value as SupportRegion; setLocalRegion(next); onRegionChange?.(next);
+      const next = normalizeSupportRegion(event.target.value); setLocalRegion(next); onRegionChange?.(next);
     }}>
-      <option value="OTHER">{t.region_other}</option><option value="CN">{t.region_cn}</option><option value="US">{t.region_us}</option><option value="UK_IE">{t.region_uk}</option>
+      <option value="OTHER">{SUPPORT_REGIONS.OTHER.label[lang]}</option>
+      {SUPPORT_REGION_CODES.filter((code) => code !== "OTHER").map((code) => <option key={code} value={code}>{SUPPORT_REGIONS[code].label[lang]}</option>)}
+      {selected === "UK_IE" && <option value="UK_IE">{SUPPORT_REGIONS.UK_IE.label[lang]}</option>}
     </select></label>
     <p className="support-note">{t.support_region_note}</p>
+    {selected !== "OTHER" && <p className="support-note">{t.support_call_note}</p>}
     {selected === "OTHER" && <p className="support-note">{t.support_other_note}</p>}
     <div className="crisis-hotlines" role="group" aria-label={t.hotline_label}>
-      {lines.map((line) => <a key={line.num} className="crisis-hotline" href={line.href}><Ic.phone /><span className="ch-num">{line.num}</span><span className="ch-label">{line.label}</span></a>)}
-      <a className="crisis-hotline" href={"https://" + INTL_RESOURCES.finder} target="_blank" rel="noopener noreferrer"><span className="ch-label">{t.h_finder} ↗</span></a>
+      {resources.map((resource) => <a key={resource.href} className="crisis-hotline" href={resource.href} target={resource.href.startsWith("https:") ? "_blank" : undefined} rel={resource.href.startsWith("https:") ? "noopener noreferrer" : undefined}>
+        {resource.number && <><Ic.phone /><span className="ch-num">{resource.number}</span></>}<span className="ch-label">{resource.label[lang]}{resource.kind === "directory" ? " ↗" : ""}{resource.note && <span style={{ display: "block", marginTop: 4 }}>{resource.note[lang]}</span>}</span>
+      </a>)}
+      {!resources.some((resource) => resource.href === "https://" + INTL_RESOURCES.finder) && <a className="crisis-hotline" href={"https://" + INTL_RESOURCES.finder} target="_blank" rel="noopener noreferrer"><span className="ch-label">{t.h_finder} ↗</span></a>}
     </div>
+    {sources.length > 0 && <p className="support-note">{t.support_sources}{sources.map((resource, index) => <span key={resource.sourceUrl}>{index > 0 ? " · " : ""}<a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer">{resource.label[lang]}</a></span>)}</p>}
   </section>;
 }
 

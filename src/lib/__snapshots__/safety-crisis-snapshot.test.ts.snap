@@ -3,7 +3,7 @@
 exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createCrisisReplyResponse escalate en 1`] = `
 "Thank you for telling me. From your answer, the most important thing right now is not this chat — it is getting a real person or emergency service to you in the next few minutes.
 
-Please do this now: call emergency or a crisis line, or reach someone who can come to you. US/Canada 988 or 911; UK/Ireland 116 123 (Samaritans); Australia 13 11 14 (Lifeline); mainland China 110/120 or 12356; elsewhere findahelpline.com.
+Please do this now: call your local emergency service or a crisis line, or reach someone who can come to you. Support for your selected region: Find local support: https://findahelpline.com. These resources are also available through Human support on this page.
 If anything you could use to hurt yourself is within reach, leave that room now or ask someone to hold it for you.
 
 I am staying right here with you, but I cannot replace in-person help. Can you make that call now, or tell me who is nearby that we can reach?"
@@ -12,7 +12,7 @@ I am staying right here with you, but I cannot replace in-person help. Can you m
 exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createCrisisReplyResponse escalate zh 1`] = `
 "谢谢你回我。从你的回答看，现在最重要的事不是继续聊，而是让一个真实的人或急救服务在接下来几分钟里到你身边。
 
-请现在就做：拨打急救或危机热线，或联系一个能马上到场的人。中国大陆 110/120，或全国心理援助热线 12356；美国/加拿大 988 或 911；英国/爱尔兰 116 123；澳洲 13 11 14；其他地区可在 findahelpline.com 找当地热线。
+请现在就做：拨打当地急救或危机热线，或联系一个能马上到场的人。所选地区的支持资源：查找当地支持: https://findahelpline.com。也可通过页面「真人支持」查看这些资源。
 如果手边有可能伤害自己的东西，先离开那个房间，或请别人替你拿走。
 
 我会一直在这儿陪着你，但我不能替代现场帮助。你愿意现在就打这个电话，或者告诉我你身边能联系到谁吗？"
@@ -39,15 +39,9 @@ exports[`crisis templates — byte-equivalence snapshots (behavior lock) > creat
 5. 先做一个今晚的安全约定：在联系到现实中的人之前，不去碰那些可能伤害自己的东西。"
 `;
 
-exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createMinorSupportLine en 1`] = `
-"If you're still in school or under 18: alongside everything above, please reach a trusted adult as soon as you can — a parent, a relative you trust, or your school counselor or teacher. You deserve to have someone with you in person.
-Youth help: in the US/Canada call or text 988, or text HOME to 741741 (Crisis Text Line). Elsewhere, find a local youth line at findahelpline.com."
-`;
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createMinorSupportLine en 1`] = `"If you are under 18, reach a trusted adult who can support you in person, such as a safe relative, school counselor or teacher. If a caregiver is causing harm, choose another safe adult. You can also use the local support links on this page: Find local support: https://findahelpline.com."`;
 
-exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createMinorSupportLine zh 1`] = `
-"如果你还在上学、未满 18 岁：除了上面的资源，也请尽快找一个信任的成年人陪着你——可以是学校的心理老师或班主任、信任的亲戚，或父母。你值得有人在现实里陪你一起面对。
-面向未成年人的求助：全国青少年服务台 12355（共青团心理援助），以及全国心理援助热线 12356。"
-`;
+exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createMinorSupportLine zh 1`] = `"如果你未满18岁，请找一位信任的成年人在现实里支持你，例如安全的亲属、学校心理老师或老师。若照顾者正在伤害你，可以选择其他安全的成年人。也可使用页面的当地支持入口：查找当地支持: https://findahelpline.com。"`;
 
 exports[`crisis templates — byte-equivalence snapshots (behavior lock) > createSuicideConcernResponse en 1`] = `
 "I am going to take that seriously. It sounds like part of you may be thinking about disappearing, not waking up, or not having to keep living. We should not treat that as a normal venting line.

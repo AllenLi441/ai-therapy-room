@@ -7,6 +7,7 @@ import { AboutSheet, ScaleModal, CrisisBanner, CaseDrawer, ConfirmSheet, Consent
 import { ImportRecords, SessionHistory, SessionSummary } from "./session-panels";
 import { CONSENT_VERSION, STORAGE_KEYS, RequestScope, modelMessages, parseRecordBackup, readCaseMap, readMessages, readScales, readSessions, storedMessages, type RecordBackup, type SessionRecord } from "./session-state";
 import { assessRisk } from "@/lib/safety";
+import { normalizeSupportRegion } from "@/lib/support-regions";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { REASONING_OPEN, REASONING_CLOSE, EVENT_DELIM } from "@/lib/stream-markers";
 import styles from "./session-panels.module.css";
@@ -23,7 +24,7 @@ function readInitialState() {
   const messages = readMessages(read("js_chat"));
   return {
     lang, theme: string("js_theme") === "dark" ? "dark" : "light",
-    supportRegion: (["CN", "US", "UK_IE"].includes(string("js_support_region") || "") ? string("js_support_region") : "OTHER") as SupportRegion,
+    supportRegion: normalizeSupportRegion(string("js_support_region")),
     ageRange: (["adult", "minor"].includes(string("js_age_range") || "") ? string("js_age_range") : "unspecified") as AgeRange,
     consented: string("js_consent") === CONSENT_VERSION,
     messages: messages.length ? messages : [{ id: uid(), role: "assistant", personaId: "linxi", content: `${lang === "zh" ? "你好，我是安屿。" : "Hi, I'm Anyu."}\n\n${STR[lang].today_intro}` } as Message],
@@ -38,7 +39,6 @@ class StorageStatus {
   snapshot = () => this.message;
   set(message: string | null) { if (message !== this.message) { this.message = message; for (const listener of this.listeners) listener(); } }
 }
-const regionCodes = { CN: "cn", US: "us", UK_IE: "uk", OTHER: "other" } as const;
 
 export function App() {
   const ready = useSyncExternalStore(subscribeHydration, getClientSnapshot, getServerSnapshot);
@@ -193,7 +193,7 @@ function ClientApp() {
       const payload = modelMessages(messagesRef.current.slice(0, index));
       const response = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: request.signal,
-        body: JSON.stringify({ messages: payload, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, crisisModeActive: previouslyInCrisis, scaleResults, caseMap, supportRegion: regionCodes[supportRegion], ageRange, continuationNote: continuation, availableScale: detectScaleNeed(user.content) }),
+        body: JSON.stringify({ messages: payload, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, crisisModeActive: previouslyInCrisis, scaleResults, caseMap, supportRegion, ageRange, continuationNote: continuation, availableScale: detectScaleNeed(user.content) }),
       });
       if (!request.current()) return;
       if (response.headers.get("X-Crisis-Triggered") === "1") updateCrisis(true);

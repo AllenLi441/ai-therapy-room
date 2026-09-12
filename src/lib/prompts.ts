@@ -13,6 +13,7 @@ import { formatPersonaForPrompt } from "./personas";
 import type { SessionPaceId } from "./model-options";
 import { getRiskInstruction } from "./safety";
 import { deriveStateTag, latestResultsPerScale, scaleSafetySignal } from "./state-tags";
+import { normalizeSupportRegion, SUPPORT_REGIONS, type SupportRegionInput } from "./support-regions";
 
 const PROFESSIONAL_BOUNDARY = [
   "你是一名心理咨询助理，工作方式接近受过训练的咨询师：准确倾听、温和承接、形成心理机制假设、给出低负担干预。",
@@ -138,11 +139,11 @@ function formatScales(scales?: ScaleResult[]) {
 
 function formatProductContext(input: {
   scaleResults?: ScaleResult[];
-  supportRegion?: "cn" | "us" | "uk" | "other";
+  supportRegion?: SupportRegionInput;
   ageRange?: "adult" | "minor" | "unspecified";
   availableScale?: "PHQ-9" | "GAD-7" | "ISI" | null;
 }) {
-  const region = { cn: "中国大陆", us: "美国", uk: "英国/爱尔兰", other: "其他地区或尚未选择" }[input.supportRegion ?? "other"];
+  const region = SUPPORT_REGIONS[normalizeSupportRegion(input.supportRegion)].label.zh;
   const completed = latestResultsPerScale(input.scaleResults).map((result) => result.id);
   return [
     "【当前产品能力与用户选择】",
@@ -217,7 +218,7 @@ export function buildCounselorSystemPrompt(input: {
   earlierUserContext?: string;
   moodMemory?: string;
   webResults?: Array<{ title: string; url: string; snippet: string }>;
-  supportRegion?: "cn" | "us" | "uk" | "other";
+  supportRegion?: SupportRegionInput;
   ageRange?: "adult" | "minor" | "unspecified";
   continuationNote?: string;
   availableScale?: "PHQ-9" | "GAD-7" | "ISI" | null;

@@ -37,15 +37,19 @@ describe("hasMinorContextCue — augments safety copy for likely minors (recall-
 });
 
 describe("createMinorSupportLine — age-appropriate youth referral", () => {
-  it("zh routes to a trusted adult + youth hotlines (12355/12356)", () => {
-    const zh = createMinorSupportLine("zh");
+  it("routes an explicitly selected mainland China region to adult support and youth hotlines", () => {
+    const zh = createMinorSupportLine("zh", "CN");
     expect(zh).toContain("信任的成年人");
     expect(zh).toContain("12355");
   });
-  it("en routes to a trusted adult + youth lines (988 / 741741)", () => {
-    const en = createMinorSupportLine("en");
+  it("routes an explicitly selected US region to trusted adult support and the local lifeline", () => {
+    const en = createMinorSupportLine("en", "US");
     expect(en.toLowerCase()).toContain("trusted adult");
     expect(en).toContain("988");
-    expect(en).toContain("741741");
+  });
+  it.each(["zh", "en"] as const)("does not infer a country from %s when no region was selected", (language) => {
+    const line = createMinorSupportLine(language);
+    expect(line).toContain("findahelpline.com");
+    expect(line).not.toMatch(/12355|12356|988|741741/);
   });
 });

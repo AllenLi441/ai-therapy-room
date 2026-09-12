@@ -7,20 +7,7 @@ import type {
   RiskFlag,
   RiskLevel
 } from "./types";
-import { CN_PRIMARY_HOTLINES, CN_SUPPLEMENTAL, INTL_RESOURCES, type CrisisHotline } from "./crisis-resources";
-
-// Crisis hotline numbers, read from the SSOT (crisis-resources.ts) so these
-// server-side templates can never drift from the UI CrisisSheet. Every value below
-// is byte-identical to the previously-hardcoded literal — behavior-preserving.
-function cnHotline(id: CrisisHotline["id"]): string {
-  const hit = CN_PRIMARY_HOTLINES.find((h) => h.id === id);
-  if (!hit) throw new Error(`crisis-resources: missing hotline ${id}`);
-  return hit.number;
-}
-const PSYCH = cnHotline("psych");      // 12356
-const POLICE = cnHotline("police");    // 110
-const MEDICAL = cnHotline("medical");  // 120
-const CN_EMS = `${POLICE}/${MEDICAL}`; // 110/120
+import { formatSupportResourceList, minorSupportResources, supportResources, type SupportRegionInput } from "./support-regions";
 
 type RiskRule = {
   category: RiskCategory;
@@ -690,25 +677,26 @@ export function createSuicideConcernResponse(language: AppLanguage = "zh") {
 // carry an appended in-text hotline block; hotlines live in the crisis banner / CrisisSheet /
 // global footer UI. The 1–4 check-in is asked via the banner buttons only.)
 
-export function createGlobalSafetyFooter(language: AppLanguage = "zh"): string {
+export function createGlobalSafetyFooter(language: AppLanguage = "zh", supportRegion?: SupportRegionInput): string {
+  const resources = formatSupportResourceList(supportResources(supportRegion), language);
   if (language === "en") {
-    return `📞 If you are in danger or need immediate help, call your local emergency number (e.g. ${INTL_RESOURCES.usEmergency} US/Canada) or a crisis line (${INTL_RESOURCES.usCrisis} US · Samaritans ${INTL_RESOURCES.ukSamaritans} · ${INTL_RESOURCES.finder}), or reach someone you trust.`;
+    return `📞 If you are in danger or need immediate help, call your local emergency service or reach someone you trust. Resources for your selected region are also in Human support: ${resources}.`;
   }
-  return `📞 如果你现在有危险或需要立即帮助，请拨打 ${CN_EMS} 或 ${PSYCH}，或联系身边可信赖的人。`;
+  return `📞 如果你现在有危险或需要立即帮助，请联系当地急救服务或身边可信赖的人。页面「真人支持」也提供所选地区的资源：${resources}。`;
 }
 
 export function getRiskInstruction(assessment: RiskAssessment) {
   if (assessment.level === "high") {
     // Crisis-generation guidance (③): the model writes a TAILORED reply to someone
-    // who may be about to hurt themselves. The deterministic hotline block is
-    // appended by the route, so the model need not list numbers itself.
+    // who may be about to hurt themselves. Verified regional resources live in
+    // the support UI, so the model must not invent or rewrite hotline numbers.
     return [
       "高风险危机——你不是在做普通咨询，是在陪一个可能要伤害自己的人度过眼前几分钟：",
       "1. 先用一两句贴着对方刚说的话回应，具体说中此刻最重的那个感受（用对方的词，不要套话、不要复读模板）。",
       "2. 不分析原因、不讲机制、不堆建议、不追问过去。",
       "3. 温和把注意力引向「眼前安全」和「联系现实中的人」。",
       "4. 不评判、不说教、不承诺一切会好、不替对方做决定；保持短。",
-      "5. 真实热线和安全步骤会由系统在你这段话后面自动附上，你不必自己列号码。"
+      "5. 已核验的地区资源在页面「真人支持 / Human support」入口和危机横幅中提供，可提示用户打开该入口；不要自行编造或改写热线号码。"
     ].join("\n");
   }
 
@@ -1260,26 +1248,11 @@ export function createGentleCheckResponse(cue: string | undefined, language: App
     "如果愿意，可以多和我聊一句最近最沉的是什么；如果暂时不想说，我们就慢慢来，我在这儿。"
   ].join("\n");
 }
-export function createMinorSupportLine(language: AppLanguage = "zh", supportRegion?: "cn" | "us" | "uk" | "other"): string {
-  if (supportRegion) {
-    const resource = supportRegion === "cn" ? `${CN_SUPPLEMENTAL.youth} / ${PSYCH}`
-      : supportRegion === "us" ? INTL_RESOURCES.usCrisis
-      : supportRegion === "uk" ? INTL_RESOURCES.ukSamaritans
-      : INTL_RESOURCES.finder;
-    return language === "en"
-      ? `If you are under 18, reach a trusted adult who can support you in person, such as a safe relative, school counselor or teacher. If a caregiver is causing harm, choose another safe adult. You can also use the local support links on this page: ${resource}.`
-      : `如果你未满18岁，请找一位信任的成年人在现实里支持你，例如安全的亲属、学校心理老师或老师。若照顾者正在伤害你，可以选择其他安全的成年人。也可使用页面的当地支持入口：${resource}。`;
-  }
-  if (language === "en") {
-    return [
-      "If you're still in school or under 18: alongside everything above, please reach a trusted adult as soon as you can — a parent, a relative you trust, or your school counselor or teacher. You deserve to have someone with you in person.",
-      `Youth help: in the US/Canada call or text ${INTL_RESOURCES.usCrisis}, or text HOME to 741741 (Crisis Text Line). Elsewhere, find a local youth line at ${INTL_RESOURCES.finder}.`
-    ].join("\n");
-  }
-  return [
-    "如果你还在上学、未满 18 岁：除了上面的资源，也请尽快找一个信任的成年人陪着你——可以是学校的心理老师或班主任、信任的亲戚，或父母。你值得有人在现实里陪你一起面对。",
-    `面向未成年人的求助：全国青少年服务台 ${CN_SUPPLEMENTAL.youth}（共青团心理援助），以及全国心理援助热线 ${PSYCH}。`
-  ].join("\n");
+export function createMinorSupportLine(language: AppLanguage = "zh", supportRegion?: SupportRegionInput): string {
+  const resource = formatSupportResourceList(minorSupportResources(supportRegion), language);
+  return language === "en"
+    ? `If you are under 18, reach a trusted adult who can support you in person, such as a safe relative, school counselor or teacher. If a caregiver is causing harm, choose another safe adult. You can also use the local support links on this page: ${resource}.`
+    : `如果你未满18岁，请找一位信任的成年人在现实里支持你，例如安全的亲属、学校心理老师或老师。若照顾者正在伤害你，可以选择其他安全的成年人。也可使用页面的当地支持入口：${resource}。`;
 }
 export function hasMinorContextCue(text: string): boolean {
   if (!text) return false;
@@ -1288,13 +1261,14 @@ export function hasMinorContextCue(text: string): boolean {
   if (MINOR_AGE_RE.test(n)) return true;
   return MINOR_CONTEXT_CUES.some((c) => n.includes(normalizeText(c)));
 }
-export function createCrisisReplyResponse(tier: CrisisReplyTier, language: AppLanguage = "zh") {
+export function createCrisisReplyResponse(tier: CrisisReplyTier, language: AppLanguage = "zh", supportRegion?: SupportRegionInput) {
+  const resources = formatSupportResourceList(supportResources(supportRegion), language);
   if (language === "en") {
     if (tier === "escalate") {
       return [
         "Thank you for telling me. From your answer, the most important thing right now is not this chat — it is getting a real person or emergency service to you in the next few minutes.",
         "",
-        `Please do this now: call emergency or a crisis line, or reach someone who can come to you. US/Canada ${INTL_RESOURCES.usCrisis} or ${INTL_RESOURCES.usEmergency}; UK/Ireland ${INTL_RESOURCES.ukSamaritans} (Samaritans); Australia ${INTL_RESOURCES.auLifeline} (Lifeline); mainland China ${CN_EMS} or ${PSYCH}; elsewhere ${INTL_RESOURCES.finder}.`,
+        `Please do this now: call your local emergency service or a crisis line, or reach someone who can come to you. Support for your selected region: ${resources}. These resources are also available through Human support on this page.`,
         "If anything you could use to hurt yourself is within reach, leave that room now or ask someone to hold it for you.",
         "",
         "I am staying right here with you, but I cannot replace in-person help. Can you make that call now, or tell me who is nearby that we can reach?"
@@ -1314,7 +1288,7 @@ export function createCrisisReplyResponse(tier: CrisisReplyTier, language: AppLa
     return [
       "谢谢你回我。从你的回答看，现在最重要的事不是继续聊，而是让一个真实的人或急救服务在接下来几分钟里到你身边。",
       "",
-      `请现在就做：拨打急救或危机热线，或联系一个能马上到场的人。中国大陆 ${CN_EMS}，或全国心理援助热线 ${PSYCH}；美国/加拿大 ${INTL_RESOURCES.usCrisis} 或 ${INTL_RESOURCES.usEmergency}；英国/爱尔兰 ${INTL_RESOURCES.ukSamaritans}；澳洲 ${INTL_RESOURCES.auLifeline}；其他地区可在 ${INTL_RESOURCES.finder} 找当地热线。`,
+      `请现在就做：拨打当地急救或危机热线，或联系一个能马上到场的人。所选地区的支持资源：${resources}。也可通过页面「真人支持」查看这些资源。`,
       "如果手边有可能伤害自己的东西，先离开那个房间，或请别人替你拿走。",
       "",
       "我会一直在这儿陪着你，但我不能替代现场帮助。你愿意现在就打这个电话，或者告诉我你身边能联系到谁吗？"

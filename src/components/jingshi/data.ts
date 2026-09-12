@@ -7,7 +7,7 @@ import { assessRisk } from "@/lib/safety";
 import { suggestScale } from "@/lib/scales";
 
 export type Lang = "zh" | "en";
-export type SupportRegion = "CN" | "US" | "UK_IE" | "OTHER";
+export type { SupportRegion } from "@/lib/support-regions";
 export type AgeRange = "adult" | "minor" | "unspecified";
 
 export type Persona = {
@@ -117,7 +117,7 @@ export const STR = {
     crisis_q_label: "现在的情况?轻点一下告诉我",
     crisis_q1: "1 · 我已移开危险物品", crisis_q2: "2 · 我身边有人", crisis_q3: "3 · 我准备打电话", crisis_q4: "4 · 我现在做不到",
     real_human: "我是 AI，没办法在现实里陪在你身边。如果你有伤害自己的念头，请现在联系下面的真人——他们能真正帮到你。",
-    hotline_label: "可以马上拨打",
+    hotline_label: "当地支持与紧急服务",
     h_psy: "全国心理援助热线", h_police: "公安报警", h_med: "急救",
     h_us988: "自杀与危机生命线(美国)", h_samaritans: "撒玛利亚会(英国/爱尔兰)", h_finder: "查找当地热线(全球)",
     emergency_contact: "联系我的紧急联系人", emergency_contact_d: "你之前留下的、信任的人",
@@ -152,7 +152,7 @@ export const STR = {
     about_privacy_t: "本地历史与远端处理",
     about_privacy: "聊天历史保存在此浏览器。发送的文字和图片需要服务器、模型及必要的检索服务处理。删除本地记录会清除此浏览器的当前及往次对话、小结、量表、理解、反馈和年龄地区偏好，无法撤回服务方已处理的数据或你已分享的文件。",
     support_title: "真人支持", support_region: "支持资源地区", support_region_note: "请按你所在地区选择；语言设置不会更改地区。", support_other_note: "如果正有紧急危险，请联系当地急救服务或身边可信赖的人。可通过下方目录查找所在地区的支持。", support_intro: "不必等到危机时刻，也可以向真人求助。以下链接会打开电话或外部支持网站。",
-    region_cn: "中国大陆", region_us: "美国", region_uk: "英国 / 爱尔兰", region_other: "其他地区 / 尚未选择",
+    support_call_note: "短号码通常需使用当地电话网络；接听语言与时段请查看机构说明。", support_sources: "机构说明：",
     close: "关闭", language_label: "切换语言", theme_label: "切换明暗主题", age_label: "年龄范围（可跳过）", age_adult: "18 岁及以上", age_minor: "未满 18 岁", age_unspecified: "暂不选择", minor_note: "如果你未满 18 岁，遇到让你害怕或难以承受的事，可以找可信赖的成年人一起寻求帮助。这里不能替代专业人员或现实中的照顾。",
     scale_safety_title: "先关心一下你的安全", scale_safety_note: "谢谢你告诉我。刚才关于死亡或伤害自己的回答值得单独关心，无论总分多少。你现在有伤害自己的打算，或已经做了可能伤害自己的事吗？如果眼下有危险，请先联系急救或身边可信赖的人。", scale_safety_continue: "我现在安全，继续查看", scale_safety_resources: "查看真人支持", scale_score_reference: "总分参考", feedback_export_failed: "导出失败，请重试。",
     about_safety_t: "危险时，我会带你找真人",
@@ -194,7 +194,7 @@ export const STR = {
     crisis_q_label: "How are things right now? Tap one",
     crisis_q1: "1 · I moved dangerous items away", crisis_q2: "2 · Someone is with me", crisis_q3: "3 · I am about to call", crisis_q4: "4 · I cannot do this right now",
     real_human: "I'm an AI — I can't be with you in person. If you're having thoughts of harming yourself, please reach a real person below now. They can truly help.",
-    hotline_label: "Call now",
+    hotline_label: "Local support and emergency services",
     h_psy: "Psychological support line", h_police: "Police", h_med: "Emergency medical",
     h_us988: "Suicide & Crisis Lifeline (US)", h_samaritans: "Samaritans (UK/Ireland)", h_finder: "Find a helpline (global)",
     emergency_contact: "Reach my emergency contact", emergency_contact_d: "Someone you trust, saved earlier",
@@ -229,7 +229,7 @@ export const STR = {
     about_privacy_t: "Local history and remote processing",
     about_privacy: "History is saved in this browser. Sent text and images are processed by our server, model providers and search services when needed. Deleting local records clears current and past conversations, summaries, self-checks, understanding, feedback, age and region preferences. It cannot recall data already processed by providers or files you shared.",
     support_title: "Human support", support_region: "Support resource region", support_region_note: "Choose your location. Changing the language does not change this region.", support_other_note: "If you are in immediate danger, contact local emergency services or someone you trust nearby. The directory below can help you find support in your region.", support_intro: "You can reach a real person before things become a crisis. These links open a phone call or an external support website.",
-    region_cn: "Mainland China", region_us: "United States", region_uk: "United Kingdom / Ireland", region_other: "Other region / not selected",
+    support_call_note: "Short numbers usually require a local phone network. Check the service for languages and opening hours.", support_sources: "Service information: ",
     close: "Close", language_label: "Change language", theme_label: "Change color theme", age_label: "Age range (optional)", age_adult: "18 or older", age_minor: "Under 18", age_unspecified: "Prefer not to choose", minor_note: "If you are under 18 and something feels frightening or too much to handle, a trusted adult can help you reach support. This space cannot replace professional help or care in your life.",
     scale_safety_title: "Let’s check on your safety", scale_safety_note: "Thank you for telling me. Your answer about death or self-harm deserves attention on its own, whatever the total score. Do you intend to hurt yourself now, or have you already done something that could hurt you? If you are in immediate danger, contact emergency services or someone you trust nearby first.", scale_safety_continue: "I’m safe right now — continue", scale_safety_resources: "See human support", scale_score_reference: "Total score reference", feedback_export_failed: "The export failed. Please try again.",
     att_read_failed: "The image could not be read. Please select it again.", att_remove: "Remove image", att_error_close: "Dismiss image notice",

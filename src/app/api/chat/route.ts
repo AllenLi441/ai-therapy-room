@@ -49,6 +49,7 @@ import { defaultTurnPlan } from "@/lib/session-plan";
 import { checkRateLimit, rateLimitResponse, readRateLimitEnv } from "@/lib/rate-limit";
 import { recordChatLlmFallback } from "@/lib/chat-monitoring";
 import { EVENT_DELIM, REASONING_OPEN, REASONING_CLOSE } from "@/lib/stream-markers";
+import { normalizeSupportRegion, parseSupportRegion, type SupportRegionInput } from "@/lib/support-regions";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -65,7 +66,7 @@ type ChatRequest = {
   crisisModeActive?: boolean;
   moodMemory?: string;
   language?: AppLanguage;
-  supportRegion?: "cn" | "us" | "uk" | "other";
+  supportRegion?: SupportRegionInput;
   ageRange?: "adult" | "minor" | "unspecified";
   continuationNote?: string;
   availableScale?: "PHQ-9" | "GAD-7" | "ISI" | null;
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
         ["modality", "protocolStep", "whatToReflect", "intervention", "clarifyingQuestion", "avoid"].some((key) => typeof (body.turnPlan as unknown as Record<string, unknown>)[key] !== "string"))) ||
       [body.exitedCrisis, body.crisisModeActive].some((value) => value !== undefined && typeof value !== "boolean") ||
       (body.continuationNote !== undefined && (typeof body.continuationNote !== "string" || body.continuationNote.length > 3000)) ||
-      (body.supportRegion !== undefined && !["cn", "us", "uk", "other"].includes(body.supportRegion)) ||
+      (body.supportRegion !== undefined && parseSupportRegion(body.supportRegion) === null) ||
       (body.ageRange !== undefined && !["adult", "minor", "unspecified"].includes(body.ageRange)) ||
       (body.availableScale != null && !["PHQ-9", "GAD-7", "ISI"].includes(body.availableScale)) ||
       (body.scaleResults !== undefined && (!Array.isArray(body.scaleResults) || body.scaleResults.length > 300 || body.scaleResults.some((scale) =>
@@ -181,7 +182,8 @@ export async function POST(request: Request) {
     return new Response("Missing user message", { status: 400 });
   }
   const latestUserText = latestUserMessage.content;
-  const productContext = { supportRegion: body.supportRegion, ageRange: body.ageRange, continuationNote: body.continuationNote, availableScale: body.availableScale };
+  const supportRegion = normalizeSupportRegion(body.supportRegion);
+  const productContext = { supportRegion, ageRange: body.ageRange, continuationNote: body.continuationNote, availableScale: body.availableScale };
   // Only ground in the KB / web when the user is actually asking for info or methods —
   // venting gets pure warm companionship with no bolted-on sources (see isInfoSeeking).
   const infoSeeking = isInfoSeeking(latestUserText);
@@ -256,7 +258,7 @@ export async function POST(request: Request) {
     // §5 additive minor support: if this looks like a minor, append the 12355 youth
     // line to the crisis reply (never replaces — additive only, zero downside; internal safety review).
     const minorLine = body.ageRange === "minor" || hasMinorContextCue(latestUserText)
-      ? `\n\n${createMinorSupportLine(language, body.supportRegion ?? "other")}`
+      ? `\n\n${createMinorSupportLine(language, supportRegion)}`
       : "";
     try {
       const recent = takeRecentWithinBudget(messages);
@@ -317,7 +319,7 @@ export async function POST(request: Request) {
     const check = classifyCrisisCheckReply(latestUserText, lastAssistant?.content ?? "", { assumeAsked: true });
     if (check) {
       logFireAndForget("crisis_check_reply", stubImplicit, stubDecision);
-      return new Response(textStreamFromString(createCrisisReplyResponse(check.tier, language)), {
+      return new Response(textStreamFromString(createCrisisReplyResponse(check.tier, language, supportRegion)), {
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
           "Cache-Control": "no-store",
