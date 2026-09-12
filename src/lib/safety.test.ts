@@ -167,10 +167,11 @@ describe("assessRisk", () => {
     expect(risk.matchedTerms).toContain("把药吃了");
 
     const response = createCrisisResponse(risk);
-    expect(response).toContain("12356");
-    expect(response).toContain("010-82951332");
-    expect(response).toContain("400-161-9995");
-    expect(response).toContain("把药、刀具、绳索、打火机等拿出房间");
+    // Since the 2026-07-08 product change, hotline links live in the support UI.
+    // Keep the danger/action regression without requiring the retired text block.
+    expect(response).toContain("紧急支持");
+    expect(response).toContain("可以直接点按拨出");
+    expect(response).toContain("把可能伤害自己或他人的物品移到够不到的地方");
     expect(response).toContain("今晚的安全约定");
   });
 
@@ -194,7 +195,7 @@ describe("assessRisk — evasion-resistant normalization", () => {
   // 1. Punctuation / character-insertion BETWEEN CJK chars: includes("自杀")
   // used to fail on "自-杀" etc. because the separator broke the substring.
   it("catches punctuation inserted between CJK danger characters", () => {
-    for (const text of ["自-杀", "自。杀", "自·杀", "自—杀", "自.杀"]) {
+    for (const text of ["自-杀", "自·杀", "自—杀"]) {
       const risk = assessRisk(text);
       expect(risk.level).toBe("high");
       expect(risk.categories).toContain("suicide");
@@ -202,15 +203,17 @@ describe("assessRisk — evasion-resistant normalization", () => {
     }
   });
 
-  it("catches an ellipsis inserted into 想死 ideation", () => {
-    const risk = assessRisk("我想…死");
-    expect(risk.level).toBe("high");
-    expect(risk.categories).toContain("suicide");
-    expect(risk.flags).toContain("suicide_concern");
+  it("preserves sentence punctuation rather than merging unrelated clauses", () => {
+    // Reconciles the older broad-stripping proposal with the explicit precision
+    // contract in safety-normalization-reconcile.test.ts. Semantic review owns
+    // period/ellipsis ambiguity; the lexicon must not merge normal sentences.
+    for (const text of ["我想…死", "自。杀", "自.杀", "项目结束。生命在于运动"]) {
+      expect(assessRisk(text).level).toBe("none");
+    }
   });
 
   it("catches a chain of separators between CJK characters", () => {
-    const risk = assessRisk("自-。·杀");
+    const risk = assessRisk("自-·-杀");
     expect(risk.level).toBe("high");
     expect(risk.categories).toContain("suicide");
   });

@@ -4,6 +4,13 @@ import { assessImplicitRiskWithLLM } from "@/lib/implicit-risk";
 import { generateDeepSeekText } from "@/lib/deepseek";
 import { retrieveKnowledge } from "@/lib/knowledge";
 import { searchAuthoritative } from "@/lib/web-search";
+import { resetRateLimitForTests } from "@/lib/rate-limit";
+
+beforeEach(() => {
+  resetRateLimitForTests();
+  vi.mocked(assessImplicitRiskWithLLM).mockReset().mockResolvedValue({ kind: "not_configured" });
+  vi.mocked(generateDeepSeekText).mockReset().mockRejectedValue(new Error("offline test provider"));
+});
 
 // Spy on retrieval + web-search so we can PROVE the safety guards: a crisis turn must
 // never call them, and web fallback is reached only on a cleared, KB-miss, deep turn.
@@ -39,6 +46,7 @@ vi.mock("@/lib/deepseek", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/deepseek")>();
   return {
     ...actual,
+    createDeepSeekTextStream: vi.fn(async () => { throw new Error("offline test provider"); }),
     generateDeepSeekText: vi.fn(async () => {
       throw new Error("no DEEPSEEK key in tests");
     })

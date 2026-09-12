@@ -72,19 +72,21 @@ function normalizeModality(value: unknown): TherapyModality {
   return (allowed.find((modality) => modality === value) ?? "person-centered") as TherapyModality;
 }
 
-function parsePlannerOutput(raw: string, fallbackCase: CaseMap): SessionPlan {
+function parsePlannerOutput(raw: string, fallbackCase: CaseMap, requireFresh = false): SessionPlan {
   let parsed: Record<string, unknown> | null = null;
 
   try {
     const trimmed = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
     parsed = JSON.parse(trimmed) as Record<string, unknown>;
   } catch {
+    if (requireFresh) throw new Error("invalid_plan");
     return {
       caseMap: fallbackCase,
       turnPlan: defaultTurnPlan()
     };
   }
 
+  if (requireFresh && (!parsed || !parsed.case_map || typeof parsed.case_map !== "object" || Array.isArray(parsed.case_map))) throw new Error("invalid_plan");
   const caseRaw = (parsed?.case_map ?? {}) as Record<string, unknown>;
   const planRaw = (parsed?.turn_plan ?? {}) as Record<string, unknown>;
 
@@ -181,6 +183,8 @@ export async function generateSessionPlan(input: {
   risk: RiskAssessment;
   consultGoal?: ConsultGoal | null;
   persona?: TherapyPersona | null;
+  language?: "zh" | "en";
+  requireFresh?: boolean;
 }): Promise<SessionPlan> {
   const fallbackCase = input.priorCaseMap ?? emptyCaseMap();
 
@@ -201,6 +205,7 @@ export async function generateSessionPlan(input: {
   }
 
   if (!isKimiConfigured() || input.messages.length === 0) {
+    if (input.requireFresh) throw new Error("plan_unavailable");
     return { caseMap: fallbackCase, turnPlan: defaultTurnPlan() };
   }
 
@@ -236,7 +241,7 @@ export async function generateSessionPlan(input: {
   try {
     const raw = await generateKimiText(
       buildKimiPayload({
-        systemPrompt: PLANNER_SYSTEM,
+        systemPrompt: PLANNER_SYSTEM + (input.language === "en" ? "\n当前用户使用英文。上面的中文字段值要求在此改为英文：保持JSON键名不变，所有面向用户的字段值必须使用自然英文。" : ""),
         messages: [{ role: "user", content: userPrompt }],
         temperature: 0.2,
         maxTokens: 900,
@@ -244,8 +249,9 @@ export async function generateSessionPlan(input: {
       }),
       20_000
     );
-    return parsePlannerOutput(raw, fallbackCase);
-  } catch {
+    return parsePlannerOutput(raw, fallbackCase, input.requireFresh);
+  } catch (error) {
+    if (input.requireFresh) throw error;
     return { caseMap: fallbackCase, turnPlan: defaultTurnPlan() };
   }
 }

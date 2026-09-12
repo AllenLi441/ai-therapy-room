@@ -3,7 +3,12 @@
    /api/chat. Persona id stays "linxi" for backend-contract compatibility;
    display name is 安屿 / Anyu. */
 
+import { assessRisk } from "@/lib/safety";
+import { suggestScale } from "@/lib/scales";
+
 export type Lang = "zh" | "en";
+export type SupportRegion = "CN" | "US" | "UK_IE" | "OTHER";
+export type AgeRange = "adult" | "minor" | "unspecified";
 
 export type Persona = {
   id: string;
@@ -35,6 +40,10 @@ export type Message = {
   pace?: "deep" | "fast"; // which tier produced this reply (for the mode badge)
   safety?: "safe" | "unchecked" | "gentle" | "suicide_concern" | "crisis"; // Kimi danger-check result
   feedback?: "up" | "down"; // per-turn beta feedback ("有帮到 / 没帮到"), device-local only
+  replyToId?: string;
+  modelContent?: string;
+  retryable?: boolean;
+  hadImages?: boolean;
 };
 
 export type ScaleId = "PHQ-9" | "GAD-7" | "ISI";
@@ -71,14 +80,14 @@ export const PERSONAS: Persona[] = [COMPANION];
 export const personaById = (id?: string): Persona => (id === "jingshi" ? CRISIS : COMPANION);
 
 // ---- i18n ----
-export const STR: Record<Lang, Record<string, any>> = {
+export const STR = {
   zh: {
     sub: "JÌNGSHÌ",
-    privacy_a: "对话只存在你的设备", privacy_b: "随时可", privacy_del: "一键彻底删除",
-    delete_title: "彻底删除这次对话？", delete_body: "对话、量表结果和「对你的理解」都会被清空，无法撤销。", delete_confirm: "删除", delete_cancel: "取消",
-    placeholder: "把现在心里的话，慢慢写下来…",
+    privacy_a: "历史保存在此浏览器", privacy_b: "随时可", privacy_del: "删除本地记录",
+    delete_title: "删除此浏览器的对话记录？", delete_body: "将清除此浏览器的当前及往次对话、结束小结、草稿、量表、「对你的理解」、反馈、年龄和地区偏好，并停止当前请求。无法撤回服务方已处理的数据，也不会删除你已下载或分享的文件。此操作无法撤销。", delete_confirm: "删除本地记录", delete_cancel: "取消",
+    placeholder: "慢慢写，我在听…",
     import_image: "导入图片", import_video: "导入视频", import_media: "添加图片或视频",
-    att_too_many: "最多只能添加 {n} 张图片", att_not_image: "只能添加图片", att_too_big: "图片太大了（上限 {mb}MB）",
+    att_too_many: "最多只能添加 {n} 张图片", att_not_image: "只能添加图片", att_too_big: "图片超过 {mb}MiB，请先缩小或压缩后重试。", att_read_failed: "图片读取失败，请重新选择。", att_remove: "移除图片", att_error_close: "关闭图片提示",
     placeholder_calm: "如果想说点什么，我在这里",
     input_too_long: "太长了，分几次说",
     send: "发送", enter_hint: "Enter 发送 · Shift+Enter 换行", jump_latest: "回到最新",
@@ -97,7 +106,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     scales: "情绪自评", scales_d: "温和的小问卷，帮你和我看清楚一些。",
     scales_sub: "都是匿名的临床自评量表，结果只作参考，不下诊断。", scale_items_zh: "题", scale_mins: "约 1 分钟",
     scale_suggest: "要不要花 1 分钟做个简短的自评？只是帮我们看清楚一些，不是诊断。", scale_suggest_cta: "做个自评", scale_dismiss: "暂时不用",
-    safety_tip: "如果你现在有危险或需要立即帮助，请拨打 110/120 或 12356，或联系身边可信赖的人。", safety_tip_dismiss: "我知道了",
+    safety_tip: "如果你现在有危险，请联系当地急救或身边可信赖的人。也可以点「真人支持」选择所在地区的帮助。", safety_tip_dismiss: "我知道了",
     crisis_tool: "我现在很危险", crisis_tool_d: "立刻看到热线和真人支持。",
     case_title: "对你的理解", case_note: "这些是我在对话里逐渐形成的理解，可能不准确，你可以随时纠正我。",
     case_empty: "我们才刚开始，我还没有足够的了解来谈你。多和我说几句，我会慢慢看懂，再写在这里。",
@@ -127,11 +136,11 @@ export const STR: Record<Lang, Record<string, any>> = {
     consent_title: "在开始之前",
     consent_p1_t: "我是谁", consent_p1_d: "我是 AI 陪伴练习伙伴，不是心理治疗，也不是医疗服务，不能替代专业帮助。",
     consent_p2_t: "如果你正处于危机",
-    consent_p3_t: "你的隐私", consent_p3_d: "对话只保存在你自己的设备上，清除对话即删除。",
+    consent_p3_t: "你的数据如何处理", consent_p3_d: "发送后，文字会经服务器交给 DeepSeek 生成回复，并可能由 Kimi 做安全识别和理解；图片由 Kimi 处理，必要时还会使用检索服务。历史保存在此浏览器。删除本地记录无法撤回服务方已处理的数据。请避免提供姓名、住址等个人身份信息。",
     consent_p4_t: "这是内测版本", consent_p4_d: "当前为内测版本，回复可能不完善；你可以对每条回复标记有没有帮到你。",
     consent_agree: "点击下方按钮，即代表你已阅读并了解以上内容。", consent_enter: "我了解了，开始对话",
     feedback_up: "有帮到", feedback_down: "没帮到",
-    msg_delete: "删除这条消息", msg_delete_confirm: "删除?",
+    msg_delete: "删除这条消息及关联记录", msg_delete_confirm: "确认删除?",
     export_feedback: "导出内测反馈", export_feedback_note: "导出文件包含被评价的对话片段，仅在你主动分享时才会离开设备。",
     about_title: "关于安屿",
     about_who: "安屿是「静室」里陪你的声音——温柔、专注、不评判。以倾听为主，需要时融入稳定化练习和温和的认知视角。",
@@ -140,18 +149,22 @@ export const STR: Record<Lang, Record<string, any>> = {
     about_voice_samples: ["听起来这件事压在你心上挺久了。", "我们先不急着想办法，你愿意多说说吗？", "今天先到这就好——只写一句最沉的话。"],
     about_honest_t: "我是 AI，不是医生",
     about_honest: "我不会、也不能做诊断或开处方。我能做的，是认真听你、陪你慢下来。",
-    about_privacy_t: "对话只在你的设备",
-    about_privacy: "这些话不会离开这台设备，你随时可以一键彻底删除。",
+    about_privacy_t: "本地历史与远端处理",
+    about_privacy: "聊天历史保存在此浏览器。发送的文字和图片需要服务器、模型及必要的检索服务处理。删除本地记录会清除此浏览器的当前及往次对话、小结、量表、理解、反馈和年龄地区偏好，无法撤回服务方已处理的数据或你已分享的文件。",
+    support_title: "真人支持", support_region: "支持资源地区", support_region_note: "请按你所在地区选择；语言设置不会更改地区。", support_other_note: "如果正有紧急危险，请联系当地急救服务或身边可信赖的人。可通过下方目录查找所在地区的支持。", support_intro: "不必等到危机时刻，也可以向真人求助。以下链接会打开电话或外部支持网站。",
+    region_cn: "中国大陆", region_us: "美国", region_uk: "英国 / 爱尔兰", region_other: "其他地区 / 尚未选择",
+    close: "关闭", language_label: "切换语言", theme_label: "切换明暗主题", age_label: "年龄范围（可跳过）", age_adult: "18 岁及以上", age_minor: "未满 18 岁", age_unspecified: "暂不选择", minor_note: "如果你未满 18 岁，遇到让你害怕或难以承受的事，可以找可信赖的成年人一起寻求帮助。这里不能替代专业人员或现实中的照顾。",
+    scale_safety_title: "先关心一下你的安全", scale_safety_note: "谢谢你告诉我。刚才关于死亡或伤害自己的回答值得单独关心，无论总分多少。你现在有伤害自己的打算，或已经做了可能伤害自己的事吗？如果眼下有危险，请先联系急救或身边可信赖的人。", scale_safety_continue: "我现在安全，继续查看", scale_safety_resources: "查看真人支持", scale_score_reference: "总分参考", feedback_export_failed: "导出失败，请重试。",
     about_safety_t: "危险时，我会带你找真人",
     about_safety: "如果出现伤害自己的念头，我会把现实中的热线和紧急联系放在最显眼的地方。"
   },
   en: {
     sub: "QUIET ROOM",
-    privacy_a: "Chats stay only on your device", privacy_b: "Always", privacy_del: "delete everything",
-    delete_title: "Delete this conversation?", delete_body: "Your conversation, self-check results and “what I understand” will all be cleared. This can’t be undone.", delete_confirm: "Delete", delete_cancel: "Cancel",
-    placeholder: "Take your time — write what's on your mind…",
+    privacy_a: "History is saved in this browser", privacy_b: "You can", privacy_del: "delete local records",
+    delete_title: "Delete this browser’s conversation records?", delete_body: "This clears current and past conversations, closing summaries, drafts, self-checks, understanding, feedback, age and region preferences in this browser, and stops active requests. It cannot recall data already processed by providers or delete files you downloaded or shared. This cannot be undone.", delete_confirm: "Delete local records", delete_cancel: "Cancel",
+    placeholder: "I’m listening…",
     import_image: "Import image", import_video: "Import video", import_media: "Add image or video",
-    att_too_many: "Up to {n} images", att_not_image: "Images only", att_too_big: "Image too large (max {mb}MB)",
+    att_too_many: "Up to {n} images", att_not_image: "Images only", att_too_big: "This image exceeds {mb}MiB. Resize or compress it, then try again.",
     placeholder_calm: "If you'd like to say something, I'm here",
     input_too_long: "That's a lot — try splitting it up",
     send: "Send", enter_hint: "Enter to send · Shift+Enter for a new line", jump_latest: "Jump to latest",
@@ -170,7 +183,7 @@ export const STR: Record<Lang, Record<string, any>> = {
     scales: "Self check-in", scales_d: "Gentle short questionnaires to see things more clearly.",
     scales_sub: "Anonymous clinical self-checks. Results are a reference, never a diagnosis.", scale_items_zh: "items", scale_mins: "~1 min",
     scale_suggest: "Would a 1-minute self check-in help us see things more clearly? It's a reference, not a diagnosis.", scale_suggest_cta: "Take it", scale_dismiss: "Not now",
-    safety_tip: "If you're in danger or need help now, call your local emergency number (e.g. 911 in the US/Canada) or a crisis line (988 · Samaritans 116 123 · findahelpline.com), or reach someone you trust.", safety_tip_dismiss: "Got it",
+    safety_tip: "If you are in danger, contact local emergency services or someone you trust nearby. Open Human support to choose resources for your region.", safety_tip_dismiss: "Got it",
     crisis_tool: "I'm in danger now", crisis_tool_d: "See hotlines and real-person support now.",
     case_title: "What I understand", case_note: "This is the understanding I've slowly formed in our talk. It may be wrong — please correct me anytime.",
     case_empty: "We've only just begun — I don't yet understand enough to say. Tell me a little more and I'll slowly piece it together here.",
@@ -200,11 +213,11 @@ export const STR: Record<Lang, Record<string, any>> = {
     consent_title: "Before we begin",
     consent_p1_t: "Who I am", consent_p1_d: "I'm an AI companion for practice — not therapy, not a medical service, and not a substitute for professional help.",
     consent_p2_t: "If you're in crisis right now",
-    consent_p3_t: "Your privacy", consent_p3_d: "Conversations are stored only on your device — deleting them removes them for good.",
+    consent_p3_t: "How your data is processed", consent_p3_d: "Sent text passes through our server to DeepSeek for replies, and may be processed by Kimi for safety checks and understanding. Kimi processes images; search services may also be used when needed. History is saved in this browser. Deleting local records cannot recall data already processed by providers. Avoid names, addresses or other identifying information.",
     consent_p4_t: "This is a beta", consent_p4_d: "This is an early beta — replies may be imperfect. You can mark whether each reply actually helped.",
     consent_agree: "Tapping the button below means you've read and understood the above.", consent_enter: "I understand — let's begin",
     feedback_up: "Helpful", feedback_down: "Not helpful",
-    msg_delete: "Delete this message", msg_delete_confirm: "Delete?",
+    msg_delete: "Delete this message and related records", msg_delete_confirm: "Confirm delete?",
     export_feedback: "Export beta feedback", export_feedback_note: "The exported file includes the rated conversation snippets — it only leaves your device if you choose to share it.",
     about_title: "About Anyu",
     about_who: "Anyu is the voice that keeps you company in Jingshi — gentle, attentive, non-judging. Listening first, with grounding and a soft cognitive lens when it helps.",
@@ -213,10 +226,15 @@ export const STR: Record<Lang, Record<string, any>> = {
     about_voice_samples: ["It sounds like this has been weighing on you for a while.", "Let's not rush to fixes — would you tell me a bit more?", "Let's stop here for today — just one heaviest sentence."],
     about_honest_t: "I'm an AI, not a doctor",
     about_honest: "I can't and won't diagnose or prescribe. What I can do is listen closely and slow down with you.",
-    about_privacy_t: "Chats stay on your device",
-    about_privacy: "None of this leaves this device. You can delete everything in one tap, anytime.",
+    about_privacy_t: "Local history and remote processing",
+    about_privacy: "History is saved in this browser. Sent text and images are processed by our server, model providers and search services when needed. Deleting local records clears current and past conversations, summaries, self-checks, understanding, feedback, age and region preferences. It cannot recall data already processed by providers or files you shared.",
+    support_title: "Human support", support_region: "Support resource region", support_region_note: "Choose your location. Changing the language does not change this region.", support_other_note: "If you are in immediate danger, contact local emergency services or someone you trust nearby. The directory below can help you find support in your region.", support_intro: "You can reach a real person before things become a crisis. These links open a phone call or an external support website.",
+    region_cn: "Mainland China", region_us: "United States", region_uk: "United Kingdom / Ireland", region_other: "Other region / not selected",
+    close: "Close", language_label: "Change language", theme_label: "Change color theme", age_label: "Age range (optional)", age_adult: "18 or older", age_minor: "Under 18", age_unspecified: "Prefer not to choose", minor_note: "If you are under 18 and something feels frightening or too much to handle, a trusted adult can help you reach support. This space cannot replace professional help or care in your life.",
+    scale_safety_title: "Let’s check on your safety", scale_safety_note: "Thank you for telling me. Your answer about death or self-harm deserves attention on its own, whatever the total score. Do you intend to hurt yourself now, or have you already done something that could hurt you? If you are in immediate danger, contact emergency services or someone you trust nearby first.", scale_safety_continue: "I’m safe right now — continue", scale_safety_resources: "See human support", scale_score_reference: "Total score reference", feedback_export_failed: "The export failed. Please try again.",
+    att_read_failed: "The image could not be read. Please select it again.", att_remove: "Remove image", att_error_close: "Dismiss image notice",
     about_safety_t: "In danger, I point you to real people",
-    about_safety: "If thoughts of self-harm appear, I put real-world hotlines and your emergency contact front and center."
+    about_safety: "If thoughts of self-harm appear, I help you find real-world support and encourage reaching someone you trust nearby."
   }
 };
 
@@ -282,21 +300,14 @@ export const SCALES: Record<string, Scale> = {
 };
 
 // crisis detection (UI banner trigger; the real safety reply is decided server-side by /api/chat)
-const RISK_RE =
-  /(不想活|不想再活|自杀|结束生命|结束自己|活不下去|去死|想死|轻生|伤害自己|割腕|跳下去|没有意义.*活|活着.*没意义|end my life|kill myself|suicide|don'?t want to live|hurt myself|want to die)/i;
 export function detectRisk(text?: string): boolean {
-  return RISK_RE.test(text || "");
+  const risk = assessRisk(text || "");
+  return risk.shouldEscalate || risk.flags.includes("suicide_concern");
 }
 
 // Surface a self-assessment scale ONLY when the conversation shows a matching
 // need (no permanent UI entry). Returns the most-specific scale id, or null.
-const SCALE_CUES: Array<{ id: ScaleId; re: RegExp }> = [
-  { id: "ISI", re: /(失眠|睡不着|睡不好|入睡困难|半夜醒|很难入睡|睡眠|insomnia|can'?t sleep|trouble sleeping|cannot sleep)/i },
-  { id: "GAD-7", re: /(焦虑|很紧张|担心|心慌|停不下来|惊恐|坐立不安|anxious|anxiety|worry|worrying|nervous|panic|on edge)/i },
-  { id: "PHQ-9", re: /(抑郁|很低落|没意思|没兴趣|提不起劲|绝望|空虚|没有价值|depress|hopeless|no interest|empty|worthless|down all the time)/i }
-];
 export function detectScaleNeed(text?: string): ScaleId | null {
-  const s = text || "";
-  for (const { id, re } of SCALE_CUES) if (re.test(s)) return id;
-  return null;
+  const id = suggestScale(text || "");
+  return id === "PHQ-9" || id === "GAD-7" || id === "ISI" ? id : null;
 }

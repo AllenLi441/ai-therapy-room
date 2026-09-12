@@ -51,7 +51,7 @@ export const SCALES: ScaleDefinition[] = [
       if (total <= 19) return "中重度抑郁倾向";
       return "重度抑郁倾向";
     },
-    trigger: ["低落", "抑郁", "没意思", "麻木", "提不起劲", "没动力", "想死", "活不下去", "空虚"]
+    trigger: ["低落", "抑郁", "没意思", "没兴趣", "麻木", "提不起劲", "没动力", "想死", "活不下去", "空虚", "绝望", "没有价值", "depressed", "depression", "hopeless", "hopelessness", "no interest", "empty", "worthless", "down all the time"]
   },
   {
     id: "GAD-7",
@@ -74,7 +74,7 @@ export const SCALES: ScaleDefinition[] = [
       if (total <= 14) return "中度焦虑";
       return "重度焦虑";
     },
-    trigger: ["焦虑", "紧张", "担心", "心慌", "停不下来", "害怕", "压力"]
+    trigger: ["焦虑", "紧张", "担心", "心慌", "停不下来", "害怕", "压力", "惊恐", "坐立不安", "anxious", "anxiety", "worry", "worrying", "nervous", "panic", "on edge"]
   },
   {
     id: "ISI",
@@ -97,7 +97,7 @@ export const SCALES: ScaleDefinition[] = [
       if (total <= 21) return "中度临床失眠";
       return "重度临床失眠";
     },
-    trigger: ["失眠", "睡不着", "早醒", "入睡", "熬夜", "半夜醒", "睡眠", "睡", "凌晨", "困"]
+    trigger: ["失眠", "睡不着", "睡不好", "早醒", "入睡", "熬夜", "半夜醒", "睡眠", "睡", "凌晨", "困", "insomnia", "can't sleep", "cannot sleep", "trouble sleeping", "difficulty sleeping", "poor sleep"]
   }
 ];
 
@@ -107,10 +107,12 @@ export function getScaleById(id: ScaleId) {
 
 export function suggestScale(text: string): ScaleId | null {
   if (!text) return null;
-  const normalized = text.toLowerCase();
+  const normalized = text.normalize("NFKC").toLowerCase().replace(/[’‘]/g, "'");
   const ranked = SCALES.map((scale) => ({
     id: scale.id,
-    score: scale.trigger.filter((term) => normalized.includes(term)).length
+    score: scale.trigger.filter((term) => /[a-z]/.test(term)
+      ? new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(normalized)
+      : normalized.includes(term)).length
   }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score);

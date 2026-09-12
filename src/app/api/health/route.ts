@@ -21,23 +21,47 @@ export const dynamic = "force-dynamic";
  * hit an instance that hasn't seen the failures; the `[CHAT_LLM_ALERT]` log line is
  * the complementary signal.
  */
-export function GET() {
+export function GET(request?: Request) {
+  const configuredVersion = process.env.APP_RELEASE_VERSION?.trim();
+  const appVersion = configuredVersion && /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(configuredVersion)
+    ? configuredVersion
+    : APP_VERSION;
+  const configuredCommit = process.env.APP_BUILD_COMMIT ?? process.env.VERCEL_GIT_COMMIT_SHA;
+  const buildCommit = configuredCommit && /^[0-9a-f]{7,40}$/i.test(configuredCommit)
+    ? configuredCommit.toLowerCase()
+    : null;
+  const release = { appVersion, buildCommit };
+
+  // Container/CI liveness checks must not need provider keys or spend API quota.
+  // The default endpoint below remains the configuration/observed-error check.
+  if (request && new URL(request.url).searchParams.get("check") === "liveness") {
+    return Response.json({ ok: true, check: "liveness", ...release }, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
   const kimiConfig = getKimiConfig();
   const kimiConfigured = isKimiConfigured();
   const deepseekConfigured = Boolean(process.env.DEEPSEEK_API_KEY);
   const conversationLlm = getChatLlmHealth();
 
-  const degraded = !kimiConfigured || !conversationLlm.healthy;
-  const okStatus = deepseekConfigured && conversationLlm.healthy;
+  const observedFailure = conversationLlm.healthy === false;
+  const degraded = !deepseekConfigured || !kimiConfigured || observedFailure;
+  const okStatus = deepseekConfigured && !observedFailure;
 
-  const note = !conversationLlm.healthy
-    ? `DEGRADED: conversation LLM failing (${conversationLlm.consecutiveFailures} consecutive fallbacks, ${conversationLlm.recentFailures} in 5m). Check DEEPSEEK_API_KEY / quota / DEEPSEEK_MODEL.`
+  const note = !deepseekConfigured
+    ? "DEGRADED: conversation provider key missing"
+    : observedFailure
+      ? `DEGRADED: conversation LLM failing (${conversationLlm.consecutiveFailures} consecutive fallbacks, ${conversationLlm.recentFailures} in 5m). Check DEEPSEEK_API_KEY / quota / DEEPSEEK_MODEL.`
     : kimiConfigured
-      ? "dual-model active: implicit-risk semantic layer enabled"
+      ? conversationLlm.healthy === true
+        ? "provider configuration present; recent conversation calls observed healthy on this instance"
+        : "provider configuration present; no recent conversation call observed on this instance (provider availability unverified)"
       : `DEGRADED: ${kimiConfig.provider} Kimi key missing — implicit-risk LLM layer OFF (lexicon/regex fail-closed layer still active)`;
 
   const body = {
-    appVersion: APP_VERSION,
+    ...release,
+    check: "configuration-and-observed-errors",
     ok: okStatus,
     implicitRiskLayerActive: kimiConfigured,
     models: {

@@ -36,4 +36,19 @@ describe("suggestScale — clinical priority for comorbid presentations", () => 
   it("no symptom keywords → null", () => {
     expect(suggestScale("今天天气不错，我们去爬山吧")).toBeNull();
   });
+
+  it("uses the same depression priority for English mixed concerns", () => {
+    expect(suggestScale("I feel depressed and I can't sleep")).toBe("PHQ-9");
+    expect(suggestScale("I feel hopeless and anxious")).toBe("PHQ-9");
+  });
+
+  it("supports English anxiety, insomnia and curly apostrophes", () => {
+    expect(suggestScale("I feel anxious and on edge")).toBe("GAD-7");
+    expect(suggestScale("I can’t sleep lately")).toBe("ISI");
+    expect(suggestScale("I have trouble sleeping")).toBe("ISI");
+  });
+
+  it("does not match English fragments inside unrelated words", () => {
+    expect(suggestScale("I was emptying the dishwasher")).toBeNull();
+  });
 });

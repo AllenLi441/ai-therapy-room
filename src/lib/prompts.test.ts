@@ -7,6 +7,23 @@ import { assessRisk } from "./safety";
 import { emptyCaseMap } from "./types";
 
 describe("buildCounselorSystemPrompt", () => {
+  it("describes actual self-check availability and does not invent previous completion", () => {
+    const base = { risk: assessRisk("普通一天"), knowledge: [], turnPlan: defaultTurnPlan() };
+    const noCheck = buildCounselorSystemPrompt(base);
+    expect(noCheck).toContain("本次尚无完成的自评记录");
+    expect(noCheck).toContain("本轮没有提供可用自评按钮");
+    const available = buildCounselorSystemPrompt({ ...base, availableScale: "ISI" });
+    expect(available).toContain("本轮页面有 ISI");
+  });
+
+  it("uses chosen region and age while treating continuation notes as correctable past context", () => {
+    const prompt = buildCounselorSystemPrompt({ risk: assessRisk("普通一天"), knowledge: [], turnPlan: defaultTurnPlan(), language: "en", supportRegion: "cn", ageRange: "minor", continuationNote: "A user-confirmed note about school." });
+    expect(prompt).toContain("用户选择的支持地区：中国大陆");
+    expect(prompt).toContain("用户自选未满18岁");
+    expect(prompt).toContain("本轮用户的更正优先");
+    expect(prompt).toContain("不要仅凭旧笔记升级当前风险");
+    expect(prompt).toContain("A user-confirmed note about school.");
+  });
   it("injects boundaries, profile, safety, knowledge, turn plan, and case map", async () => {
     const prompt = buildCounselorSystemPrompt({
       profile: { nickname: "小林", concern: "焦虑压力", intensity: 7 },

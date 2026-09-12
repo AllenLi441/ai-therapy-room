@@ -3,6 +3,7 @@ import { qdrantDenseSearch } from "./qdrant";
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -12,8 +13,15 @@ function stubQdrantEnv() {
   vi.stubEnv("QDRANT_COLLECTION", "jingshi");
 }
 
+type SearchRequest = {
+  filter: { must: Array<{ key: string; match: { value: string } }> };
+  limit: number;
+  with_payload: boolean;
+};
+type RequestCapture = { body?: SearchRequest };
+
 /** A minimal ok-fetch that records the parsed request body for assertions. */
-function stubFetchOnce(points: unknown[], capture?: { body?: unknown }) {
+function stubFetchOnce(points: unknown[], capture?: RequestCapture) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (_url: string, init: RequestInit) => {
@@ -59,7 +67,7 @@ describe("qdrantDenseSearch — fail-safe contract", () => {
 
   it("happy path: filter pins approved, and the source triple is preserved in the mapped card", async () => {
     stubQdrantEnv();
-    const capture: { body?: any } = {};
+    const capture: RequestCapture = {};
     stubFetchOnce([{ id: 1, score: 0.9, payload: whoPayload }], capture);
 
     const out = await qdrantDenseSearch([0.1, 0.2, 0.3], { limit: 4 });
@@ -67,12 +75,12 @@ describe("qdrantDenseSearch — fail-safe contract", () => {
     expect(out).toHaveLength(1);
 
     // approved-only is always in the filter.
-    expect(capture.body.filter.must).toContainEqual({
+    expect(capture.body?.filter.must).toContainEqual({
       key: "clinicalStatus",
       match: { value: "approved" }
     });
-    expect(capture.body.limit).toBe(4);
-    expect(capture.body.with_payload).toBe(true);
+    expect(capture.body?.limit).toBe(4);
+    expect(capture.body?.with_payload).toBe(true);
 
     // Verifiable source triple survives the round-trip (panel refs unchanged).
     const card = out![0];
@@ -85,12 +93,12 @@ describe("qdrantDenseSearch — fail-safe contract", () => {
 
   it("passes lang and trustTier into the filter when given", async () => {
     stubQdrantEnv();
-    const capture: { body?: any } = {};
+    const capture: RequestCapture = {};
     stubFetchOnce([{ id: 1, payload: whoPayload }], capture);
 
     await qdrantDenseSearch([0.1], { limit: 3, lang: "zh", trustTier: "authoritative" });
-    expect(capture.body.filter.must).toContainEqual({ key: "lang", match: { value: "zh" } });
-    expect(capture.body.filter.must).toContainEqual({
+    expect(capture.body?.filter.must).toContainEqual({ key: "lang", match: { value: "zh" } });
+    expect(capture.body?.filter.must).toContainEqual({
       key: "trustTier",
       match: { value: "authoritative" }
     });

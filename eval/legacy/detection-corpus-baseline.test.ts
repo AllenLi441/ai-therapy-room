@@ -1,8 +1,9 @@
+// ARCHIVED: missing original fixture(s). See README.md here.
 import { describe, it, expect } from "vitest";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { assessConversationRisk, getDangerLevel } from "./safety";
-import type { ChatMessage } from "./types";
+import { assessConversationRisk, getDangerLevel } from "../../src/lib/safety";
+import type { ChatMessage } from "../../src/lib/types";
 
 /**
  * P0 baseline harness. Runs the labeled seed corpus through the DETERMINISTIC

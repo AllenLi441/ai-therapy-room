@@ -1,13 +1,13 @@
 {
   "name": "ai-therapy-room",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "dataset:studio": "next dev -p 3020",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint src ops scripts/ci *.config.*",
     "eval:therapy": "node scripts/eval-therapy.mjs",
     "eval:find-fp-fn": "node scripts/find-fp-fn.mjs",
     "w1:harvest-logs": "node scripts/harvest-decision-logs.mjs",
@@ -16,7 +16,7 @@
     "w1:loop": "npm run eval:find-fp-fn && npm run w1:preannotate && npm run w1:append-seeds",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ratchet": "node scripts/ci/test-ratchet.mjs",
+    "test:ratchet": "vitest run",
     "kb:embed": "node scripts/build-knowledge-embeddings.mjs",
     "eval:smoke": "tsx eval/adapters/smoke.ts",
     "eval:validate": "tsx eval/validate-datasets.ts",
@@ -25,7 +25,13 @@
     "eval:human-prepare": "node eval/human-study/prepare.mjs",
     "eval:human-selftest": "node eval/human-study/analyze.mjs --selftest",
     "eval:human-apply": "node eval/human-study/apply-human-gold.mjs --apply",
-    "eval:remediation-check": "node eval/verify-remediation.mjs"
+    "eval:remediation-check": "node eval/verify-remediation.mjs",
+    "typecheck": "next typegen && tsc --noEmit",
+    "check:release": "node scripts/ci/check-release.mjs",
+    "verify": "npm run check:release && npm run lint && npm run typecheck && npm test && npm run build && npm run smoke:build",
+    "smoke:build": "node ops/smoke-build.mjs",
+    "release:check": "node ops/check-deployment.mjs",
+    "test:legacy": "node scripts/ci/test-legacy.mjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",
@@ -35,13 +41,19 @@
     "undici": "8.7.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
     "@types/node": "25.6.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "^4.1.5",
     "autoprefixer": "10.4.20",
+    "axe-core": "4.13.0",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "jsdom": "29.1.1",
     "postcss": "8.5.10",
     "tailwindcss": "3.4.17",
     "tsx": "^4.23.0",
@@ -50,5 +62,8 @@
   },
   "overrides": {
     "postcss": "8.5.10"
+  },
+  "engines": {
+    "node": ">=24.0.0 <25"
   }
 }

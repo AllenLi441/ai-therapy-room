@@ -322,12 +322,14 @@ const MEDICAL_RED_FLAG_RULES: RiskRule[] = [
     terms: [
       "胸痛",
       "胸口痛",
+      "胸口剧痛",
       "胸闷",
       "昏厥",
       "晕倒",
       "意识模糊",
       "持续呼吸困难",
       "呼吸困难",
+      "喘不上气",
       "第一次发作",
       "首次发作",
       "心脏病",
@@ -335,6 +337,7 @@ const MEDICAL_RED_FLAG_RULES: RiskRule[] = [
       "剧烈头痛",
       "一侧无力",
       "说话不清",
+      "话也说不清",
       "怀孕"
     ]
   }
@@ -360,8 +363,81 @@ const LEVEL_SCORE: Record<RiskLevel, number> = {
   high: 3
 };
 
+const TRADITIONAL_RISK_CHARACTERS: Record<string, string> = {
+  殺: "杀", 輕: "轻", 結: "结", 樓: "楼", 沒: "没", 著: "着", 覺: "觉", 傷: "伤", 藥: "药", 殘: "残",
+  繩: "绳", 槍: "枪", 頭: "头", 燒: "烧", 氣: "气", 會: "会", 個: "个", 這: "这", 們: "们", 後: "后", 遺: "遗", 書: "书"
+};
 function normalizeText(text: string) {
-  return text.toLowerCase().replace(/\s+/g, "");
+  return text.normalize("NFKC").toLowerCase()
+    .replace(/[\u200b-\u200d\u2060\ufeff'’‘]/g, "")
+    .replace(/[殺輕結樓沒著覺傷藥殘繩槍頭燒氣會個這們後遺書]/g, (char) => TRADITIONAL_RISK_CHARACTERS[char])
+    // Dashes/middle dots inside CJK words are obfuscation. Sentence punctuation
+    // stays intact so “结束。生命在于运动” never becomes a danger token.
+    .replace(/(?<=[\u3400-\u9fff])[-‐‑‒–—―·・~*_]+(?=[\u3400-\u9fff])/g, "")
+    .replace(/\s+/g, "");
+}
+
+// Keep word boundaries while interpreting English negation. Strip only a denial
+// bound to its own action; a separate statement of intent must remain visible.
+function englishWithoutDenials(text: string): string {
+  return text.normalize("NFKC").toLowerCase().replace(/[’‘]/g, "'")
+    .replace(/\bi\s+(?:do\s+not|don't|dont|never)\s+(?:want|intend|plan)\s+to\s+(?:(?:kill|hurt|harm|cut)\s+myself|(?:end|take)\s+my\s+life|die)\b/g, " ")
+    .replace(/\bi\s+(?:will\s+not|won't|wont)\s+(?:kill|hurt|harm|cut)\s+myself\b/g, " ")
+    .replace(/\bi\s+have\s+no\s+(?:thoughts|plans|intention)\s+of\s+(?:suicide|(?:killing|hurting|harming|cutting)\s+myself)\b/g, " ");
+}
+
+function englishIntentMatches(text: string): ReturnType<typeof collectMatches> {
+  const english = englishWithoutDenials(text);
+  const deathWish = /\bi\s+(?:do\s+not|don't|dont)\s+want\s+to\s+(?:live|be\s+alive)(?:\s+(?:anymore|any\s+longer))?(?=\s*(?:[.!?,;:]|$))/.test(english) || /\bi(?:'m|\s+am)\s+suicidal\b/.test(english);
+  // Pills nearby alone may be ordinary medication use. It takes an independent
+  // first-person finality/loss-of-control statement to promote this combination.
+  const means = /\b(?:pills|a\s+knife|a\s+gun)\b[^.!?\n]{0,40}\b(?:next\s+to\s+me|beside\s+me|in\s+my\s+hand)\b/.test(english);
+  const intent = /\bi(?:'m|\s+am)\s+done\b|\bi\s+(?:can't|cannot|can\s+not)\s+(?:stop|control)\s+myself\b/.test(english);
+  if (!deathWish && !(means && intent)) return [];
+  return [{ category: "suicide", level: "high", term: deathWish ? "explicit English death wish" : "means with stated intent" }];
+}
+
+// Objective combinations missing from the literal lexicon. Require both the
+// means/action and its dangerous framing; ordinary travel or medication use
+// must not inherit the risk of a nearby keyword.
+function contextualDangerMatches(text: string): ReturnType<typeof collectMatches> {
+  // Scope reporting/denial to its own statement. A later first-person statement
+  // or contrast remains assessable: a news quotation must not hide "但我也…".
+  const n = normalizeText(text)
+    .split(/(?<=[。！？!?;；])|但是|可是|然而|不过|但(?=我|现在)|(?<=[,，])(?=我)/)
+    // "我看新闻后…" describes the speaker's subsequent experience, not a
+    // quotation of what happened in the news. Keep that causal continuation.
+    .filter((statement) => !/(?:我(?:只是|正在|在)?(?:看|读|讲|说)(?:到)?(?:新闻|报道|小说|电影|故事)(?!(?:之|以)?后)|(?:新闻|报道|小说|电影|故事)(?:里|中|说|写|讲))/.test(statement))
+    .map((statement) => statement
+      .replace(/(?:我)?(?:没有|没|并未|从未|不会|不打算|不准备)(?:把)?(?:整瓶|半瓶|大半瓶)(?:安眠药|药片?|布洛芬|对乙酰氨基酚|止痛药|抗抑郁药)[^。！？,，]{0,6}(?:吞|吃|服)(?:下|掉|了)/g, "")
+      .replace(/(?:猎枪|枪)[^。！？,，]{0,6}(?:没有|没|并未|还没)(?:有)?(?:上膛|装好弹)/g, ""))
+    .join("。");
+  const matches: ReturnType<typeof collectMatches> = [];
+  const add = (category: RiskCategory, level: RiskLevel, term: string) => matches.push({ category, level, term, flags: category === "suicide" ? ["suicide_concern"] : [] });
+  const medication = /安眠药|药片|布洛芬|对乙酰氨基酚|止痛药|抗抑郁药|一瓶药|整瓶药|半瓶药/.test(n);
+  if (/(?:整瓶|半瓶|大半瓶)(?:安眠药|药片?|布洛芬|对乙酰氨基酚|止痛药|抗抑郁药)[^。！？]{0,6}(?:吞|吃|服)(?:下|掉|了)/.test(n)) add("suicide", "high", "整瓶药物摄入");
+  if (medication && /吃多少|吞多少|服多少|多少片|多少安眠药|几片/.test(n) && /会死|致死|够死/.test(n)) add("suicide", "high", "药物致死量询问");
+  if (/这(?:个)?(?:是不是|算不算|算是)致死量/.test(n)) add("suicide", "high", "确认眼前剂量是否致死");
+  if (/安眠药/.test(n) && /数好了/.test(n) && /够不够/.test(n)) add("suicide", "high", "已清点药物并询问是否足够");
+  if (medication && /吃多少|吞多少|服多少/.test(n) && /彻底解决|结束一切/.test(n)) add("suicide", "medium", "药量与结束意图");
+  if (/(?:猎枪|枪)[^。！？]{0,16}(?:子弹[^。！？]{0,6}上好了|上膛|装好弹)/.test(n)) add("suicide", "high", "已上膛枪支");
+  const preparedHanging = /绳(?:子)?[^。！？]{0,8}(?:挂在|系在|绑在)(?:房梁|横梁)[^。！？]{0,8}(?:系好了|绑好了|打好结)/.test(n);
+  if (preparedHanging && /我(?:已经)?准备好了/.test(n)) add("suicide", "high", "已布置悬挂绳索并表示准备就绪");
+  if (/烟头[^。！？]{0,5}(?:烫|烧)[^。！？]{0,8}(?:自己|我的)/.test(n)) add("self_harm", "high", "用烟头烫伤自己");
+  if (/(?:拿|用)[^。！？]{0,3}(?:皮带|棍子|电线)[^。！？]{0,3}(?:抽|打)我/.test(n)) add("abuse", "high", "被工具殴打");
+  // Require a human target: wishing anxiety or problems would disappear is not
+  // an intent to harm another person.
+  const humanTarget = "(?:(?:那个|这个|我的|那位|这位)?(?:老师|同学|同事|老板|邻居|前任|丈夫|妻子|父亲|母亲|爸爸|妈妈|孩子|男人|女人|人)|他们|她们|他|她|对方)";
+  if (new RegExp(`(?:我[^。！？不没]{0,8}(?:想|要)|想要)让${humanTarget}(?:永远消失|再也醒不来)`).test(n)) add("harm_to_others", "high", "对他人的消灭意图");
+  const weaponCarried = /(?:刀|匕首)(?:就|还)?在(?:我)?(?:包里|手里|身上)/.test(n);
+  const atTarget = /在(?:他|她|对方)(?:家|楼下|门口)/.test(n);
+  const confrontationIntent = /(?:今天|一定|必须)[^。！？]{0,8}(?:了断|报仇|付出代价)/.test(n);
+  if (weaponCarried && atTarget && confrontationIntent) add("harm_to_others", "high", "持械到达对方所在地并表示迫近行动");
+  const means = /(?:药|刀|绳)(?:就|还)?在(?:我)?(?:身边|手边|旁边|桌子上)|(?:站在|就在|现在在)(?:楼顶|天台|桥边)/.test(n);
+  if (means && /忍不住|控制不住|撑不下去/.test(n)) add("suicide", "medium", "可用手段与失控信号");
+  if (/(?:楼顶|天台|桥边)/.test(n) && /不知道为什么还要|活不下去|撑不下去|不想活/.test(n)) add("suicide", "high", "危险位置与绝望信号");
+  if (/(?:如果(?:哪天)?我不在了|万一我出事了)/.test(n) && /(?:猫|狗|孩子)[^。！？]{0,18}(?:照顾|拜托|托付)/.test(n)) add("suicide", "medium", "告别情境下托付照顾");
+  return matches;
 }
 
 function collectMatches(text: string, rules: RiskRule[]) {
@@ -417,22 +493,32 @@ function filterNegatedSuicide(
   matches: ReturnType<typeof collectMatches>
 ): ReturnType<typeof collectMatches> {
   const normalized = normalizeText(text);
+  const english = normalizeText(englishWithoutDenials(text));
   return matches.filter((m) => {
+    if (m.flags?.includes("medical_red_flag")) {
+      return stripDenials(normalized, m.term).includes(m.term);
+    }
     if (m.term === "想死" || m.term === "想死了") return hasRealXiangSi(normalized);
     if (m.term === "自杀") return hasRealZiSha(normalized);
+    if (["伤害自己", "自残", "割自己", "划自己"].includes(m.term)) {
+      return stripDenials(normalized, m.term).includes(m.term);
+    }
+    if (/^[a-z ]+$/i.test(m.term) && (m.category === "suicide" || m.category === "self_harm")) {
+      return english.includes(normalizeText(m.term));
+    }
     return true;
   });
 }
 
 export function assessRisk(text: string): RiskAssessment {
-  const matches = filterNegatedSuicide(text, [
+  const matches = [...filterNegatedSuicide(text, [
     ...collectMatches(text, HIGH_RISK_RULES),
     ...collectMatches(text, MEDICATION_REQUEST_RULES),
     ...collectMatches(text, DIAGNOSIS_REQUEST_RULES),
     ...collectMatches(text, MEDICAL_RED_FLAG_RULES),
     ...collectMatches(text, MEDIUM_RISK_RULES),
     ...collectMatches(text, LOW_RISK_RULES)
-  ]);
+  ]), ...englishIntentMatches(text), ...contextualDangerMatches(text)];
 
   const base: RiskAssessment =
     matches.length === 0
@@ -451,6 +537,7 @@ export function assessRisk(text: string): RiskAssessment {
           const categories = [...new Set(matches.map((m) => m.category))];
           const matchedTerms = [...new Set(matches.map((m) => m.term))];
           const flags = [...new Set(matches.flatMap((m) => m.flags ?? []))];
+          if (categories.includes("suicide") && !flags.includes("suicide_concern")) flags.push("suicide_concern");
           return {
             level,
             categories,
@@ -1007,6 +1094,7 @@ export function detectActiveCrisisFromHistory(messages: ChatMessage[]): {
   // immediately, because assessConversationRisk re-evaluates every turn.
   const explicitlySafe =
     !safetyAck &&
+    !assessRisk(lastUserContent).shouldEscalate &&
     !hasHardSelfHarmOrSuicideCore(lastNormalized) &&
     // P4-A3: a calm affirmation cannot release crisis while a lethal means is still
     // stated as on-hand this turn ("我好多了，药还在床边"); disposal carve-out inside.
@@ -1102,6 +1190,11 @@ export function classifyCrisisCheckReply(
     /^(?:我选|选|回复?|答案?是?|answer:?\s*|option\s*|number\s*)?\s*([1-4])\b/i
   );
   if (!match) return null;
+  const remainder = reply.slice(match[0].length).replace(/^[\s=：:、,，.。·-]+/, "").trim();
+  // Only accept a bare choice or one of the short option labels, not an unrelated
+  // story that happens to begin with a number.
+  if (remainder && !/^(?:我)?(?:现在)?(?:已经移开危险物品|已移开危险物品|身边有人|准备打电话|现在做不到|做不到|安全但很痛苦|有伤害自己的念头但没有计划|有计划或工具在身边|不确定)$/.test(remainder) &&
+      !/^(?:i\s+)?(?:am\s+)?(?:safe but in a lot of pain|moved dangerous items away|someone is with me|about to call|cannot do this right now|not sure)$/i.test(remainder)) return null;
   const digit = Number(match[1]) as 1 | 2 | 3 | 4;
 
   const isCrisisActionScale =
@@ -1167,7 +1260,16 @@ export function createGentleCheckResponse(cue: string | undefined, language: App
     "如果愿意，可以多和我聊一句最近最沉的是什么；如果暂时不想说，我们就慢慢来，我在这儿。"
   ].join("\n");
 }
-export function createMinorSupportLine(language: AppLanguage = "zh"): string {
+export function createMinorSupportLine(language: AppLanguage = "zh", supportRegion?: "cn" | "us" | "uk" | "other"): string {
+  if (supportRegion) {
+    const resource = supportRegion === "cn" ? `${CN_SUPPLEMENTAL.youth} / ${PSYCH}`
+      : supportRegion === "us" ? INTL_RESOURCES.usCrisis
+      : supportRegion === "uk" ? INTL_RESOURCES.ukSamaritans
+      : INTL_RESOURCES.finder;
+    return language === "en"
+      ? `If you are under 18, reach a trusted adult who can support you in person, such as a safe relative, school counselor or teacher. If a caregiver is causing harm, choose another safe adult. You can also use the local support links on this page: ${resource}.`
+      : `如果你未满18岁，请找一位信任的成年人在现实里支持你，例如安全的亲属、学校心理老师或老师。若照顾者正在伤害你，可以选择其他安全的成年人。也可使用页面的当地支持入口：${resource}。`;
+  }
   if (language === "en") {
     return [
       "If you're still in school or under 18: alongside everything above, please reach a trusted adult as soon as you can — a parent, a relative you trust, or your school counselor or teacher. You deserve to have someone with you in person.",

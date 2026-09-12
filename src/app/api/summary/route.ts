@@ -1,7 +1,6 @@
 import { buildDeepSeekPayload, generateDeepSeekText } from "@/lib/deepseek";
-import { resolveDeepSeekModel, type DeepSeekModelId } from "@/lib/model-options";
 import { cleanAssistantText } from "@/lib/output-style";
-import { buildSummaryPrompt, createHeuristicSummary } from "@/lib/prompts";
+import { buildSummaryPrompt } from "@/lib/prompts";
 import { assessRisk } from "@/lib/safety";
 import type { AppLanguage, CaseMap, ChatMessage, IntakeProfile, ScaleResult } from "@/lib/types";
 
@@ -41,7 +40,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const messages = sanitizeMessages(body.messages ?? []);
+  if (!body || typeof body !== "object" || !Array.isArray(body.messages) || body.messages.length > 120 || body.messages.some((message) => !message || typeof message.content !== "string" || !["user", "assistant"].includes(message.role))) {
+    return Response.json({ error: "Invalid messages" }, { status: 400 });
+  }
+  const messages = sanitizeMessages(body.messages);
   const language: AppLanguage = body.language === "en" ? "en" : "zh";
 
   if (messages.length === 0) {
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const risk = assessRisk(messages.map((message) => message.content).join("\n"));
+  const risk = assessRisk(messages.filter((message) => message.role === "user").map((message) => message.content).join("\n"));
   const systemPrompt =
     language === "en"
       ? "You are a cautious, concise psychological support session note assistant. Write in English."
@@ -74,8 +76,10 @@ export async function POST(request: Request) {
       })
     );
 
-    return Response.json({ summary: cleanAssistantText(summary) || createHeuristicSummary(messages, risk, language) });
+    const cleaned = cleanAssistantText(summary);
+    if (!cleaned) throw new Error("empty_summary");
+    return Response.json({ summary: cleaned });
   } catch {
-    return Response.json({ summary: createHeuristicSummary(messages, risk, language) });
+    return Response.json({ error: "summary_unavailable", retryable: true }, { status: 503 });
   }
 }

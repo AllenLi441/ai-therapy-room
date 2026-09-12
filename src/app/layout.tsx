@@ -1,18 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
+import "./noto-serif-sc.css";
 import { APP_VERSION } from "@/lib/version";
 
-// 衬线字标：品牌字「静室」、陪伴者名、入口问候语、各 Sheet 标题（globals.css 里的 --font-serif）。
-// 构建期自托管，运行时零外部请求；CJK 字形始终随字重文件下发，latin 子集只为英文模式下
-// 同一批衬线选区（如 About Anyu）补齐拉丁字形。
-const notoSerifSC = Noto_Serif_SC({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  display: "swap",
-  preload: false,
-  variable: "--font-serif-sc"
-});
+// Original Noto Serif SC web subsets ship locally with their OFL license.
+// No font download is required during build or from a third-party origin at runtime.
 
 export const metadata: Metadata = {
   title: "静室 · JÌNGSHÌ — AI 心理陪伴室",
@@ -33,14 +25,8 @@ const initScript = `(function(){try{var t=localStorage.getItem('js_theme');docum
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh" suppressHydrationWarning className={notoSerifSC.variable}>
+    <html lang="zh" suppressHydrationWarning className="noto-serif-sc">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <script dangerouslySetInnerHTML={{ __html: initScript }} />
       </head>
       <body>

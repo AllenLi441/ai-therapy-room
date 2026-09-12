@@ -15,6 +15,10 @@ describe("EN safety — negated reassurance is NOT a crisis", () => {
     "I'm not suicidal",
     "I have no thoughts of suicide",
     "I don't want to hurt myself",
+    "I don’t want to harm myself",
+    "I won't cut myself",
+    "I don't want to die",
+    "I do not want to end my life",
   ]) {
     it(`safe: ${text}`, () => {
       expect(assessRisk(text).level).not.toBe("high");
@@ -31,6 +35,13 @@ describe("EN safety — explicit suicidal ideation MUST fire", () => {
     "I don't want to live any longer",
     "I don't want to be alive anymore",
     "I have pills next to me and I'm done",
+    "I don’t want to live anymore",
+    "I don't want to live.",
+    "I don't want to be alive, it hurts too much.",
+    "I'm suicidal",
+    "I don't want to kill myself, but I want to kill myself tonight",
+    "I have no thoughts of suicide, but I will kill myself tonight",
+    "I don't want to hurt myself, but the pills are next to me and I can't control myself",
   ]) {
     it(`danger: ${text}`, () => {
       expect(assessRisk(text).level).toBe("high");
@@ -45,6 +56,8 @@ describe("EN safety — benign sentences must NOT false-trigger", () => {
     "I don't want to kill this process",
     "I don't want to be alive at 6am for this meeting",
     "I've been so stressed lately and can't sleep",
+    "I have pills next to me for my prescribed treatment",
+    "I'm done with work; my notebook is next to me",
   ]) {
     it(`benign: ${text}`, () => {
       expect(assessRisk(text).level).not.toBe("high");

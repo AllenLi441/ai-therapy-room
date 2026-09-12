@@ -1,0 +1,15 @@
+# Allow only build inputs. Secrets, logs, research datasets and local captures
+# never enter the Docker build context.
+**
+!package.json
+!package-lock.json
+!next.config.mjs
+!tsconfig.json
+!src/
+!src/**
+!public/
+!public/**
+src/**/*.test.ts
+src/**/*.test.tsx
+src/test/
+src/**/__snapshots__/

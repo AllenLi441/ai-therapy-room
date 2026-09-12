@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Ic } from "./icons";
 import { STR, personaById, type Lang, type Media, type Message, type Persona } from "./data";
 import { CN_PRIMARY_HOTLINES, CN_SUPPLEMENTAL, INTL_RESOURCES } from "@/lib/crisis-resources";
+import { MAX_IMAGE_BYTES } from "@/lib/media-limits";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -124,7 +125,7 @@ function MsgDelete({ lang, onDelete }: { lang: Lang; onDelete: () => void }) {
       onClick={click}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      aria-label={STR[lang].msg_delete}
+      aria-label={confirming ? STR[lang].msg_delete_confirm : STR[lang].msg_delete}
       aria-live={confirming ? "polite" : undefined}
     >
       {confirming ? STR[lang].msg_delete_confirm : <Ic.trash />}
@@ -184,22 +185,24 @@ export function Avatar({ size = 34, glow = false, className = "" }: { size?: num
   return <Presence size={size} glow={glow} className={className} />;
 }
 
-export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase }: {
+export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase, onSupport }: {
   lang: Lang; theme: string; persona: Persona;
   onTheme: () => void; onLang: () => void; onPersona: () => void; onCase: () => void;
+  onSupport?: () => void;
 }) {
   const t = STR[lang];
   return (
     <header className="topbar">
       <div className="brand"><span className="brand-name">静室</span></div>
       <div className="topbar-spacer" />
+      {onSupport && <button className="support-entry" onClick={onSupport} aria-label={t.support_title} title={t.support_title}><span className="support-entry-full">{t.support_title}</span><span className="support-entry-short" aria-hidden="true">{lang === "zh" ? "支持" : "Support"}</span></button>}
       <button className="persona-chip" onClick={onPersona} aria-label={t.about_title}>
         <Avatar size={26} />
         <span className="persona-chip-name hide-sm">{persona.name[lang]}</span>
       </button>
-      <button className="icon-btn" onClick={onCase} title={t.case_title}><Ic.insight /></button>
-      <button className="icon-btn" onClick={onLang} title="中 / EN" aria-label="language"><Ic.lang /></button>
-      <button className="icon-btn" onClick={onTheme} aria-label="theme">{theme === "dark" ? <Ic.sun /> : <Ic.moon />}</button>
+      <button className="icon-btn" onClick={onCase} title={t.case_title} aria-label={t.case_title}><Ic.insight /></button>
+      <button className="icon-btn" onClick={onLang} title="中 / EN" aria-label={t.language_label}><Ic.lang /></button>
+      <button className="icon-btn" onClick={onTheme} aria-label={t.theme_label}>{theme === "dark" ? <Ic.sun /> : <Ic.moon />}</button>
     </header>
   );
 }
@@ -209,7 +212,7 @@ export function PrivacyRibbon({ lang, onDelete }: { lang: Lang; onDelete: () => 
   return (
     <div className="privacy">
       <Ic.lock />
-      <span><b>{t.privacy_a}</b> · {t.privacy_b} <span className="del" onClick={onDelete}>{t.privacy_del}</span></span>
+      <span><b>{t.privacy_a}</b> · {t.privacy_b} <button className="del" onClick={onDelete}>{t.privacy_del}</button></span>
     </div>
   );
 }
@@ -347,11 +350,12 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
             </div>
           </details>
         )}
-        {m.errored && onRetry && (
+        {m.errored && m.retryable !== false && onRetry && (
           <button className="retry-btn" onClick={() => onRetry(m.id)}>
             <Ic.refresh className="retry-ico" /> {STR[lang].retry}
           </button>
         )}
+        {m.errored && m.retryable === false && <p className="retry-note">{m.hadImages ? (lang === "zh" ? "请重新添加图片后发送。" : "Please attach the image again and send it.") : (lang === "zh" ? "请重新发送这条消息。" : "Please send this message again.")}</p>}
       </div>
     </div>
   );
@@ -419,14 +423,18 @@ export function Stream({ messages, persona, lang, onRetry, onFeedback, onDelete 
   );
 }
 
-export function Composer({ lang, pace, busy, onSend, onPace }: {
+export function Composer({ lang, pace, busy, onSend, onPace, onStop }: {
   lang: Lang; pace: "deep" | "fast"; busy: boolean; tone?: string;
   onSend: (text: string, atts: Media[]) => void; onPace: (p: "deep" | "fast") => void;
+  onStop?: () => void;
 }) {
   const t = STR[lang];
   const [val, setVal] = useState("");
   const [atts, setAtts] = useState<Media[]>([]);
   const [attErr, setAttErr] = useState("");
+  const [readingImages, setReadingImages] = useState(false);
+  const readingImagesRef = useRef(false);
+  const composing = useRef(false);
   const ta = useRef<HTMLTextAreaElement>(null);
   const imgInput = useRef<HTMLInputElement>(null);
 
@@ -434,40 +442,41 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
     const el = ta.current; if (!el) return;
     el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 168) + "px";
   };
-  useEffect(grow, [val]);
-
-  // auto-dismiss the attach error after a few seconds
+  useEffect(grow, [val, lang]);
   useEffect(() => {
-    if (!attErr) return;
-    const id = setTimeout(() => setAttErr(""), 4000);
-    return () => clearTimeout(id);
-  }, [attErr]);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(grow) : null;
+    if (ta.current && observer) observer.observe(ta.current);
+    window.addEventListener("resize", grow);
+    return () => { observer?.disconnect(); window.removeEventListener("resize", grow); };
+  }, []);
 
   // Image only — Kimi vision takes images, not video. Guard count, size and type,
   // and tell the user when something is rejected (silently dropping files is worse).
   const addImages = async (files: FileList | null) => {
-    if (!files) return;
+    if (!files || readingImagesRef.current) return;
     const MAX_IMAGES = 6;
-    const MAX_MB = 8;
+    const MAX_MB = MAX_IMAGE_BYTES / (1024 * 1024);
     const room = MAX_IMAGES - atts.length;
     const accepted: File[] = [];
     let err = "";
     for (const f of Array.from(files)) {
       if (accepted.length >= room) { err = t.att_too_many.replace("{n}", String(MAX_IMAGES)); break; }
       if (!f.type.startsWith("image/")) { err = t.att_not_image; continue; }
-      if (f.size > MAX_MB * 1024 * 1024) { err = t.att_too_big.replace("{mb}", String(MAX_MB)); continue; }
+      if (f.size > MAX_IMAGE_BYTES) { err = t.att_too_big.replace("{mb}", String(MAX_MB)); continue; }
       accepted.push(f);
     }
     setAttErr(err);
     if (!accepted.length) return;
     // base64 data URL — used for both display AND /api/vision (Kimi).
-    const next: Media[] = await Promise.all(accepted.map(async (f) => ({
-      id: Math.random().toString(36).slice(2),
-      type: "image" as const,
-      url: await fileToDataUrl(f),
-      name: f.name
-    })));
-    setAtts((a) => [...a, ...next]);
+    readingImagesRef.current = true; setReadingImages(true);
+    try {
+      const next: Media[] = await Promise.all(accepted.map(async (f) => ({
+        id: Math.random().toString(36).slice(2), type: "image" as const,
+        url: await fileToDataUrl(f), name: f.name
+      })));
+      setAtts((a) => [...a, ...next].slice(0, MAX_IMAGES));
+    } catch { setAttErr(t.att_read_failed); }
+    finally { readingImagesRef.current = false; setReadingImages(false); }
   };
   const removeAtt = (id: string) => setAtts((a) => a.filter((x) => x.id !== id));
 
@@ -477,7 +486,7 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
   const WARN_CHARS = 3800;
   const overLimit = val.length > MAX_CHARS;
   const nearLimit = val.length > WARN_CHARS;
-  const canSend = (val.trim() || atts.length > 0) && !busy && !overLimit;
+  const canSend = (val.trim() || atts.length > 0) && !busy && !overLimit && !readingImages;
   const submit = () => {
     if (!canSend) return;
     onSend(val.trim(), atts);
@@ -485,11 +494,13 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
     requestAnimationFrame(() => { if (ta.current) ta.current.style.height = "auto"; });
   };
   const onKey = (e: React.KeyboardEvent) => {
+    if (composing.current || e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
   };
   return (
     <div className="composer-zone">
-      {attErr && <div className="attach-err" role="status">{attErr}</div>}
+      {attErr && <div className="attach-err" role="alert"><span>{attErr}</span><button onClick={() => setAttErr("")} aria-label={t.att_error_close}><Ic.close /></button></div>}
+      {readingImages && <div role="status">{lang === "zh" ? "正在读取图片…" : "Reading images…"}</div>}
       {val.length > 0 && (
         <div
           className={"len-warn" + (overLimit ? " over" : nearLimit ? " warn" : "")}
@@ -503,24 +514,24 @@ export function Composer({ lang, pace, busy, onSend, onPace }: {
           {atts.map((a) => (
             <div key={a.id} className="attach-thumb">
               <img src={a.url} alt={a.name} />
-              <button className="thumb-x" onClick={() => removeAtt(a.id)} aria-label="remove"><Ic.close /></button>
+              <button className="thumb-x" onClick={() => removeAtt(a.id)} aria-label={`${t.att_remove}${a.name ? ": " + a.name : ""}`}><Ic.close /></button>
             </div>
           ))}
         </div>
       )}
       <div className="composer">
         <div className="attach-wrap">
-          <button className="tool-btn" onClick={() => imgInput.current?.click()} aria-label={t.import_image} title={t.import_image}><Ic.plus /></button>
-          <input ref={imgInput} type="file" accept="image/*" multiple hidden onChange={(e) => { void addImages(e.target.files); e.target.value = ""; }} />
+          <button className="tool-btn" disabled={readingImages} onClick={() => imgInput.current?.click()} aria-label={t.import_image} title={t.import_image}><Ic.plus /></button>
+          <input ref={imgInput} type="file" accept="image/*" multiple hidden aria-label={t.import_image} onChange={(e) => { void addImages(e.target.files); e.target.value = ""; }} />
         </div>
-        <textarea ref={ta} value={val} rows={1} onChange={(e) => setVal(e.target.value)} onKeyDown={onKey} placeholder={t.placeholder} aria-label={t.placeholder} />
-        <button className="send-btn" onClick={submit} disabled={!canSend} aria-label={t.send}><Ic.send /></button>
+        <textarea ref={ta} value={val} rows={1} onChange={(e) => setVal(e.target.value)} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} onKeyDown={onKey} placeholder={t.placeholder} aria-label={t.placeholder} />
+        {busy && onStop ? <button className="send-btn stop-btn" onClick={onStop} aria-label={lang === "zh" ? "停止回应" : "Stop reply"}><Ic.close /></button> : <button className="send-btn" onClick={submit} disabled={!canSend} aria-label={t.send}><Ic.send /></button>}
       </div>
       <div className="composer-meta">
         <span className="disclaimer"><Ic.heart style={{ color: "var(--ink-3)" }} />{t.disclaimer}</span>
-        <div className="pace-toggle" role="group" aria-label="pace" title={t.pace_hint}>
-          <button className={pace === "deep" ? "on" : ""} onClick={() => onPace("deep")} title={t.pace_hint}>{t.pace_deep}</button>
-          <button className={pace === "fast" ? "on" : ""} onClick={() => onPace("fast")} title={t.pace_hint}>{t.pace_fast}</button>
+        <div className="pace-toggle" role="group" aria-label={lang === "zh" ? "回应方式" : "Reply mode"} title={t.pace_hint}>
+          <button className={pace === "deep" ? "on" : ""} aria-pressed={pace === "deep"} onClick={() => onPace("deep")} title={t.pace_hint}>{t.pace_deep}</button>
+          <button className={pace === "fast" ? "on" : ""} aria-pressed={pace === "fast"} onClick={() => onPace("fast")} title={t.pace_hint}>{t.pace_fast}</button>
         </div>
       </div>
     </div>

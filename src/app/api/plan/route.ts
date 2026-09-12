@@ -21,6 +21,7 @@ type PlanRequest = {
   consultGoal?: ConsultGoal | null;
   personaId?: PersonaId;
   crisisModeActive?: boolean;
+  language?: "zh" | "en";
 };
 
 export async function POST(request: Request) {
@@ -32,7 +33,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const messages = sanitizeConversation(body.messages ?? []);
+  if (!body || typeof body !== "object" || !Array.isArray(body.messages) || body.messages.length > 120 || body.messages.some((message) => !message || typeof message.content !== "string" || !["user", "assistant"].includes(message.role))) {
+    return Response.json({ error: "Invalid messages" }, { status: 400 });
+  }
+  const messages = sanitizeConversation(body.messages);
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
 
   if (!latestUserMessage) {
@@ -43,6 +47,7 @@ export async function POST(request: Request) {
   const risk = body.crisisModeActive ? activateCrisisSessionRisk(baseRisk) : baseRisk;
   const persona = resolvePersona(body.personaId);
 
+  try {
   const plan = await generateSessionPlan({
     profile: body.profile,
     messages,
@@ -50,7 +55,9 @@ export async function POST(request: Request) {
     scaleResults: body.scaleResults,
     risk,
     consultGoal: body.consultGoal ?? null,
-    persona
+    persona,
+    language: body.language === "en" ? "en" : "zh",
+    requireFresh: true,
   });
 
   return Response.json({
@@ -63,4 +70,7 @@ export async function POST(request: Request) {
       categories: risk.categories
     }
   });
+  } catch {
+    return Response.json({ error: "plan_unavailable", retryable: true }, { status: 503 });
+  }
 }

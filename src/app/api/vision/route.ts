@@ -1,5 +1,6 @@
 import { describeImageWithKimi, isKimiConfigured } from "@/lib/kimi";
 import { checkRateLimit, rateLimitResponse, readRateLimitEnv } from "@/lib/rate-limit";
+import { MAX_IMAGE_BYTES, MAX_IMAGE_BASE64_CHARS, MAX_VISION_REQUEST_BYTES } from "@/lib/media-limits";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -17,9 +18,6 @@ type VisionRequest = {
   prompt?: string;
 };
 
-// ~6MB image → ~8MB as base64. Guards the request and the Kimi call.
-const MAX_IMAGE_CHARS = 8_000_000;
-
 export async function POST(request: Request) {
   const limit = checkRateLimit(request, {
     keyPrefix: "vision",
@@ -31,31 +29,53 @@ export async function POST(request: Request) {
 
   if (!isKimiConfigured()) {
     return Response.json(
-      { error: "vision_unavailable", description: "图片理解暂不可用（未配置 Kimi 服务密钥）。" },
+      { error: "vision_unavailable", message: "图片理解暂不可用，请稍后重试或先发送文字。", retryable: true },
       { status: 503 }
     );
   }
 
   let body: VisionRequest;
   try {
-    body = (await request.json()) as VisionRequest;
+    const reader = request.body?.getReader();
+    if (!reader) return Response.json({ error: "missing_image", retryable: false }, { status: 400 });
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_VISION_REQUEST_BYTES) {
+        void reader.cancel();
+        return Response.json({ error: "image_too_large", message: "图片最大为 3 MiB。", retryable: false }, { status: 413 });
+      }
+      chunks.push(value);
+    }
+    body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as VisionRequest;
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const image = body.image?.trim();
-  if (!image || !image.startsWith("data:image/")) {
-    return Response.json({ error: "expected an image as a data:image/* base64 URL" }, { status: 400 });
+  if (!body || typeof body !== "object" || typeof body.image !== "string" ||
+      (body.prompt !== undefined && (typeof body.prompt !== "string" || body.prompt.length > 1000))) {
+    return Response.json({ error: "invalid_image", retryable: false }, { status: 400 });
   }
-  if (image.length > MAX_IMAGE_CHARS) {
-    return Response.json({ error: "image too large (max ~6MB)" }, { status: 413 });
+  const image = body.image.trim();
+  const parts = /^data:image\/[a-z0-9.+-]+;base64,([a-z0-9+/]*={0,2})$/i.exec(image);
+  if (!parts || !parts[1] || parts[1].length % 4 !== 0) {
+    return Response.json({ error: "invalid_image", message: "请选择有效图片。", retryable: false }, { status: 400 });
+  }
+  const data = parts[1];
+  const padding = data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0;
+  const decodedBytes = data.length / 4 * 3 - padding;
+  if (data.length > MAX_IMAGE_BASE64_CHARS || decodedBytes > MAX_IMAGE_BYTES) {
+    return Response.json({ error: "image_too_large", message: "图片最大为 3 MiB。", retryable: false }, { status: 413 });
   }
 
   try {
     const description = await describeImageWithKimi({ imageDataUrl: image, prompt: body.prompt });
+    if (!description.trim()) throw new Error("empty image description");
     return Response.json({ description });
-  } catch (error) {
-    console.error("[vision] failed:", error instanceof Error ? error.message : error);
-    return Response.json({ error: "vision_failed", description: "" }, { status: 502 });
+  } catch {
+    return Response.json({ error: "vision_failed", message: "图片没能读完，请重试或先发送文字。", retryable: true }, { status: 502 });
   }
 }

@@ -1,22 +1,27 @@
 import { describe, it, expect } from "vitest";
 import { assessRisk } from "./safety";
 
-// TEMP compat probe: does MY safety.ts pass the concurrent session's 11 P3 evasion
-// tests? If yes, my safety.ts is a clean superset and can supersede theirs.
-describe("concurrent P3 compat probe", () => {
-  it("punctuation between CJK", () => {
-    for (const text of ["自-杀", "自。杀", "自·杀", "自—杀", "自.杀"]) {
+// Retain word-internal evasion coverage while preserving the sentence boundaries
+// required by safety-normalization-reconcile.test.ts. Full stops and ellipses
+// must not fabricate risk terms by joining otherwise separate text.
+describe("CJK normalization precision and evasion regression", () => {
+  it("recognizes word-internal dashes and middle dots", () => {
+    for (const text of ["自-杀", "自·杀", "自—杀"]) {
       const r = assessRisk(text);
       expect(r.level, text).toBe("high");
       expect(r.categories, text).toContain("suicide");
     }
   });
-  it("ellipsis in 想死", () => {
-    const r = assessRisk("我想…死");
-    expect(r.level).toBe("high");
+  it("preserves full stops and ellipses as boundaries", () => {
+    for (const text of ["自。杀", "自.杀", "我想…死"]) {
+      const r = assessRisk(text);
+      expect(r.shouldEscalate, text).toBe(false);
+      expect(r.categories, text).not.toContain("suicide");
+    }
   });
-  it("chain of separators", () => {
-    expect(assessRisk("自-。·杀").level).toBe("high");
+  it("normalizes chained word separators without removing sentence boundaries", () => {
+    expect(assessRisk("自-·-杀").level).toBe("high");
+    expect(assessRisk("自-。·杀").shouldEscalate).toBe(false);
   });
   it("zero-width", () => {
     expect(assessRisk("自​杀").level).toBe("high");

@@ -1,6 +1,7 @@
+// ARCHIVED: missing original fixture(s). See README.md here.
 import { readFileSync, writeFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
-import { assessRisk } from "./safety";
+import { assessRisk } from "../../src/lib/safety";
 
 type Case = {
   text: string;
@@ -13,7 +14,7 @@ type Case = {
 };
 
 const cases: Case[] = JSON.parse(
-  readFileSync(new URL("./crisis-corpus.json", import.meta.url), "utf-8")
+  readFileSync(new URL("../../src/lib/crisis-corpus.json", import.meta.url), "utf-8")
 );
 
 describe("CORPUS red-team", () => {

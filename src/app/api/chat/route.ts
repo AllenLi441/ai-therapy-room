@@ -46,6 +46,9 @@ import type {
   TurnPlan
 } from "@/lib/types";
 import { defaultTurnPlan } from "@/lib/session-plan";
+import { checkRateLimit, rateLimitResponse, readRateLimitEnv } from "@/lib/rate-limit";
+import { recordChatLlmFallback } from "@/lib/chat-monitoring";
+import { EVENT_DELIM, REASONING_OPEN, REASONING_CLOSE } from "@/lib/stream-markers";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -62,13 +65,75 @@ type ChatRequest = {
   crisisModeActive?: boolean;
   moodMemory?: string;
   language?: AppLanguage;
+  supportRegion?: "cn" | "us" | "uk" | "other";
+  ageRange?: "adult" | "minor" | "unspecified";
+  continuationNote?: string;
+  availableScale?: "PHQ-9" | "GAD-7" | "ISI" | null;
   // Set by the frontend when the user taps "我没事了" to leave safety mode. When
   // true, judge risk on THIS message only (not the multi-turn aggregate, which
   // would keep re-detecting the earlier crisis line and trap the user).
   exitedCrisis?: boolean;
 };
 
+function providerErrorResponse(language: AppLanguage, headers?: Record<string, string>) {
+  return Response.json({ error: "provider_unavailable", message: createProviderErrorFallback(language), retryable: true }, {
+    status: 503,
+    headers: { "Cache-Control": "no-store", ...headers }
+  });
+}
+
+function validCaseMap(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value !== "object" || Array.isArray(value)) return false;
+  const map = value as Record<string, unknown>;
+  return ["presenting", "workingHypothesis", "updatedAt"].every((key) => typeof map[key] === "string" && (map[key] as string).length <= 4000) &&
+    ["triggers", "automaticThoughts", "coreBeliefs", "bodyResponses", "behaviors", "needsValues", "resources"].every((key) =>
+      Array.isArray(map[key]) && map[key].length <= 40 && map[key].every((item: unknown) => typeof item === "string" && item.length <= 2000));
+}
+
+// Once headers have been sent, report failures in the same event protocol as
+// safety updates. Preserve prior answer text and allow the parallel safety tail
+// to finish even when the answer provider disconnects.
+function observeReplyStream(stream: ReadableStream<Uint8Array>, language: AppLanguage) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let reasoning = false;
+  let sawAnswer = false;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { value, done } = await reader.read();
+        if (done) {
+          if (!sawAnswer) throw new Error("empty reply");
+          recordChatLlmFallback(false);
+          controller.close();
+          return;
+        }
+        for (const char of decoder.decode(value, { stream: true })) {
+          if (char === REASONING_OPEN) reasoning = true;
+          else if (char === REASONING_CLOSE) reasoning = false;
+          else if (!reasoning && char.trim()) sawAnswer = true;
+        }
+        controller.enqueue(value);
+      } catch {
+        recordChatLlmFallback(true);
+        const event = { type: "error", code: "provider_unavailable", message: createProviderErrorFallback(language), retryable: true };
+        controller.enqueue(encoder.encode((reasoning ? REASONING_CLOSE : "") + EVENT_DELIM + JSON.stringify(event) + EVENT_DELIM));
+        controller.close();
+        void reader.cancel().catch(() => {});
+      }
+    },
+    cancel() { void reader.cancel().catch(() => {}); }
+  });
+}
+
 export async function POST(request: Request) {
+  const limit = checkRateLimit(request, {
+    keyPrefix: "chat",
+    ...readRateLimitEnv("CHAT_RATE_LIMIT_MAX", "CHAT_RATE_LIMIT_WINDOW_MS", 30, 60_000)
+  });
+  if (!limit.allowed) return rateLimitResponse(limit);
   let body: ChatRequest;
 
   try {
@@ -77,29 +142,46 @@ export async function POST(request: Request) {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  // Input-length guardrail: checked against the RAW body, before sanitizeConversation's
-  // per-message cap (3000 chars) truncates it — an extremely long single message is very
-  // likely a paste dump rather than a normal conversational turn, and risks blowing
-  // token/latency budgets downstream (risk assessment, the LLM judge, generation).
-  // Reject early with a gentle prompt to split it up rather than silently truncate it.
+  if (!body || typeof body !== "object" || Array.isArray(body) ||
+      !Array.isArray(body.messages) || body.messages.length > 240 ||
+      body.messages.some((message) => !message || (message.role !== "user" && message.role !== "assistant") || typeof message.content !== "string") ||
+      !validCaseMap(body.caseMap) ||
+      (body.profile !== undefined && (!body.profile || typeof body.profile !== "object" || Array.isArray(body.profile) ||
+        [body.profile.nickname, body.profile.concern].some((value) => value !== undefined && (typeof value !== "string" || value.length > 2000)))) ||
+      (body.turnPlan != null && (typeof body.turnPlan !== "object" || Array.isArray(body.turnPlan) ||
+        ["modality", "protocolStep", "whatToReflect", "intervention", "clarifyingQuestion", "avoid"].some((key) => typeof (body.turnPlan as unknown as Record<string, unknown>)[key] !== "string"))) ||
+      [body.exitedCrisis, body.crisisModeActive].some((value) => value !== undefined && typeof value !== "boolean") ||
+      (body.continuationNote !== undefined && (typeof body.continuationNote !== "string" || body.continuationNote.length > 3000)) ||
+      (body.supportRegion !== undefined && !["cn", "us", "uk", "other"].includes(body.supportRegion)) ||
+      (body.ageRange !== undefined && !["adult", "minor", "unspecified"].includes(body.ageRange)) ||
+      (body.availableScale != null && !["PHQ-9", "GAD-7", "ISI"].includes(body.availableScale)) ||
+      (body.scaleResults !== undefined && (!Array.isArray(body.scaleResults) || body.scaleResults.length > 300 || body.scaleResults.some((scale) =>
+        !scale || !["PHQ-9", "GAD-7", "ISI"].includes(scale.id) || !Number.isFinite(scale.total) || typeof scale.severity !== "string" ||
+        typeof scale.completedAt !== "string" || !Array.isArray(scale.answers) || scale.answers.length > 9 || scale.answers.some((answer) => !Number.isInteger(answer) || answer < 0 || answer > (scale.id === "ISI" ? 4 : 3)))))) {
+    return Response.json({ error: "invalid_request", message: "Invalid chat request" }, { status: 400 });
+  }
+
+  // Reject overlong current input rather than silently truncating safety signals.
+  // The conversation sanitizer below uses the same 4000-character cap.
+  const language: AppLanguage = body.language === "en" ? "en" : "zh";
   const rawLastUserMessage = [...(body.messages ?? [])].reverse().find((m) => m?.role === "user");
   if (typeof rawLastUserMessage?.content === "string" && rawLastUserMessage.content.length > 4000) {
-    return new Response("这段有点长,我一次接不住。可以分几次发给我吗?每次说一部分就好。", {
+    return new Response(language === "en" ? "That message is a little long. Please split it into a few shorter messages." : "这段有点长,我一次接不住。可以分几次发给我吗?每次说一部分就好。", {
       status: 413,
       headers: { "Content-Type": "text/plain; charset=utf-8" }
     });
   }
 
-  const messages = sanitizeConversation(body.messages ?? []);
+  const messages = sanitizeConversation(body.messages ?? [], { perMessageCap: 4000 });
   const model = resolveDeepSeekModel(body.model);
   const persona = resolvePersona(body.personaId);
-  const language: AppLanguage = body.language === "en" ? "en" : "zh";
   const latestUserMessage = [...messages].reverse().find((m) => m.role === "user");
 
   if (!latestUserMessage) {
     return new Response("Missing user message", { status: 400 });
   }
   const latestUserText = latestUserMessage.content;
+  const productContext = { supportRegion: body.supportRegion, ageRange: body.ageRange, continuationNote: body.continuationNote, availableScale: body.availableScale };
   // Only ground in the KB / web when the user is actually asking for info or methods —
   // venting gets pure warm companionship with no bolted-on sources (see isInfoSeeking).
   const infoSeeking = isInfoSeeking(latestUserText);
@@ -173,12 +255,13 @@ export async function POST(request: Request) {
     };
     // §5 additive minor support: if this looks like a minor, append the 12355 youth
     // line to the crisis reply (never replaces — additive only, zero downside; internal safety review).
-    const minorLine = hasMinorContextCue(latestUserText)
-      ? `\n\n${createMinorSupportLine(language)}`
+    const minorLine = body.ageRange === "minor" || hasMinorContextCue(latestUserText)
+      ? `\n\n${createMinorSupportLine(language, body.supportRegion ?? "other")}`
       : "";
     try {
       const recent = takeRecentWithinBudget(messages);
       const crisisPrompt = buildCounselorSystemPrompt({
+        ...productContext,
         profile: body.profile,
         risk: activateCrisisSessionRisk(decisionRisk),
         knowledge: [],
@@ -199,13 +282,15 @@ export async function POST(request: Request) {
       });
       const reply = (await generateDeepSeekText(payload)).trim();
       if (!reply) throw new Error("empty crisis reply");
+      recordChatLlmFallback(false);
       return new Response(textStreamFromString(`${reply}${minorLine}`), { headers });
     } catch {
+      recordChatLlmFallback(true);
       const fallback =
         mode === "crisis"
           ? createCrisisResponse(decisionRisk, { language })
           : createSuicideConcernResponse(language);
-      return new Response(textStreamFromString(`${fallback}${minorLine}`), { headers });
+      return new Response(textStreamFromString(`${fallback}${minorLine}`), { headers: { ...headers, "X-Reply-Fallback": "safety" } });
     }
   }
 
@@ -309,6 +394,7 @@ export async function POST(request: Request) {
       : [];
     const fastRecent = takeRecentWithinBudget(messages);
     const fastSystemPrompt = buildCounselorSystemPrompt({
+      ...productContext,
       profile: body.profile,
       risk,
       knowledge: fastKnowledge,
@@ -357,11 +443,13 @@ export async function POST(request: Request) {
     if (fastRefs.length) fastHeaders["X-Knowledge"] = encodeURIComponent(JSON.stringify(fastRefs));
     try {
       const answer = sanitizeReplyStream(createAssistantTextStream(await createDeepSeekTextStream(fastPayload)));
-      return streamTextResponse(appendParallelSafety(answer, resolveSafety), fastHeaders);
+      return streamTextResponse(appendParallelSafety(observeReplyStream(answer, language), resolveSafety), fastHeaders);
     } catch {
-      return new Response(createProviderErrorFallback(), {
-        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
-      });
+      recordChatLlmFallback(true);
+      const safety = await resolveSafety();
+      const status = (safety.event as { status: string }).status;
+      const safetyHeaders = status === "crisis" || status === "suicide_concern" ? { "X-Crisis-Triggered": "1", "X-Crisis-Mode": status } : undefined;
+      return providerErrorResponse(language, safetyHeaders);
     }
   }
 
@@ -409,7 +497,7 @@ export async function POST(request: Request) {
       // instant (fixed text, no model round-trip, so it also kills the ~30s crisis-path
       // latency these false positives used to incur). Hotlines stay in the global footer.
       logFireAndForget("implicit_gentle_check", implicitOutcome, implicitDecision);
-      return new Response(textStreamFromString(createGentleCheckResponse(undefined, language)), {
+      return new Response(prependEventToStream(textStreamFromString(createGentleCheckResponse(undefined, language)), { type: "safety", status: "gentle" }), {
         headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
       });
     }
@@ -435,7 +523,7 @@ export async function POST(request: Request) {
       return await respondTailoredCrisis("suicide_concern", mergedRisk, "lexicon");
     }
     logFireAndForget("implicit_gentle_check", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createGentleCheckResponse(undefined, language)), {
+    return new Response(prependEventToStream(textStreamFromString(createGentleCheckResponse(undefined, language)), { type: "safety", status: "gentle" }), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
@@ -445,23 +533,23 @@ export async function POST(request: Request) {
   // above, so "我把整瓶安眠药都吞了" can no longer be short-circuited into a medication
   // reply. medical_red_flag reads mergedRisk so the JUDGE (not only the lexicon) can
   // raise it.
-  if (risk.flags.includes("medication_request")) {
+  if (!mergedRisk.shouldEscalate && mergedRisk.flags.includes("medical_red_flag")) {
+    logFireAndForget("lexicon_medical_red_flag", implicitOutcome, implicitDecision);
+    return new Response(textStreamFromString(createMedicalRedFlagResponse(language)), {
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+    });
+  }
+
+  if (!mergedRisk.shouldEscalate && risk.flags.includes("medication_request")) {
     logFireAndForget("lexicon_medication", implicitOutcome, implicitDecision);
     return new Response(textStreamFromString(createMedicationBoundaryResponse(language)), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
 
-  if (risk.flags.includes("diagnosis_request")) {
+  if (!mergedRisk.shouldEscalate && risk.flags.includes("diagnosis_request")) {
     logFireAndForget("lexicon_diagnosis", implicitOutcome, implicitDecision);
     return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
-    });
-  }
-
-  if (mergedRisk.flags.includes("medical_red_flag")) {
-    logFireAndForget("lexicon_medical_red_flag", implicitOutcome, implicitDecision);
-    return new Response(textStreamFromString(createMedicalRedFlagResponse(language)), {
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
     });
   }
@@ -530,6 +618,7 @@ export async function POST(request: Request) {
   const promptRisk = crisisModeActive ? activateCrisisSessionRisk(mergedRisk) : mergedRisk;
 
   const systemPrompt = buildCounselorSystemPrompt({
+    ...productContext,
     profile: body.profile,
     risk: promptRisk,
     knowledge,
@@ -554,7 +643,7 @@ export async function POST(request: Request) {
   // On a continuation crisis turn (engaging in context instead of re-dumping the
   // template), keep the crisis banner up so the real hotlines stay one tap away —
   // the deterministic safety floor while the reply itself is model-generated.
-  const crisisHeader = crisisModeActive ? { "X-Crisis-Triggered": "1" } : undefined;
+  const crisisHeader = crisisModeActive || mergedRisk.shouldEscalate ? { "X-Crisis-Triggered": "1" } : undefined;
 
   // Visible RAG: tell the client which knowledge cards were actually consulted for
   // this reply, so the UI can show "数据来源" with clickable, checkable links. URL-
@@ -587,18 +676,24 @@ export async function POST(request: Request) {
   // The danger judge already ran (blocking) above and did NOT intercept, so prepend a
   // leading safety event the client shows as "🛡 安全识别 ✓" (or 未检 if the judge was
   // unavailable) — the visible danger-check step for deep mode.
-  const safetyStatus = implicitOutcome.kind === "ok" ? "safe" : "unchecked";
+  // A classifier's "none" verdict cannot clear explicit high risk. This also
+  // applies during an already-active crisis, which intentionally uses this
+  // contextual reply path instead of repeating the first-contact template.
+  const safetyStatus = mergedRisk.shouldEscalate
+    ? "crisis"
+    : implicitDecision.intercept && implicitDecision.mode === "suicide_concern"
+      ? "suicide_concern"
+      : implicitOutcome.kind === "ok" ? "safe" : "unchecked";
 
   try {
     const raw = await createDeepSeekTextStream(payload, { includeReasoning: wantThinking });
     const styled = wantThinking
       ? createAssistantTextStreamWithThinking(raw)
       : sanitizeReplyStream(createAssistantTextStream(raw));
-    const withSafety = prependEventToStream(styled, { type: "safety", status: safetyStatus });
+    const withSafety = prependEventToStream(observeReplyStream(styled, language), { type: "safety", status: safetyStatus });
     return streamTextResponse(withSafety, replyHeaders);
   } catch {
-    return new Response(createProviderErrorFallback(), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...crisisHeader }
-    });
+    recordChatLlmFallback(true);
+    return providerErrorResponse(language, crisisHeader);
   }
 }

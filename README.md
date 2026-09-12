@@ -1,6 +1,6 @@
 # 静室 JÌNGSHÌ
 
-**An open-source, privacy-first Chinese AI mental-health companion — layered safety pipeline, verifiable RAG, and a fully reproducible evaluation suite.**
+**An open-source, privacy-first Chinese AI mental-health companion — layered safety pipeline, verifiable RAG, and a documented evaluation suite.**
 
 [English](#english) · [中文](#中文) · Live: [ai-therapy-room.vercel.app](https://ai-therapy-room.vercel.app)
 
@@ -42,6 +42,10 @@ npm run dev                  # or: npm run build
 
 Deploys to Vercel out of the box; Docker/self-hosting works the same. Without vector-store keys, retrieval degrades gracefully (committed vectors → keyword) and the app stays functional. Verify with `npm test · npm run lint · npm run build`.
 
+### Product checks and missing historical fixtures
+
+`npm run verify` runs product lint, types, deterministic/API/component tests, build, and a local deployment smoke check. It does not call live models or establish clinical accuracy. Three historical external fixtures are missing: `src/lib/crisis-corpus.json`, `evals/detection-seed-corpus.json`, and `evals/detection-redteam-corpus.json`. Their original harnesses are retained under [`eval/legacy/`](eval/legacy/README.md); `npm run test:legacy` explicitly fails until all originals are restored. The 13 concrete crisis strings recoverable from source remain in the default tests. No old 402-case coverage or clinical-labeling claim is counted as passing.
+
 ### Reproducible evaluation
 
 - `../datasets/eval-suite/` — 19 zero-shot tasks over 8 public mental-health benchmarks (EmoBench, CPsyExam, IMHI×9, PsySUICIDE, MentalManip, CBT-Bench, MDD-5k, EATD): strict closed-set parsing, per-row `api_model` + `system_fingerprint` provenance, resume, plus audit scripts (`audit_results.py`, `paired_model_audit.py`, `compare_runs.py`).
@@ -81,6 +85,10 @@ npm run dev                  # 或 npm run build
 ```
 
 支持 Vercel 一键部署与 Docker 自托管;未配置向量库时检索自动降级,应用仍可用。国内网络部署方案见 `docs/china-deployment.md`。
+
+### 产品检查与历史资料缺口
+
+`npm run verify` 执行代码、类型、当前产品回归、构建和本地发布检查；不调用在线模型，也不代表临床准确性验证。缺失的历史外部文件共 **3 个**：`src/lib/crisis-corpus.json`、`evals/detection-seed-corpus.json`、`evals/detection-redteam-corpus.json`。原测试保留在 [`eval/legacy/`](eval/legacy/README.md)，`npm run test:legacy` 在原件补齐前明确失败。源码可恢复的 13 条具体危机正负回归仍纳入默认测试；不将旧 402 条覆盖率或“临床标注”声明算作通过。
 
 ### 可复现评测
 

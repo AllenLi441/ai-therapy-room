@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AuthorCandidate,
   PRODUCT_BRANCHES,
@@ -56,7 +56,8 @@ const DEFAULT_REVIEWER: ReviewerWorkspace = {
 function safeParse<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
   try {
-    return JSON.parse(value) as T;
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as T : fallback;
   } catch {
     return fallback;
   }
@@ -128,50 +129,72 @@ function ChoiceButtons<T extends string>({
   );
 }
 
+const subscribeToHydration = () => () => {};
+
 export function DatasetStudio() {
-  const [mode, setMode] = useState<Mode>("author");
-  const [author, setAuthor] = useState<AuthorWorkspace>(DEFAULT_AUTHOR);
-  const [reviewer, setReviewer] = useState<ReviewerWorkspace>(DEFAULT_REVIEWER);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+  return hydrated ? <HydratedDatasetStudio /> : <p role="status">正在恢复本机草稿…</p>;
+}
+
+function readWorkspace() {
+  const storedMode = localStorage.getItem(MODE_STORAGE);
+  const storedAuthor = safeParse(localStorage.getItem(AUTHOR_STORAGE), DEFAULT_AUTHOR);
+  const normalizedAuthorItems = Array.isArray(storedAuthor.items)
+    ? storedAuthor.items.map((item, index) => normalizeAuthorCandidate(item, index + 1, {
+      batch: storedAuthor.batch,
+      authorId: storedAuthor.authorId,
+    }))
+    : [];
+  const storedReviewer = safeParse(localStorage.getItem(REVIEWER_STORAGE), DEFAULT_REVIEWER);
+  const reviewerItems = Array.isArray(storedReviewer.items) ? storedReviewer.items : [];
+  return {
+    mode: storedMode === "reviewer" ? "reviewer" as const : "author" as const,
+    author: {
+      ...DEFAULT_AUTHOR,
+      ...storedAuthor,
+      items: normalizedAuthorItems,
+      selected: Math.max(0, Math.min(storedAuthor.selected ?? 0, normalizedAuthorItems.length - 1)),
+    },
+    reviewer: {
+      ...DEFAULT_REVIEWER,
+      ...storedReviewer,
+      items: reviewerItems,
+      selected: Math.max(0, Math.min(storedReviewer.selected ?? 0, reviewerItems.length - 1)),
+    },
+  };
+}
+
+function HydratedDatasetStudio() {
+  const [initialWorkspace] = useState(readWorkspace);
+  const [mode, setMode] = useState<Mode>(initialWorkspace.mode);
+  const [author, setAuthor] = useState<AuthorWorkspace>(initialWorkspace.author);
+  const [reviewer, setReviewer] = useState<ReviewerWorkspace>(initialWorkspace.reviewer);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [notice, setNotice] = useState("从空白开始。这里不会生成文本或替你选择标签。");
   const authorImportRef = useRef<HTMLInputElement>(null);
   const reviewerImportRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const storedMode = localStorage.getItem(MODE_STORAGE);
-    const storedAuthor = safeParse(localStorage.getItem(AUTHOR_STORAGE), DEFAULT_AUTHOR);
-    const normalizedAuthorItems = Array.isArray(storedAuthor.items)
-      ? storedAuthor.items.map((item, index) => normalizeAuthorCandidate(item, index + 1, {
-        batch: storedAuthor.batch,
-        authorId: storedAuthor.authorId,
-      }))
-      : [];
-    const storedReviewer = safeParse(localStorage.getItem(REVIEWER_STORAGE), DEFAULT_REVIEWER);
-    const reviewerItems = Array.isArray(storedReviewer.items) ? storedReviewer.items : [];
-    setMode(storedMode === "reviewer" ? "reviewer" : "author");
-    setAuthor({
-      ...DEFAULT_AUTHOR,
-      ...storedAuthor,
-      items: normalizedAuthorItems,
-      selected: Math.max(0, Math.min(storedAuthor.selected ?? 0, normalizedAuthorItems.length - 1)),
-    });
-    setReviewer({
-      ...DEFAULT_REVIEWER,
-      ...storedReviewer,
-      items: reviewerItems,
-      selected: Math.max(0, Math.min(storedReviewer.selected ?? 0, reviewerItems.length - 1)),
-    });
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(MODE_STORAGE, mode);
-    localStorage.setItem(AUTHOR_STORAGE, JSON.stringify(author));
-    localStorage.setItem(REVIEWER_STORAGE, JSON.stringify(reviewer));
-    setLastSaved(new Date());
-  }, [author, hydrated, mode, reviewer]);
+    let pending = true;
+    const persist = () => {
+      if (!pending) return;
+      localStorage.setItem(MODE_STORAGE, mode);
+      localStorage.setItem(AUTHOR_STORAGE, JSON.stringify(author));
+      localStorage.setItem(REVIEWER_STORAGE, JSON.stringify(reviewer));
+      pending = false;
+    };
+    // Save asynchronously and flush before navigating away or replacing this snapshot.
+    const timer = window.setTimeout(() => {
+      persist();
+      setLastSaved(new Date());
+    }, 200);
+    window.addEventListener("pagehide", persist);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pagehide", persist);
+      persist();
+    };
+  }, [author, mode, reviewer]);
 
   const currentAuthor = author.items[author.selected] ?? null;
   const currentReview = reviewer.items[reviewer.selected] ?? null;

@@ -119,18 +119,15 @@ describe("crisis template hotlines + concise opener", () => {
     }
   });
 
-  it("concise opener is a short first-beat on the severity scale", () => {
-    const conciseEn = createCrisisResponse(assessment, { language: "en", concise: true });
-    expect(conciseEn).toContain("one number");
-    // concise uses the severity scale, NOT the action scale
-    expect(conciseEn).not.toContain("moved dangerous items away");
-    expect(conciseEn.length).toBeLessThan(crisisPromptEn.length);
-    // a reply against the concise prompt is therefore read on the severity scale
-    expect(classifyCrisisCheckReply("3", conciseEn)).toEqual({ digit: 3, tier: "escalate" });
-
-    const conciseZh = createCrisisResponse(assessment, { language: "zh", concise: true });
-    expect(conciseZh).toContain("一个数字");
-    expect(conciseZh.length).toBeLessThan(crisisPromptZh.length);
+  it("current replies point to support without reintroducing the retired numeric prompt", () => {
+    const en = createCrisisResponse(assessment, { language: "en" });
+    const zh = createCrisisResponse(assessment, { language: "zh" });
+    expect(en).toContain("support panel");
+    expect(zh).toContain("紧急支持");
+    expect(en).not.toContain("one number");
+    expect(zh).not.toContain("一个数字");
+    expect(classifyCrisisCheckReply("3", en)).toBeNull();
+    expect(classifyCrisisCheckReply("3", zh)).toBeNull();
   });
 });
 

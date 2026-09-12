@@ -29,6 +29,12 @@ describe("detectActiveCrisisFromHistory — conservative de-escalation", () => {
     expect(r.deescalated).toBe(false);
   });
 
+  it("recognizes curly apostrophes but keeps new English intent in crisis", () => {
+    expect(detectActiveCrisisFromHistory(afterCrisis("I’m safe now, thank you")).deescalated).toBe(true);
+    expect(detectActiveCrisisFromHistory(afterCrisis("I'm safe now but I want to kill myself tonight")).deescalated).toBe(false);
+    expect(detectActiveCrisisFromHistory(afterCrisis("I'm safe now but I don't want to live anymore")).deescalated).toBe(false);
+  });
+
   it("does NOT release while the user is still distressed", () => {
     const r = detectActiveCrisisFromHistory(afterCrisis("我现在不知道该怎么办"));
     expect(r.active).toBe(true);

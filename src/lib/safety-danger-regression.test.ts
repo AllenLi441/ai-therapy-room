@@ -19,7 +19,9 @@ describe("fail-closed danger detection", () => {
     "我家有把猎枪，子弹也上好了",
     "我经常用烟头烫自己的胳膊",
     "我爸喝醉了就拿皮带抽我",
-    "我想让那个老师永远消失"
+    "我想让那个老师永远消失",
+    "我准备好了，绳子已经挂在房梁上系好了",
+    "我现在就在他楼下，刀在包里，今天必须做个了断，他毁了我整个家"
   ];
 
   for (const text of mustEscalate) {
@@ -60,5 +62,45 @@ describe("benign lookalikes must NOT escalate", () => {
 
   it("counting money is not a lethal-dose inquiry", () => {
     expect(assessRisk("出门前钱我都数好了").level).not.toBe("high");
+  });
+
+  it("does not promote medicine proximity without an independent danger signal", () => {
+    expect(assessRisk("药就在身边，是医生开的每日处方，我按医嘱服用").shouldEscalate).toBe(false);
+    expect(assessRisk("我不想让那个老师永远消失，只想换个班").shouldEscalate).toBe(false);
+    expect(assessRisk("我把整瓶水都喝了").shouldEscalate).toBe(false);
+  });
+
+  it("requires dangerous preparation or confrontation in addition to ordinary equipment", () => {
+    expect(assessRisk("我准备好晒衣服了，绳子已经挂在房梁上系好了").shouldEscalate).toBe(false);
+    expect(assessRisk("我现在就在他楼下，刀在包里，我来归还厨刀").shouldEscalate).toBe(false);
+    expect(assessRisk("我现在就在他楼下，今天必须做个了断，谈完分手我就走").shouldEscalate).toBe(false);
+  });
+
+  it.each([
+    "我想让这场焦虑永远消失",
+    "我想让我的烦恼永远消失",
+    "我没有把半瓶安眠药吃了",
+    "我在看新闻，有个人把半瓶安眠药吃了",
+    "我只是说小说里猎枪已经上膛",
+    "我家有把猎枪，但是没有上膛"
+  ])("does not promote denied, reported, or non-human danger: %s", (text) => {
+    expect(assessRisk(text).shouldEscalate).toBe(false);
+  });
+
+  it.each([
+    "我没有把半瓶安眠药吃了，但我刚刚把整瓶布洛芬都吞了",
+    "我在看新闻，有个人把半瓶安眠药吃了。但我刚刚把整瓶布洛芬都吞了",
+    "我只是说小说里猎枪已经上膛，可是我家有把猎枪，子弹也上好了",
+    "我看新闻后情绪崩溃，把半瓶安眠药吃了",
+    "我看新闻之后情绪崩溃，把半瓶安眠药吃了",
+    "我看新闻以后情绪崩溃，把半瓶安眠药吃了",
+    "我想让这场焦虑永远消失，我想让那个老师永远消失"
+  ])("keeps an independent personal danger statement: %s", (text) => {
+    expect(assessRisk(text).shouldEscalate).toBe(true);
+  });
+
+  it("scopes a denied bodily symptom without removing a separately reported emergency symptom", () => {
+    expect(assessRisk("没有胸口剧痛，也没有喘不上气").flags).not.toContain("medical_red_flag");
+    expect(assessRisk("没有胸口剧痛，但是我现在喘不上气").flags).toContain("medical_red_flag");
   });
 });

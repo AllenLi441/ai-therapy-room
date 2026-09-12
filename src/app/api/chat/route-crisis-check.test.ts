@@ -1,10 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { assessImplicitRiskWithLLM } from "@/lib/implicit-risk";
 import { generateDeepSeekText } from "@/lib/deepseek";
 import { retrieveKnowledge } from "@/lib/knowledge";
 import { searchAuthoritative } from "@/lib/web-search";
 import { createSuicideConcernResponse } from "@/lib/safety";
+import { resetRateLimitForTests } from "@/lib/rate-limit";
+
+beforeEach(() => resetRateLimitForTests());
 
 // Same mock shape as route.test.ts — see that file's comments for rationale.
 vi.mock("@/lib/knowledge", async (importOriginal) => {
@@ -31,6 +34,7 @@ vi.mock("@/lib/deepseek", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/deepseek")>();
   return {
     ...actual,
+    createDeepSeekTextStream: vi.fn(async () => { throw new Error("offline test provider"); }),
     generateDeepSeekText: vi.fn(async () => {
       throw new Error("no DEEPSEEK key in tests");
     })

@@ -3,13 +3,30 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"]
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["src/**/*.test.ts", "ops/**/*.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "components",
+          environment: "jsdom",
+          include: ["src/**/*.test.tsx"],
+          setupFiles: ["./src/test/setup-dom.ts"],
+          environmentOptions: { jsdom: { url: "http://localhost:3000" } },
+        },
+      },
+    ],
   },
   resolve: {
     alias: {
-      // Prefix form reliably rewrites "@/lib/foo" → "<root>/src/lib/foo".
-      "@/": fileURLToPath(new URL("./src/", import.meta.url))
-    }
-  }
+      "@/": fileURLToPath(new URL("./src/", import.meta.url)),
+    },
+  },
 });
