@@ -1,6 +1,8 @@
-# 静室发布与域名迁移（0.8.0）
+# 静室发布与域名迁移（0.8.1）
 
 当前先发布到现有 Vercel 项目，之后在阿里云购买 `jingshiroom.com` 并绑定同一个项目。买域名和迁服务器是两个独立操作：域名放在阿里云管理，不妨碍网站及所有 API 继续运行在 Vercel。
+
+0.8.1 修复自动小结继承深度模型后，750 token 预算可能全部用于思考、最终正文为空的问题。小结使用明确的快速模型；聊天里的深度/快速选择保持不变。供应商不可用时仍显示重试及手动保存入口。
 
 ## 现有项目与发布
 
@@ -25,7 +27,7 @@ GitHub Actions 的 `CI / verify` 执行相同检查。**仅提交 workflow 不�
 ## 发布后核验
 
 ```sh
-npm run release:check -- https://ai-therapy-room.vercel.app 0.8.0 EXPECTED_GIT_COMMIT
+npm run release:check -- https://ai-therapy-room.vercel.app 0.8.1 EXPECTED_GIT_COMMIT
 ```
 
 把 `EXPECTED_GIT_COMMIT` 替换为本次真实提交号。脚本先验证 `/api/health?check=liveness`，再验证 `/api/health`。版本不一致、提交号不一致、HTTP 错误、缺少服务配置或观察到降级都会退出失败。若部署方式暂时无法提供提交号，可省略最后一个参数，但该次只能证明版本，不能证明具体提交。
@@ -66,11 +68,11 @@ Vercel 执行回退后会暂停新推送自动覆盖生产域名；修复并验�
 以下命令是未来已有服务器和权限后的操作步骤，本轮未执行：
 
 ```sh
-docker build --build-arg APP_BUILD_COMMIT=EXPECTED_GIT_COMMIT -t jingshi:0.8.0 .
+docker build --build-arg APP_BUILD_COMMIT=EXPECTED_GIT_COMMIT -t jingshi:0.8.1 .
 docker run -d --name jingshi-candidate --restart unless-stopped \
   --env-file /etc/jingshi/runtime.env \
-  -p 127.0.0.1:3001:3000 jingshi:0.8.0
-npm run release:check -- http://127.0.0.1:3001 0.8.0 EXPECTED_GIT_COMMIT
+  -p 127.0.0.1:3001:3000 jingshi:0.8.1
+npm run release:check -- http://127.0.0.1:3001 0.8.1 EXPECTED_GIT_COMMIT
 ```
 
 私有运行配置应保留与原 Vercel 项目等效的 API、检索、模型选择等变量；只迁前端或忘记后端环境变量会造成接口退化。`runtime.env` 仅在服务器存放，由发布人员在受控界面配置，不输出文件内容。若启用持久化日志，应单独配置受控存储；容器本地目录不能作为跨实例长期记录方案。

@@ -71,6 +71,9 @@ export async function POST(request: Request) {
       buildDeepSeekPayload({
         systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
+        // A short note must not inherit a thinking model from the chat default:
+        // its reasoning can consume this entire budget before any note is written.
+        apiModel: "deepseek-v4-flash",
         stream: false,
         maxTokens: 750
       })
