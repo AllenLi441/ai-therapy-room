@@ -319,14 +319,14 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
             <summary>
               <Ic.clipboard />
               {lang === "zh"
-                ? `信息来源 · ${m.refs.length} 条（点开看原文出处）`
-                : `Sources · ${m.refs.length} (open to check)`}
+                ? `本轮参考资料 · ${m.refs.length} 条（点开核对原文）`
+                : `Retrieved references · ${m.refs.length} (open to check)`}
             </summary>
             <div className="kb-body">
               <div className="kb-note">
                 {lang === "zh"
-                  ? "这条回应参考了下面这些权威来源的要点。点链接可核对原文——只用真实、可查证的资料,不替代专业诊疗。"
-                  : "This reply drew on the authoritative sources below — open a link to verify the original. We use only real, checkable sources, never a substitute for professional care."}
+                  ? "这是本轮检索到的参考资料，不表示每条资料都被回答采用，也不代表回答中的每个判断已被验证。可打开原文核对；一般科普信息不替代专业诊疗。"
+                  : "These references were retrieved for this turn. Their presence does not mean every source was used or every claim in the reply was verified. Open the originals to check; general information does not replace professional care."}
               </div>
               <ol className="kb-list">
                 {m.refs.map((r, i) => (

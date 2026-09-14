@@ -424,6 +424,35 @@ function contextualDangerMatches(text: string): ReturnType<typeof collectMatches
   if (means && /忍不住|控制不住|撑不下去/.test(n)) add("suicide", "medium", "可用手段与失控信号");
   if (/(?:楼顶|天台|桥边)/.test(n) && /不知道为什么还要|活不下去|撑不下去|不想活/.test(n)) add("suicide", "high", "危险位置与绝望信号");
   if (/(?:如果(?:哪天)?我不在了|万一我出事了)/.test(n) && /(?:猫|狗|孩子)[^。！？]{0,18}(?:照顾|拜托|托付)/.test(n)) add("suicide", "medium", "告别情境下托付照顾");
+  // Preparatory handover plus a near-term statement of finality needs a safety
+  // response even when the external judge is unavailable. Neither ordinary account
+  // sharing nor relief after a stated retirement/leave is sufficient on its own.
+  const handover = n.match(/(?:账号|密码|财产|重要物品)[^。！？]{0,16}(?:交代|交给|留给|告诉|安排)(?:好|完|了)/)?.[0];
+  const deniedHandover = handover && /没有|没|并未|不会|不打算/.test(handover);
+  const nearTermFinality = /(?:今晚|今夜|明天)[^。！？]{0,10}(?:不用|不必|不需要)[^。！？]{0,6}(?:撑着|撑下去|醒来|承受|活着)/.test(n);
+  const statedRoutineTransition = /退休|离职|交班|休假|出差|项目结束|结束加班/.test(n);
+  if (handover && !deniedHandover && nearTermFinality && !statedRoutineTransition) add("suicide", "medium", "已交代重要事项并表达近期终结感");
+  return matches;
+}
+
+/** Bodily danger can be described across words rather than with the exact token
+ * '胸痛'. Detect the symptom, not a diagnosis; the route will request medical
+ * assessment and prevent retrieval of relaxation advice. Preserve clear denials
+ * and metaphorical breathlessness without physical symptom context. */
+function contextualMedicalMatches(text: string): ReturnType<typeof collectMatches> {
+  const n = normalizeText(text);
+  const matches: ReturnType<typeof collectMatches> = [];
+  for (const match of n.matchAll(/胸(?:口|部)?[^。！？!?，,;；]{0,12}(?:痛|疼)/g)) {
+    const symptom = match[0];
+    if (/(?:没有|没|并不|不再|不)(?:怎么|太)?(?:痛|疼)/.test(symptom)) continue;
+    if (!stripDenials(n, symptom).includes(symptom)) continue;
+    matches.push({ category: "medical", level: "medium", term: symptom, flags: ["medical_red_flag"] });
+  }
+  const breathing = n.match(/喘不(?:上|过)(?:来)?气|吸不进气|呼不出气/)?.[0];
+  const physicalContext = /心跳|胸|冷汗|昏|晕|站不稳|呼吸|(?:我|现在|此刻)(?:正|有点|突然)?喘/.test(n);
+  if (breathing && physicalContext && stripDenials(n, breathing).includes(breathing)) {
+    matches.push({ category: "medical", level: "medium", term: breathing, flags: ["medical_red_flag"] });
+  }
   return matches;
 }
 
@@ -457,8 +486,9 @@ function collectMatches(text: string, rules: RiskRule[]) {
 // "有自杀计划" (no negator) — those keep firing. It DOES catch "(从来)没(有)(想过)自杀"
 // and "(从来)没(有)想死".
 function stripDenials(text: string, core: string): string {
+  const literalCore = core.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(
-    `(从来|从)?(没有|没|不|未|别)(想过|想要|想|有过|有|会|要|打算|过)?${core}`,
+    `(从来|从)?(没有|没|不|未|别)(想过|想要|想|有过|有|会|要|打算|过)?${literalCore}`,
     "g"
   );
   return text.replace(re, "");
@@ -505,7 +535,7 @@ export function assessRisk(text: string): RiskAssessment {
     ...collectMatches(text, MEDICAL_RED_FLAG_RULES),
     ...collectMatches(text, MEDIUM_RISK_RULES),
     ...collectMatches(text, LOW_RISK_RULES)
-  ]), ...englishIntentMatches(text), ...contextualDangerMatches(text)];
+  ]), ...englishIntentMatches(text), ...contextualDangerMatches(text), ...contextualMedicalMatches(text)];
 
   const base: RiskAssessment =
     matches.length === 0
@@ -588,20 +618,20 @@ export function createCrisisResponse(
 export function createMedicalRedFlagResponse(language: AppLanguage = "zh") {
   if (language === "en") {
     return [
-      "Put physical safety first. Symptoms such as chest pain, fainting, ongoing breathing difficulty, a first episode, heart history, slurred speech, or one-sided weakness should not be treated only as stress or panic.",
+      "Put physical safety first. Physical symptoms like these should not be explained only as stress or panic. This chat cannot determine the cause or replace an in-person medical assessment.",
       "",
-      "If these symptoms are happening now, feel intense, are not easing, or this is the first time, please contact local medical services or emergency help as soon as possible. If someone is nearby, ask them to stay with you and help you get care. A psychological support tool cannot judge whether this is a panic attack and cannot replace an in-person medical assessment.",
+      "If you are having significant or sudden chest pain or difficulty breathing now, call your local emergency service immediately or get emergency medical care. Do not wait for this chat or a relaxation exercise to help. If someone is nearby, ask them to stay with you and help you contact medical care.",
       "",
-      "While you contact real-world help, sit down or lean against a wall, reduce walking around, and focus on a slow exhale. The priority is not analyzing why this happened. The priority is confirming your body is safe."
+      "If symptoms have eased but are new, recurring, or still worrying you, contact a medical professional promptly. A psychological support tool cannot judge whether this is a panic attack."
     ].join("\n");
   }
 
   return [
-    "先把身体风险放在前面处理。你提到的胸痛、昏厥、持续呼吸困难、首次发作、心脏病史、说话不清或一侧无力这类信号，不能只按心理压力或惊恐来解释。",
+    "先把身体风险放在前面处理。这类身体不适不能只按心理压力或惊恐来解释；聊天无法判断病因，也不能替代现场医疗评估。",
     "",
-    "如果这些症状正在发生、强度明显、持续不缓解，或这是第一次出现，请尽快联系当地医疗服务或急救电话；身边有人时，请直接让对方陪你一起处理。心理支持工具不能判断这是不是惊恐发作，也不能替代现场医疗评估。",
+    "如果你现在有明显或突然出现的胸痛、呼吸困难，请立即联系当地急救服务或前往急诊，不要等聊天回复或放松练习起效。身边有人时，请让对方陪着你并协助联系医疗服务。",
     "",
-    "在联系现实帮助的同时，你可以先坐下或靠墙站稳，减少走动，把注意力放在慢慢呼气上。现在最重要的不是分析原因，而是确认身体安全。"
+    "如果症状已经缓解，但属于新出现、反复出现或仍让你担心的情况，也请尽快联系医生。心理支持工具不能判断这是不是惊恐发作。"
   ].join("\n");
 }
 
@@ -714,7 +744,7 @@ export function getRiskInstruction(assessment: RiskAssessment) {
     }
 
     if (assessment.flags.includes("medical_red_flag")) {
-      return "中风险且有身体/医疗红旗：先保持短句稳定化，同时明确建议及时联系医疗服务；如果有胸痛、昏厥、持续呼吸困难、首次发作、心脏病史、说话不清或一侧无力，不要只按心理问题处理。";
+      return "中风险且有身体/医疗红旗：不能只按心理问题解释，也不能判断病因；不要把用户没有说出的症状或病史归给用户。如果正在有明显或急性胸痛、呼吸困难，建议立即联系当地急救或急诊，不要用放松练习延误；其他身体症状建议及时联系医疗人员。";
     }
 
     if (assessment.categories.includes("panic")) {

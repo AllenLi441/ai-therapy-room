@@ -27,6 +27,7 @@
 
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
+import { createHash } from "node:crypto";
 
 const cardsUrl = new URL("../src/lib/knowledge-cards.ts", import.meta.url);
 const embeddingsUrl = new URL("../src/lib/embeddings.ts", import.meta.url);
@@ -109,7 +110,10 @@ const manifest = {
   providerId: provider.id,
   model: provider.id.split(":").slice(1).join(":") || provider.id,
   dim,
-  vectors: byId
+  vectors: byId,
+  contentHashes: Object.fromEntries(cards.map((card) => [
+    card.id, createHash("sha256").update(cardEmbedText(card)).digest("hex")
+  ]))
 };
 
 await writeFile(outUrl, JSON.stringify(manifest, null, 2) + "\n", "utf8");

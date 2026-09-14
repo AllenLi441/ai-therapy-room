@@ -1,6 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { KnowledgeCard } from "./types";
 import type { EmbeddingProvider } from "./embeddings";
+// These are network waterfall tests. The separate reference registry suite covers
+// the offline general-information path so it cannot mask remote-path regressions here.
+vi.mock("./knowledge-reference-cards", () => ({ KNOWLEDGE_REFERENCE_CARDS: [] }));
+vi.mock("./knowledge-embeddings.generated.json", async () => {
+  const { createHash } = await import("node:crypto");
+  const { KNOWLEDGE_CARDS, cardEmbedText } = await import("./knowledge-cards");
+  const c = KNOWLEDGE_CARDS.find((card) => card.id === "nimh-anxiety")!;
+  return { default: {
+    providerId: "openai:text-embedding-3-small", model: "text-embedding-3-small", dim: 3,
+    vectors: { [c.id]: [1, 0, 0] },
+    contentHashes: { [c.id]: createHash("sha256").update(cardEmbedText(c)).digest("hex") },
+  } };
+});
 
 // Tier-1 dependencies are mocked so the tests exercise retrieveKnowledge's WIRING without
 // any network: qdrantDenseSearch is fully controllable; rerankByRelevance is stubbed to a
@@ -199,7 +212,7 @@ describe("retrieveKnowledge integration (web-grounded KB populated)", () => {
 
 describe("retrieveKnowledge Tier-1 (Qdrant dense, mocked)", () => {
   const groundedCard = card({
-    id: "who-depression",
+    id: "remote-who-depression",
     title: "抑郁:临床事实与一线方法（WHO）",
     content: "抑郁是常见心理障碍。",
     guidance: ["先承接情绪"],
@@ -233,7 +246,7 @@ describe("retrieveKnowledge Tier-1 (Qdrant dense, mocked)", () => {
 
     const out = await retrieveKnowledge("我怎么缓解抑郁", 4, { fastMode: true });
 
-    expect(out.map((c) => c.id)).toEqual(["who-depression"]);
+    expect(out.map((c) => c.id)).toEqual(["remote-who-depression"]);
     expect(out[0].sourceUrl).toBe(groundedCard.sourceUrl);
     expect(out[0].sourceQuote).toBe(groundedCard.sourceQuote);
     expect(mockedRerank).not.toHaveBeenCalled();
@@ -246,6 +259,53 @@ describe("retrieveKnowledge Tier-1 (Qdrant dense, mocked)", () => {
     const out = await retrieveKnowledge("我一到考试就焦虑得不行", 4, { fastMode: true });
     expect(Array.isArray(out)).toBe(true);
     expect(out.every((c) => c.clinicalStatus === "approved")).toBe(true);
+  });
+
+  it("successful Qdrant miss abstains instead of re-admitting a loose keyword match", async () => {
+    stubEmbedProvider();
+    mockedQdrant.mockResolvedValueOnce([]);
+    expect(await retrieveKnowledge("我一到考试就焦虑", 4, { fastMode: true })).toEqual([]);
+  });
+
+  it("deep mode rejects low-score neighbours when reranking is unavailable", async () => {
+    stubEmbedProvider();
+    mockedQdrant.mockResolvedValueOnce([{ ...groundedCard, retrievalScore: 0.32 }]);
+    expect(await retrieveKnowledge("焦虑", 4)).toEqual([]);
+    expect(mockedRerank).toHaveBeenCalledOnce();
+  });
+
+  it("deep mode keeps a strict-score neighbour and preserves its exact source", async () => {
+    stubEmbedProvider();
+    mockedQdrant.mockResolvedValueOnce([{ ...groundedCard, retrievalScore: 0.75 }]);
+    const result = await retrieveKnowledge("焦虑", 4);
+    expect(result).toHaveLength(1);
+    expect(result[0].sourceUrl).toBe(groundedCard.sourceUrl);
+  });
+
+  it("a rerank rejection remains empty even with strong keywords", async () => {
+    stubEmbedProvider();
+    mockedQdrant.mockResolvedValueOnce([{ ...groundedCard, retrievalScore: 0.75 }]);
+    mockedRerank.mockResolvedValueOnce([{ id: groundedCard.id, score: 0.01 }]);
+    expect(await retrieveKnowledge("抑郁", 4)).toEqual([]);
+  });
+
+  it("reuses ONE embedding across Qdrant failure, local-vector recall and strict-score fallback", async () => {
+    stubEmbedProvider();
+    vi.stubEnv("EMBEDDING_MODEL", "text-embedding-3-small");
+    vi.stubEnv("EMBEDDING_DIM", "3");
+    mockedQdrant.mockResolvedValueOnce(null);
+    const result = await retrieveKnowledge("焦虑", 4);
+    expect(result.map((card) => card.id)).toEqual(["nimh-anxiety"]);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(mockedRerank).toHaveBeenCalledOnce();
+  });
+
+  it("deep-mode reranking shares the same deadline instead of adding a second timeout", async () => {
+    stubEmbedProvider();
+    mockedQdrant.mockResolvedValueOnce([{ ...groundedCard, retrievalScore: 0.75 }]);
+    mockedRerank.mockImplementationOnce(() => new Promise(() => {}));
+    const result = await retrieveKnowledge("焦虑", 4, { timeoutMs: 5 });
+    expect(result.every((card) => card.id !== groundedCard.id)).toBe(true);
   });
 
   it("embed AND Qdrant both throwing still resolves to an array (fail-safe [])", async () => {

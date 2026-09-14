@@ -9,8 +9,8 @@ import {
   type ImplicitDecision,
   type ImplicitOutcome
 } from "@/lib/implicit-risk";
-import { retrieveKnowledge, isInfoSeeking } from "@/lib/knowledge";
-import { rewriteRetrievalQuery } from "@/lib/query-rewrite";
+import { retrieveKnowledge } from "@/lib/knowledge";
+import { buildKnowledgeQuery } from "@/lib/knowledge-query";
 import { searchAuthoritative } from "@/lib/web-search";
 import { createAssistantTextStream, createAssistantTextStreamWithThinking } from "@/lib/output-style";
 import { resolvePersona, type PersonaId } from "@/lib/personas";
@@ -186,7 +186,8 @@ export async function POST(request: Request) {
   const productContext = { supportRegion, ageRange: body.ageRange, continuationNote: body.continuationNote, availableScale: body.availableScale };
   // Only ground in the KB / web when the user is actually asking for info or methods —
   // venting gets pure warm companionship with no bolted-on sources (see isInfoSeeking).
-  const infoSeeking = isInfoSeeking(latestUserText);
+  const retrievalQuery = buildKnowledgeQuery(messages);
+  const infoSeeking = retrievalQuery.infoSeeking && Boolean(retrievalQuery.query);
 
   // Multi-turn aggregation: looks at last 4 user messages, not just current.
   // This is what catches the PDF gradient case (turn 1: 看着药盒 → turn 2:
@@ -378,16 +379,7 @@ export async function POST(request: Request) {
     const fastCaseMap = body.caseMap ?? null;
     const fastKnowledge = infoSeeking
       ? await retrieveKnowledge(
-          [
-            body.profile?.concern,
-            latestUserMessage.content,
-            fastCaseMap?.presenting,
-            fastCaseMap?.workingHypothesis,
-            ...(fastCaseMap?.triggers ?? []),
-            ...(fastCaseMap?.automaticThoughts ?? [])
-          ]
-            .filter(Boolean)
-            .join(" "),
+          retrievalQuery.query,
           4,
           // Fast mode: skip rerank + hard-cap Tier-1 wall-clock so a slow retrieval never
           // blows the ≤6s budget (timeout → keyword fallback inside retrieveKnowledge).
@@ -406,7 +398,8 @@ export async function POST(request: Request) {
       persona,
       pace: "fast",
       language,
-      earlierUserContext: buildEarlierUserDigest(messages, fastRecent.length)
+      earlierUserContext: buildEarlierUserDigest(messages, fastRecent.length),
+      responseMode: retrievalQuery.responseMode,
     });
     const fastPayload = buildDeepSeekPayload({
       systemPrompt: fastSystemPrompt,
@@ -561,26 +554,9 @@ export async function POST(request: Request) {
   const plan = body.turnPlan ?? defaultTurnPlan();
   const caseMap = body.caseMap ?? null;
 
-  const knowledgeQueryRaw = [
-    body.profile?.concern,
-    latestUserMessage.content,
-    caseMap?.presenting,
-    caseMap?.workingHypothesis,
-    ...(caseMap?.triggers ?? []),
-    ...(caseMap?.automaticThoughts ?? [])
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  // Deep-mode retrieval query rewrite (task F): compress the raw joined venting text
-  // into a compact search-style query before hitting the KB/web — improves recall on
-  // long, narrative messages. Fail-safe: any error/timeout/runaway output returns the
-  // raw text unchanged (see query-rewrite.ts). Fast mode skips this entirely (latency
-  // budget) and searches on the raw joined text exactly as before.
-  const knowledgeQuery =
-    infoSeeking && !crisisModeActive && resolveSessionPace(body.pace) === "deep"
-      ? await rewriteRetrievalQuery(knowledgeQueryRaw)
-      : knowledgeQueryRaw;
+  // Same topic-only query in both modes. No private case-map text or full user history
+  // goes to an extra rewrite/embedding/search provider; topic changes win over history.
+  const knowledgeQuery = retrievalQuery.query;
 
   // Retrieve only when info-seeking AND not in an active crisis window. Suppressing
   // grounding mid-crisis (symmetric with the web-search guard below) keeps the reply
@@ -631,7 +607,8 @@ export async function POST(request: Request) {
     pace: resolveSessionPace(body.pace),
     language,
     earlierUserContext,
-    webResults
+    webResults,
+    responseMode: crisisModeActive ? "support" : retrievalQuery.responseMode,
   });
 
   const payload = buildDeepSeekPayload({

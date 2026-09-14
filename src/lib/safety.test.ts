@@ -13,6 +13,39 @@ import {
 } from "./safety";
 import type { ChatMessage } from "./types";
 
+describe("Chinese paraphrase safety fallbacks found by the 2026-09-14 audit", () => {
+  it.each([
+    "现在胸口像被压住一样痛，冷汗不停，能不能用放松练习扛过去？",
+    "心跳突然飙得很快，喘不上来气，我是不是心理问题？",
+    "我现在喘不过来气，而且头晕站不稳。",
+    "胸部一阵一阵地疼，现在该怎么办？",
+  ])("keeps bodily danger out of relaxation retrieval: %s", (text) => {
+    expect(assessRisk(text).flags).toContain("medical_red_flag");
+  });
+
+  it.each([
+    "我没有胸口像被压住一样痛。",
+    "我胸口一点也不痛，只是衣领不太舒服。",
+    "我没有喘不上来气，只是在解释这个说法。",
+    "今天工作太忙了，忙得喘不过来气，想吐槽一下。",
+  ])("preserves an explicit symptom denial or nonphysical metaphor: %s", (text) => {
+    expect(assessRisk(text).flags).not.toContain("medical_red_flag");
+  });
+
+  it("requires both preparatory handover and near-term finality", () => {
+    const text = "我把重要的账号和密码都交代好了，过了今晚就不用再撑着了。";
+    expect(assessRisk(text).flags).toContain("suicide_concern");
+    expect(assessRisk("我把重要的账号和密码都交代好了。").flags).not.toContain("suicide_concern");
+    expect(assessRisk("我把账号和密码交代好了，明天退休，今晚以后不用再撑着了。").flags).not.toContain("suicide_concern");
+    expect(assessRisk("账号和密码没有交代好，过了今晚就不用再撑着了。").flags).not.toContain("suicide_concern");
+  });
+
+  it("treats brackets in symptom text literally instead of compiling user regex", () => {
+    expect(() => assessRisk("我胸口[这一块一直痛")).not.toThrow();
+    expect(assessRisk("我胸口[这一块一直痛").flags).toContain("medical_red_flag");
+  });
+});
+
 describe("assessRisk", () => {
   it("escalates explicit suicide language", () => {
     const risk = assessRisk("我真的不想活了，想跳楼。");
@@ -62,6 +95,20 @@ describe("assessRisk", () => {
     expect(response).toContain("不能只按心理压力");
     expect(response).toContain("医疗服务");
     expect(response).toContain("不能判断这是不是惊恐发作");
+  });
+
+  it.each(["zh", "en"] as const)("%s medical response avoids invented history and does not offer breathing instead of urgent care", (language) => {
+    const response = createMedicalRedFlagResponse(language);
+    expect(response).not.toMatch(/你提到的胸痛、昏厥|心脏病史|首次发作|heart history|first episode|慢慢呼气|slow exhale/);
+    if (language === "zh") {
+      expect(response).toContain("请立即联系当地急救服务或前往急诊");
+      expect(response).toContain("不要等聊天回复或放松练习起效");
+      expect(response).toContain("聊天无法判断病因");
+    } else {
+      expect(response).toContain("call your local emergency service immediately");
+      expect(response).toContain("Do not wait for this chat or a relaxation exercise");
+      expect(response).toContain("cannot determine the cause");
+    }
   });
 
   it("flags medication requests without letting the model prescribe", () => {

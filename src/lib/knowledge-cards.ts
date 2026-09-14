@@ -39,14 +39,13 @@ export const KNOWLEDGE_CARDS: KnowledgeCard[] = [
   },
   {
     id: "icbt-efficacy",
-    title: "认知行为疗法到底有没有用（元分析,带效应量）",
+    title: "有指导的网络 CBT：研究发现与证据边界",
     tags: ["治疗", "CBT", "循证"],
     keywords: ["有用吗", "管用吗", "有效吗", "能好吗", "会不会好", "怎么治", "治疗", "心理咨询有用", "认知行为", "CBT", "看心理医生"],
-    content: "一项纳入 19 项常规照护研究、共 12,096 人的系统综述与元分析显示:基于互联网的认知行为疗法(iCBT)对抑郁的治疗前后效应量 g=1.18(95%CI 1.06–1.29)、对焦虑 g=0.94(0.83–1.06),均属'大效应'。也就是说,CBT 这类方法对抑郁和焦虑有临床上有意义的改善,不是安慰剂。",
-    guidance: ["当对方怀疑'这真的有用吗',可以用'研究里 CBT 这类方法对抑郁焦虑的效果挺扎实'给一点现实的希望,但不夸大、不打包票、不替代正规治疗。"],
-    sourceTitle: "PMC — iCBT in Routine Care: Systematic Review & Meta-Analysis（n=12,096）",
-    sourceUrl: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7490682/",
-    sourceQuote: "The average pre-post effect size of all depression treatments was g=1.18 (95% CI 1.06-1.29), which can be considered a large effect.",
+    content: "这项 2020 年系统综述汇总了常规照护中有指导的网络认知行为疗法研究，观察到参与者的抑郁和焦虑症状在治疗前后有所改善。纳入的是非随机的前后比较，研究间差异较大；仅凭这些变化不能排除自然恢复等因素，也不能证明优于安慰剂。研究对象是有指导的治疗项目，不能把结果直接推广到普通聊天机器人或保证个人疗效。",
+    guidance: ["解释有指导的网络治疗与普通聊天支持的区别。", "不把前后变化当成相对安慰剂的因果疗效，不推算治愈率，也不保证结果。"],
+    sourceTitle: "JMIR — Effects of Internet-Based Cognitive Behavioral Therapy in Routine Care (2020)",
+    sourceUrl: "https://www.jmir.org/2020/8/e18100/",
     clinicalStatus: "approved"
   },
   {
@@ -54,8 +53,8 @@ export const KNOWLEDGE_CARDS: KnowledgeCard[] = [
     title: "行为激活:对「什么都不想做」的循证解法（元分析）",
     tags: ["治疗", "抑郁", "循证"],
     keywords: ["不想动", "什么都不想做", "动不起来", "没动力", "提不起劲", "宅", "躺平", "拖着", "做不了事", "行为激活"],
-    content: "行为激活——逐步、从极小处恢复有意义或愉悦的活动——是抑郁的循证疗法。一项纳入 26 项随机对照试验、1,524 人的元分析显示,行为激活优于对照组(标准化均数差 SMD≈−0.74),效果与抗抑郁药相当。它正对'越不动越糟、越糟越不想动'的恶性循环。",
-    guidance: ["关键不是'你要积极一点',而是'先做、再有感觉',从一个低到几乎没负担的小动作起步,而不是等有动力才动。"],
+    content: "行为激活是一类包含自我观察和活动安排的心理治疗。2014 年一项纳入 26 项随机试验的综述发现，它在减轻抑郁症状方面优于研究中的对照条件。作者同时指出多数研究质量较低、随访较短，仍需要更高质量和更长期的研究。不能据此替个人决定治疗方式，或把一次日常活动等同于完成专业治疗。",
+    guidance: ["如果用户想了解方法，可以介绍其总体思路；具体治疗计划由专业人员结合个人情况制定。", "不把有限的药物比较研究描述成普遍等效或据此建议停药。"],
     sourceTitle: "PMC — Behavioural Activation for Depression: Meta-Analysis Update（26 RCTs）",
     sourceUrl: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4061095/",
     sourceQuote: "A random effects meta-analysis of symptom level post treatment showed behavioural activation to be superior to controls (SMD −0.74 CI −0.91 to −0.56, k = 25, N = 1088) and medication (SMD −0.42 CI −0.83 to −0.00, k = 4, N = 283).",
@@ -79,14 +78,13 @@ export const KNOWLEDGE_CARDS: KnowledgeCard[] = [
   // affect-labeling carries URL + finding but no quote (verbatim not confirmable).
   {
     id: "panic-attacks",
-    title: "惊恐发作:会到达顶峰,也会过去",
+    title: "惊恐发作与身体症状：先保留判断边界",
     tags: ["焦虑", "身体反应"],
     keywords: ["突然心跳很快", "喘不上气", "觉得自己要死了", "手抖出汗", "胸口很闷", "突然很害怕", "头晕站不稳", "感觉要失控了", "心慌得厉害"],
-    content: "惊恐发作通常是一阵突然涌来的强烈恐惧,常伴随心跳加快、喘不上气、手抖、出汗、头晕等身体反应,让人感觉很可怕,甚至害怕自己失控或出事。重要的是:这种强烈的感受会达到一个顶峰,然后逐渐缓和、过去——它虽然吓人,但不会一直持续。世界卫生组织指出,惊恐障碍属于焦虑障碍,而焦虑障碍是有多种有效治疗方法的。你现在经历的,是很多人都经历过、并且能够好转的状况。",
-    guidance: ["试着提醒自己:这股感觉正在到达顶点,接下来会慢慢退去;把注意力放在缓慢、拉长的呼气上。", "如果惊恐发作反复出现、影响到生活,寻求专业帮助是有效的一步。"],
-    sourceTitle: "Anxiety disorders — World Health Organization",
-    sourceUrl: "https://www.who.int/news-room/fact-sheets/detail/anxiety-disorders",
-    sourceQuote: "panic disorder (panic attacks and fear of continued panic attacks)",
+    content: "NHS 介绍，惊恐发作可能伴随突然的强烈恐惧、心跳加快、气短、发抖等体验。但这些身体症状也可能有其他原因，不能仅凭聊天判断为惊恐发作。反复出现或影响生活时，应由医疗专业人员评估并排除其他原因；本卡不用于判断眼前的胸痛或呼吸困难是否安全。",
+    guidance: ["不能说用户肯定只是惊恐、没有身体危险。", "明显或突发的身体危险优先走医疗求助流程，不以呼吸练习或心理解释替代评估。"],
+    sourceTitle: "Panic disorder — NHS",
+    sourceUrl: "https://www.nhs.uk/mental-health/conditions/panic-disorder/",
     clinicalStatus: "approved"
   },
   {

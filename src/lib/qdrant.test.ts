@@ -123,4 +123,33 @@ describe("qdrantDenseSearch — fail-safe contract", () => {
     );
     await expect(qdrantDenseSearch([0.1], { limit: 4 })).resolves.toBeNull();
   });
+
+  it("rejects pending clinical cards even if remote flags claim source verification", async () => {
+    stubQdrantEnv();
+    stubFetchOnce([{ score: 0.9, payload: { ...whoPayload, clinicalStatus: "pending", sourceReview: { status: "verified_primary" }, channel: "grounded_information" } }]);
+    expect(await qdrantDenseSearch([0.1], { limit: 4 })).toEqual([]);
+  });
+
+  it("does not trust a spoofed domain, unsafe scheme, missing citation or empty content", async () => {
+    stubQdrantEnv();
+    stubFetchOnce([
+      ...["https://who.int.evil.example/fact", "javascript:alert(1)", "https://who.int@evil.example", "http://www.who.int/fact", ""].map((sourceUrl) => ({ score: 0.9, payload: { ...whoPayload, sourceUrl } })),
+      { score: 0.9, payload: { ...whoPayload, content: "" } },
+    ]);
+    expect(await qdrantDenseSearch([0.1], { limit: 4 })).toEqual([]);
+  });
+
+  it("enforces score floor locally and rejects NaN embeddings without a request", async () => {
+    stubQdrantEnv();
+    stubFetchOnce([
+      { score: 0.2, payload: whoPayload },
+      { payload: { ...whoPayload, id: "missing-score" } },
+      { score: 0.8, payload: { ...whoPayload, id: "strong" } },
+    ]);
+    const result = await qdrantDenseSearch([0.1], { limit: 4, scoreThreshold: 0.45 });
+    expect(result?.map((card) => card.id)).toEqual(["strong"]);
+    vi.mocked(fetch).mockClear();
+    expect(await qdrantDenseSearch([NaN], { limit: 4 })).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });
