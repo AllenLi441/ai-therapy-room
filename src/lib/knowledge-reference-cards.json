@@ -1,0 +1,1671 @@
+[
+  {
+    "id": "ref-selfcare-personal",
+    "title": "自我照顾可以从适合自己的小事开始",
+    "tags": [
+      "自我照顾",
+      "情绪"
+    ],
+    "keywords": [
+      "自我照顾",
+      "照顾自己",
+      "放松活动",
+      "每天的小事",
+      "self care",
+      "self-care",
+      "自我关怀",
+      "日常照料",
+      "自我关照",
+      "休闲爱好",
+      "taking care of myself"
+    ],
+    "content": "自我照顾是留出时间做有助于身心健康的事。NIMH 强调适合每个人的做法不同，可能需要尝试；散步、阅读、听音乐和低压力爱好都属于可选择的日常活动。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Caring for Your Mental Health",
+    "sourceUrl": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health",
+    "sourceId": "nimh-selfcare",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般生活科普；不能用活动清单替代持续困扰所需的评估。"
+    ],
+    "evidenceSummary": "来源说明自我照顾的定义、个体差异及低压力活动例子。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Overview; How can I take care of my mental health?; When should I seek professional help?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-priorities-rest",
+    "title": "任务过多时区分优先级",
+    "tags": [
+      "压力",
+      "任务"
+    ],
+    "keywords": [
+      "优先级",
+      "任务太多",
+      "事情做不完",
+      "休息有负罪感",
+      "saying no",
+      "priorities",
+      "安排任务",
+      "负荷太重",
+      "工作堆积",
+      "分清轻重缓急",
+      "拒绝新任务"
+    ],
+    "content": "NIMH 的日常自我照顾建议包括区分现在必须做的事与可以等待的事，负担过重时拒绝新增任务，并看见当天已经完成的部分。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Caring for Your Mental Health",
+    "sourceUrl": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health",
+    "sourceId": "nimh-selfcare",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "适用于一般负荷管理；不判断雇佣、家庭或医疗情境中的具体义务。"
+    ],
+    "evidenceSummary": "来源的 Set goals and priorities 段支持任务排序和对新增任务设限。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Overview; How can I take care of my mental health?; When should I seek professional help?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-help-impact",
+    "title": "困扰的持续时间和生活影响值得关注",
+    "tags": [
+      "求助",
+      "生活功能"
+    ],
+    "keywords": [
+      "什么时候求助",
+      "日常功能",
+      "持续两周",
+      "无法工作",
+      "seek help",
+      "daily functioning",
+      "生活受影响",
+      "影响学习工作",
+      "严重困扰",
+      "情绪影响生活",
+      "when to seek support"
+    ],
+    "content": "睡眠、食欲、兴趣、专注或日常任务能力持续受影响时，专业求助值得考虑。NIMH 特别提示严重或令人苦恼的症状持续两周以上；这不是要求严重困扰者必须等满两周。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Caring for Your Mental Health",
+    "sourceUrl": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health",
+    "sourceId": "nimh-selfcare",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "提供求助线索，不能依据时间或症状数量下诊断；紧急风险进入独立安全通道。"
+    ],
+    "evidenceSummary": "来源列出持续严重症状和功能受损的求助提示；不作为个人诊断规则。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Overview; How can I take care of my mental health?; When should I seek professional help?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-therapy-purpose",
+    "title": "谈话治疗通常在做什么",
+    "tags": [
+      "心理咨询",
+      "治疗"
+    ],
+    "keywords": [
+      "心理治疗是什么",
+      "谈话治疗",
+      "咨询和聊天",
+      "psychotherapy",
+      "talk therapy",
+      "心理咨询是什么",
+      "找朋友聊天",
+      "咨询在做什么",
+      "谈话疗法",
+      "what happens in therapy"
+    ],
+    "content": "谈话治疗是一组帮助人识别并改变困扰情绪、想法和行为的方法，通常由具备资质的专业人员个别或团体开展。它的目标包括减轻困扰、支持日常功能和生活质量。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Psychotherapies",
+    "sourceUrl": "https://www.nimh.nih.gov/health/topics/psychotherapies",
+    "sourceId": "nimh-therapy",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般过程说明；聊天机器人不因引用该定义而成为治疗服务。"
+    ],
+    "evidenceSummary": "来源定义 psychotherapy 及其目标和常见开展形式。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is psychotherapy?; What should I look for in a therapist?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-therapist-fit",
+    "title": "初次接触咨询师可以了解哪些信息",
+    "tags": [
+      "心理咨询",
+      "求助"
+    ],
+    "keywords": [
+      "选咨询师",
+      "咨询师资质",
+      "专业背景",
+      "治疗方法",
+      "therapist credentials",
+      "find a therapist",
+      "联系咨询师",
+      "咨询师背景",
+      "选择咨询师",
+      "治疗师资质",
+      "therapist qualifications"
+    ],
+    "content": "选择咨询师时，可了解其资质、经验、擅长问题、采用的方法及依据。初步交谈也有助于判断自己是否感到舒适、信任，以及是否理解双方准备如何合作。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Psychotherapies",
+    "sourceUrl": "https://www.nimh.nih.gov/health/topics/psychotherapies",
+    "sourceId": "nimh-therapy",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不认证具体咨询师；执业资质和服务规则需按所在地核实。"
+    ],
+    "evidenceSummary": "来源列出资质、专长、治疗依据与初步建立信任的问题。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is psychotherapy?; What should I look for in a therapist?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-therapy-progress",
+    "title": "咨询目标、进展与保密边界可以讨论",
+    "tags": [
+      "心理咨询",
+      "过程"
+    ],
+    "keywords": [
+      "咨询没进展",
+      "咨询目标",
+      "保密例外",
+      "多久见效",
+      "therapy progress",
+      "confidentiality",
+      "咨询进展",
+      "原地踏步",
+      "治疗没帮助",
+      "咨询多久",
+      "保密范围",
+      "therapy not helping"
+    ],
+    "content": "开始咨询时可讨论目标、预计安排、如何观察进展，以及保密如何保障和有哪些限制。若一段时间后感觉没有帮助，可以和咨询师讨论调整方法或寻找其他专业支持。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Psychotherapies",
+    "sourceUrl": "https://www.nimh.nih.gov/health/topics/psychotherapies",
+    "sourceId": "nimh-therapy",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不承诺固定见效时间，不把保密描述为没有例外；具体规则向服务方确认。"
+    ],
+    "evidenceSummary": "来源建议询问目标、进展评估、保密限制，并讨论未改善时的选择。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is psychotherapy?; What should I look for in a therapist?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-help-access",
+    "title": "可以从哪些入口寻找心理支持",
+    "tags": [
+      "求助",
+      "服务"
+    ],
+    "keywords": [
+      "找不到心理医生",
+      "学校心理中心",
+      "员工援助",
+      "基层医生",
+      "student support",
+      "EAP",
+      "find mental health help",
+      "学生心理支持",
+      "寻找资源",
+      "学校健康中心",
+      "心理求助渠道",
+      "找心理支持",
+      "college counseling"
+    ],
+    "content": "寻找支持可从基层医疗人员、学校健康中心、当地健康服务或保险服务目录开始。一些单位提供员工援助计划。不同地方的资格、费用、预约和可用服务差异很大。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Help for Mental Illnesses",
+    "sourceUrl": "https://www.nimh.nih.gov/health/find-help",
+    "sourceId": "nimh-help",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "来源以美国服务情境为主；不推定其他国家有相同福利，也不虚构本地机构。"
+    ],
+    "evidenceSummary": "来源列出 primary care、学校、地方机构、保险和员工援助等入口。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "How can I find a health care provider or treatment?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-visit-notes",
+    "title": "就诊前把变化记下来",
+    "tags": [
+      "求助",
+      "就诊准备"
+    ],
+    "keywords": [
+      "就诊准备",
+      "跟医生怎么说",
+      "症状记录",
+      "记不住",
+      "appointment preparation",
+      "symptom notes",
+      "忘记要说什么",
+      "见医生前",
+      "门诊准备",
+      "初诊准备",
+      "看诊前记录",
+      "prepare for appointment"
+    ],
+    "content": "就诊前可记录想讨论的问题、变化何时开始、频率、严重程度和生活影响，以及近期压力。已有药物、非处方产品和补充剂的信息，也有助于医疗人员了解完整情况。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Tips for Talking With a Health Care Provider About Your Mental Health",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/tips-for-talking-with-your-health-care-provider",
+    "sourceId": "nimh-visit",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "这里只准备沟通信息；不根据清单给出诊断或调整药物。"
+    ],
+    "evidenceSummary": "来源建议提前列问题、记录用药并具体说明症状和近期压力。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Prepare ahead of your visit; Be honest; Ask questions",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-care-options",
+    "title": "对治疗方案有疑问可以继续问",
+    "tags": [
+      "求助",
+      "共同决策"
+    ],
+    "keywords": [
+      "治疗选择",
+      "第二意见",
+      "不理解方案",
+      "不同方法",
+      "shared decision",
+      "second opinion",
+      "询问其他选择",
+      "方案不理解",
+      "治疗方案疑问",
+      "方案的顾虑",
+      "another opinion"
+    ],
+    "content": "没有一种治疗适合所有人。对建议的方案不理解或不舒适时，可以说明顾虑，询问其他选择、各自考虑，以及是否需要另一位专业人员的意见。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Tips for Talking With a Health Care Provider About Your Mental Health",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/tips-for-talking-with-your-health-care-provider",
+    "sourceId": "nimh-visit",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不代替医生选疗法或要求中断既有治疗。"
+    ],
+    "evidenceSummary": "来源 Ask questions 段强调表达顾虑、询问选择及个体差异。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Prepare ahead of your visit; Be honest; Ask questions",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-anxiety-everyday",
+    "title": "日常焦虑与持续困扰的区别",
+    "tags": [
+      "焦虑",
+      "科普"
+    ],
+    "keywords": [
+      "日常紧张",
+      "普通焦虑",
+      "焦虑障碍区别",
+      "anxiety disorder",
+      "ordinary anxiety",
+      "偶尔紧张",
+      "偶发担忧",
+      "焦虑持续",
+      "焦虑的区别",
+      "persistent anxiety"
+    ],
+    "content": "偶尔焦虑是生活中的常见体验。焦虑障碍的困扰往往不易消退、会出现在多种情境并影响生活。判断需要结合持续情况、严重程度和功能影响，不能只看一次紧张反应。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Anxiety Disorders",
+    "sourceUrl": "https://www.nimh.nih.gov/health/topics/anxiety-disorders",
+    "sourceId": "nimh-anxiety",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般概念区分；不确认用户是否患病。"
+    ],
+    "evidenceSummary": "NIMH 将偶发焦虑与持续、广泛及加重的焦虑困扰区分。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is anxiety?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-gad-overview",
+    "title": "广泛性焦虑涉及难以控制的多方面担忧",
+    "tags": [
+      "焦虑",
+      "担忧"
+    ],
+    "keywords": [
+      "广泛性焦虑",
+      "什么都担心",
+      "多方面担忧",
+      "generalized anxiety",
+      "GAD",
+      "同时担心很多事",
+      "到处担心",
+      "难以控制担忧",
+      "广泛担忧",
+      "uncontrollable worry"
+    ],
+    "content": "广泛性焦虑的担忧可涉及健康、金钱、工作和家庭等多个方面，频率或强度可能超出事情本身，且难以控制。单凭担心的内容，不能判断一个人是否患有这种障碍。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Generalized Anxiety Disorder: What You Need to Know",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/generalized-anxiety-disorder-gad",
+    "sourceId": "nimh-gad",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "仅解释术语；持续困扰需由专业人员综合评估。"
+    ],
+    "evidenceSummary": "来源概述多领域、过度的担忧及其与偶发焦虑的区别。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is generalized anxiety disorder?; Psychotherapy; Support groups",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-act-overview",
+    "title": "接纳与承诺疗法关注什么",
+    "tags": [
+      "治疗",
+      "ACT"
+    ],
+    "keywords": [
+      "接纳与承诺",
+      "接纳疗法",
+      "价值行动",
+      "ACT",
+      "acceptance commitment therapy",
+      "接纳内在体验",
+      "承诺行动",
+      "有意义的行动",
+      "接纳与行动",
+      "values based action"
+    ],
+    "content": "接纳与承诺疗法（ACT）重视不评判地觉察和接纳内在体验，并参与对自己有意义的活动；正念和目标设定是其中可能使用的方法。是否合适需结合个人情况讨论。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Generalized Anxiety Disorder: What You Need to Know",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/generalized-anxiety-disorder-gad",
+    "sourceId": "nimh-gad",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "治疗概念介绍；不把接纳解释为忍受伤害，不在聊天中自称开展完整 ACT。"
+    ],
+    "evidenceSummary": "来源 Psychotherapy 段介绍 ACT 的接纳、意义活动和目标设定。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is generalized anxiety disorder?; Psychotherapy; Support groups",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-peer-support",
+    "title": "互助小组提供经验交流，不替代个体治疗",
+    "tags": [
+      "求助",
+      "互助"
+    ],
+    "keywords": [
+      "互助小组",
+      "病友建议",
+      "同伴支持",
+      "support group",
+      "peer support",
+      "同伴互助",
+      "互助群",
+      "线上互助",
+      "病友群",
+      "经验交流",
+      "mutual support"
+    ],
+    "content": "互助小组可让有类似困扰的人交流经验和进展，形式可以在线或线下。成员的建议来自个人经历，不能直接替代医疗人员针对个人情况提出的建议。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Generalized Anxiety Disorder: What You Need to Know",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/generalized-anxiety-disorder-gad",
+    "sourceId": "nimh-gad",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不认证小组，不据他人经历安排个人治疗。"
+    ],
+    "evidenceSummary": "来源 Support groups 段区分互助价值与专业治疗建议。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is generalized anxiety disorder?; Psychotherapy; Support groups",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-stress-reaction",
+    "title": "压力也可能体现在身体和注意力上",
+    "tags": [
+      "压力",
+      "身体感受"
+    ],
+    "keywords": [
+      "压力反应",
+      "压力和身体",
+      "胃不舒服",
+      "紧绷",
+      "stress response",
+      "physical stress",
+      "压力身体反应",
+      "压力影响注意力",
+      "压力影响胃",
+      "压力症状",
+      "body under stress"
+    ],
+    "content": "压力是面对困难时的担忧或紧张反应，人们的表现不同。它可能伴随易怒、专注困难、睡眠变化、头痛或胃部不适；这些表现也可能有其他原因。",
+    "guidance": [],
+    "sourceTitle": "WHO — Stress",
+    "sourceUrl": "https://www.who.int/news-room/questions-and-answers/item/stress",
+    "sourceId": "who-stress",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不能把新出现或严重身体症状直接归因于压力。"
+    ],
+    "evidenceSummary": "WHO 说明压力定义、个体差异及认知、情绪和身体表现。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is stress?; What are the signs of stress?; Limit time following news",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-news-stress",
+    "title": "信息摄入也可以有边界",
+    "tags": [
+      "压力",
+      "信息"
+    ],
+    "keywords": [
+      "刷新闻",
+      "负面新闻",
+      "越刷越焦虑",
+      "doomscrolling",
+      "news stress",
+      "刷坏消息",
+      "负面信息",
+      "新闻焦虑",
+      "信息摄入",
+      "bad news stress"
+    ],
+    "content": "WHO 指出，过多关注新闻和社交媒体可能增加压力。如果阅读使压力加重，可以考虑减少关注时长；保留作息、休息和与可信任者联系的时间也属于日常压力管理。",
+    "guidance": [],
+    "sourceTitle": "WHO — Stress",
+    "sourceUrl": "https://www.who.int/news-room/questions-and-answers/item/stress",
+    "sourceId": "who-stress",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般媒体使用科普；不鼓励忽略与本人安全直接相关的信息。"
+    ],
+    "evidenceSummary": "来源 Limit time following news 与日常作息、连接建议支持本卡。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is stress?; What are the signs of stress?; Limit time following news",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-burnout-scope",
+    "title": "职业倦怠是特定工作情境的概念",
+    "tags": [
+      "工作",
+      "倦怠"
+    ],
+    "keywords": [
+      "职业倦怠",
+      "工作耗竭",
+      "burnout",
+      "burn-out",
+      "工作倦怠",
+      "对工作疏离",
+      "职业耗竭",
+      "工作筋疲力尽",
+      "occupational burnout"
+    ],
+    "content": "WHO 在 ICD-11 中将职业倦怠列为职业现象，而不是一种医学疾病。其描述涉及长期未被有效处理的工作压力，以及耗竭、对工作疏离或消极、职业效能感降低。",
+    "guidance": [],
+    "sourceTitle": "WHO — Burn-out an occupational phenomenon: International Classification of Diseases",
+    "sourceUrl": "https://www.who.int/news/item/28-05-2019-burn-out-an-occupational-phenomenon-international-classification-of-diseases",
+    "sourceId": "who-burnout",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "该概念特指工作情境；不能用它排除抑郁等其他问题。"
+    ],
+    "evidenceSummary": "来源明确 occupational phenomenon、非疾病分类及三方面特征。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "ICD-11 occupational phenomenon definition",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-work-environment",
+    "title": "工作压力也与工作条件有关",
+    "tags": [
+      "工作",
+      "压力"
+    ],
+    "keywords": [
+      "工作环境",
+      "工作量",
+      "缺乏掌控",
+      "职场压力",
+      "workload",
+      "job control",
+      "工作自主权",
+      "工作条件",
+      "缺少支持",
+      "任务负担",
+      "职场霸凌",
+      "workplace risks"
+    ],
+    "content": "过高工作量、低自主性、缺少支持、不明确职责、霸凌和就业不稳定，都可能构成心理健康风险。理解工作压力需要同时看个人体验与工作条件。",
+    "guidance": [],
+    "sourceTitle": "WHO — Mental health at work",
+    "sourceUrl": "https://www.who.int/news-room/fact-sheets/detail/mental-health-at-work",
+    "sourceId": "who-work",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般职业健康信息；不作劳动法律判断，也不指示个人辞职。"
+    ],
+    "evidenceSummary": "WHO 将工作负荷、控制感、支持、霸凌和不稳定列为社会心理风险。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Risks to mental health at work",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-insomnia-pattern",
+    "title": "睡眠困难不只表现为入睡慢",
+    "tags": [
+      "睡眠",
+      "失眠"
+    ],
+    "keywords": [
+      "入睡困难",
+      "夜间醒",
+      "早醒",
+      "睡醒还累",
+      "insomnia",
+      "night waking",
+      "半夜醒",
+      "夜醒",
+      "睡后疲惫",
+      "睡眠困难表现",
+      "睡眠不足表现",
+      "waking at night"
+    ],
+    "content": "睡眠困难可表现为难入睡、夜间反复醒、早醒后难以再睡，以及白天疲惫和专注受影响。睡眠需要存在个体差异，不能仅靠一晚睡了多久作判断。",
+    "guidance": [],
+    "sourceTitle": "NHS — Insomnia",
+    "sourceUrl": "https://www.nhs.uk/conditions/insomnia/",
+    "sourceId": "nhs-insomnia",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般睡眠科普；不确认个人失眠诊断。"
+    ],
+    "evidenceSummary": "NHS 罗列夜间与白天表现，并说明睡眠需求因人而异。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Symptoms; How you can treat insomnia yourself; See a GP if; Treatment from a GP",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-insomnia-help",
+    "title": "长期影响生活的睡眠困难可求助",
+    "tags": [
+      "睡眠",
+      "求助"
+    ],
+    "keywords": [
+      "长期失眠",
+      "失眠就医",
+      "睡眠门诊",
+      "CBT-I",
+      "insomnia help",
+      "睡不好几个月",
+      "失眠持续",
+      "睡眠习惯调整没用",
+      "睡眠评估",
+      "persistent sleep trouble"
+    ],
+    "content": "当睡眠困难持续数月、影响白天生活，或调整习惯仍无帮助时，医疗评估可了解原因。针对失眠的认知行为方法会关注维持睡眠困难的想法和行为。",
+    "guidance": [],
+    "sourceTitle": "NHS — Insomnia",
+    "sourceUrl": "https://www.nhs.uk/conditions/insomnia/",
+    "sourceId": "nhs-insomnia",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不提供睡眠限制处方，不用科普替代其他睡眠障碍或身体问题的检查。"
+    ],
+    "evidenceSummary": "NHS 的求助提示与 CBT 治疗介绍支持本卡。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Symptoms; How you can treat insomnia yourself; See a GP if; Treatment from a GP",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-sleep-routine",
+    "title": "睡眠习惯可以先从可持续的一点调整",
+    "tags": [
+      "睡眠",
+      "日常习惯"
+    ],
+    "keywords": [
+      "睡眠习惯",
+      "固定起床",
+      "睡前放松",
+      "卧室环境",
+      "sleep hygiene",
+      "sleep routine",
+      "改善作息",
+      "睡前习惯",
+      "规律起床",
+      "安静卧室",
+      "睡觉环境",
+      "bedtime routine"
+    ],
+    "content": "NHS 的一般建议包括规律起床、睡前留出放松时间、让卧室安静舒适，以及留意咖啡因和酒精。可以选择可持续的小调整，而不是追求一张必须全部完成的清单。",
+    "guidance": [],
+    "sourceTitle": "NHS — Insomnia",
+    "sourceUrl": "https://www.nhs.uk/conditions/insomnia/",
+    "sourceId": "nhs-insomnia",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "生活信息；轮班、身体疾病或长期失眠可能需要个别化安排。"
+    ],
+    "evidenceSummary": "来源的睡眠习惯部分支持规律作息、环境及饮品注意事项。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Symptoms; How you can treat insomnia yourself; See a GP if; Treatment from a GP",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-grief-variety",
+    "title": "哀伤没有必须依次完成的阶段",
+    "tags": [
+      "哀伤",
+      "丧失"
+    ],
+    "keywords": [
+      "哀伤阶段",
+      "不哭",
+      "麻木",
+      "悲伤反复",
+      "grief stages",
+      "bereavement",
+      "丧亲反应",
+      "哀伤麻木",
+      "突然哭",
+      "不按阶段",
+      "丧失后的情绪",
+      "grieving numbness"
+    ],
+    "content": "重要丧失之后可能出现悲伤、麻木、愤怒、疲倦或内疚，感受也可能突然涌现。并非人人都会经历常说的所有哀伤阶段，也不必按固定顺序经过。",
+    "guidance": [],
+    "sourceTitle": "NHS — Grief after bereavement or loss",
+    "sourceUrl": "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/feelings-and-symptoms/grief-bereavement-loss/",
+    "sourceId": "nhs-grief",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不规定哀伤期限，不根据是否哭泣判断感情或病情。"
+    ],
+    "evidenceSummary": "NHS 说明反应多样且阶段并非全都出现或按序进行。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Symptoms; Stages; Things you can try; When and where to get medical help",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-grief-support",
+    "title": "哀伤时支持可以很具体",
+    "tags": [
+      "哀伤",
+      "支持"
+    ],
+    "keywords": [
+      "哀伤支持",
+      "失去亲人怎么照顾自己",
+      "bereavement support",
+      "grief support",
+      "丧亲支持",
+      "亲人过世",
+      "亲人去世",
+      "丧亲后日常",
+      "失去家人",
+      "bereavement coping"
+    ],
+    "content": "面对丧失时，与信任的人谈感受、寻求同伴支持、保持规律饮食，以及把任务缩小，都是 NHS 列出的可选支持方式。难以应对或生活持续受影响时也可以寻求专业支持。",
+    "guidance": [],
+    "sourceTitle": "NHS — Grief after bereavement or loss",
+    "sourceUrl": "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/feelings-and-symptoms/grief-bereavement-loss/",
+    "sourceId": "nhs-grief",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不强迫讲述丧失细节，不保证这些方法足够或立即有效。"
+    ],
+    "evidenceSummary": "来源列出交流、同伴支持、规律饮食、小目标和求助方向。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Symptoms; Stages; Things you can try; When and where to get medical help",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-loneliness-distinction",
+    "title": "孤独感与身边是否有人并不完全相同",
+    "tags": [
+      "孤独",
+      "关系"
+    ],
+    "keywords": [
+      "有人也孤独",
+      "在人群里孤独",
+      "孤独和独处",
+      "loneliness",
+      "alone versus lonely",
+      "孤独但不独处",
+      "有朋友还孤独",
+      "有人陪仍孤独",
+      "关系中孤独",
+      "lonely with friends"
+    ],
+    "content": "孤独感可能与搬迁、失去关系、独居或生活变化有关，但不一定发生在独自一人时；与朋友、家人或伴侣相处时，也可能感到孤独。",
+    "guidance": [],
+    "sourceTitle": "NHS — Feeling lonely",
+    "sourceUrl": "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/feelings-and-symptoms/feeling-lonely/",
+    "sourceId": "nhs-loneliness",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "概念说明；不推断用户关系失败或缺乏社交能力。"
+    ],
+    "evidenceSummary": "来源 Causes of loneliness 指出孤独的多种背景与非独处性。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Causes of loneliness; Things you can try to help with loneliness",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-connection-small",
+    "title": "连接可以从低压力参与开始",
+    "tags": [
+      "孤独",
+      "社会连接"
+    ],
+    "keywords": [
+      "交朋友的第一步",
+      "融入新城市",
+      "兴趣小组",
+      "社会连接",
+      "small social steps",
+      "social connection",
+      "建立联系",
+      "建立连接",
+      "新环境社交",
+      "搬到新地方",
+      "融入新环境",
+      "connecting after moving"
+    ],
+    "content": "NHS 的可选做法包括参与自己感兴趣的小组、先旁观一次、去有人的公共场所、联系熟人或尝试志愿活动。可以从容易完成的小目标开始。",
+    "guidance": [],
+    "sourceTitle": "NHS — Feeling lonely",
+    "sourceUrl": "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/feelings-and-symptoms/feeling-lonely/",
+    "sourceId": "nhs-loneliness",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不强迫社交；选择安全、本人愿意参与的情境，不保证消除孤独。"
+    ],
+    "evidenceSummary": "来源建议兴趣小组、先观看、公共空间、志愿参与及小目标。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Causes of loneliness; Things you can try to help with loneliness",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-anger-pause",
+    "title": "留意愤怒的早期变化",
+    "tags": [
+      "愤怒",
+      "情绪"
+    ],
+    "keywords": [
+      "易怒",
+      "生气暂停",
+      "握拳",
+      "愤怒调节",
+      "anger",
+      "irritability",
+      "愤怒信号",
+      "生气的早期信号",
+      "生气绷紧",
+      "生气握拳",
+      "怒气上来",
+      "anger warning signs"
+    ],
+    "content": "愤怒可能伴随肌肉紧张、握拳、心跳加快或难以放松。NHS 建议尽早察觉，给自己一点思考时间再回应，并可和不在冲突中的人谈谈。",
+    "guidance": [],
+    "sourceTitle": "NHS — Anger",
+    "sourceUrl": "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/feelings-and-symptoms/anger/",
+    "sourceId": "nhs-anger",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般情绪信息；暴力或伤害风险优先进入安全通道，不能用暂停替代保护措施。"
+    ],
+    "evidenceSummary": "来源列出愤怒身心表现、回应前留时间及向第三方交流。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Symptoms of anger; Things you can try to help with anger",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-panic-concepts",
+    "title": "一次惊恐发作与惊恐障碍不同",
+    "tags": [
+      "焦虑",
+      "惊恐"
+    ],
+    "keywords": [
+      "惊恐发作和惊恐障碍",
+      "突然强烈害怕",
+      "panic attack",
+      "panic disorder",
+      "一次惊恐",
+      "偶发惊恐",
+      "惊恐的区别",
+      "恐慌发作",
+      "single panic episode"
+    ],
+    "content": "惊恐发作是一阵强烈恐惧或不适，可以伴随明显身体感受。偶发一次不等于惊恐障碍；反复意外发作以及对再次发作的持续担心或回避，是专业评估关注的内容。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Panic Disorder: What You Need to Know",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/panic-disorder-when-fear-overwhelms",
+    "sourceId": "nimh-panic",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不能凭聊天判定胸痛、呼吸困难等身体症状是惊恐；新发严重症状应走医疗通道。"
+    ],
+    "evidenceSummary": "NIMH 区分一次或偶发发作与伴持续担忧、行为改变的障碍。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Difference between a panic attack and panic disorder; How is panic disorder treated?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-panic-options",
+    "title": "惊恐相关困扰有多种专业支持方式",
+    "tags": [
+      "焦虑",
+      "治疗"
+    ],
+    "keywords": [
+      "惊恐治疗",
+      "害怕再次发作",
+      "panic treatment",
+      "panic CBT",
+      "惊恐专业支持",
+      "惊恐心理治疗",
+      "反复惊恐求助",
+      "惊恐治疗方式",
+      "help for panic"
+    ],
+    "content": "惊恐障碍的专业支持可能包括心理治疗、药物或结合使用。CBT 是常用的有研究支持的心理方法；方案要考虑需求、偏好和身体情况，找到合适方法可能需要时间。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Panic Disorder: What You Need to Know",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/panic-disorder-when-fear-overwhelms",
+    "sourceId": "nimh-panic",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "只介绍选择，不安排暴露训练、药物或诊断；不能保证疗效。"
+    ],
+    "evidenceSummary": "来源 How is panic disorder treated? 描述方案选择、CBT 与起效需要时间。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Difference between a panic attack and panic disorder; How is panic disorder treated?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-social-fear",
+    "title": "社交焦虑关注被评价时的强烈不安",
+    "tags": [
+      "焦虑",
+      "社交"
+    ],
+    "keywords": [
+      "害怕评价",
+      "社交焦虑",
+      "当众发言",
+      "聚会回避",
+      "social anxiety",
+      "fear of judgement",
+      "内向和社交焦虑",
+      "被注视紧张",
+      "怕人评价",
+      "社交回避",
+      "社交恐惧",
+      "shyness versus social anxiety"
+    ],
+    "content": "社交焦虑可能围绕被注视、评价、出丑或拒绝，包括发言、见陌生人及日常互动。若担忧和回避持续干扰学习、工作或关系，值得与专业人员讨论。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Social Anxiety Disorder: What You Need to Know",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/social-anxiety-disorder-more-than-just-shyness",
+    "sourceId": "nimh-social",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不把害羞或内向直接等同障碍，不强迫现场暴露。"
+    ],
+    "evidenceSummary": "来源介绍被评价情境的焦虑、回避和生活干扰。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is social anxiety disorder?; Know when to seek help",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-cbt-connections",
+    "title": "CBT 会一起看情境、想法、感受和行为",
+    "tags": [
+      "治疗",
+      "CBT"
+    ],
+    "keywords": [
+      "CBT是什么",
+      "认知行为疗法",
+      "想法感受行为",
+      "cognitive behavioural therapy",
+      "cognitive behavioral therapy",
+      "认知行为治疗",
+      "认知疗法",
+      "乐观想开点",
+      "情境想法行为",
+      "CBT approach"
+    ],
+    "content": "CBT 通常从具体困难情境出发，讨论其中的想法、感受和行为，再一起探索不同的理解和行动方式。它不只是要求一个人凡事积极想。",
+    "guidance": [],
+    "sourceTitle": "NHS — Cognitive behavioural therapy (CBT)",
+    "sourceUrl": "https://www.nhs.uk/tests-and-treatments/cognitive-behavioural-therapy-cbt/",
+    "sourceId": "nhs-cbt",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "治疗概念科普；不据此宣称聊天完成了 CBT 或替用户否定其体验。"
+    ],
+    "evidenceSummary": "NHS 的会谈内容介绍支持情境、认知、情绪和行为的共同观察。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Before you have CBT; What happens in CBT; What CBT sessions involve",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-cbt-between",
+    "title": "CBT 的会谈之间也可能有练习",
+    "tags": [
+      "治疗",
+      "咨询过程"
+    ],
+    "keywords": [
+      "咨询作业",
+      "会谈间练习",
+      "CBT练习",
+      "CBT homework",
+      "between sessions",
+      "咨询间隔练习",
+      "咨询外的练习",
+      "治疗作业",
+      "会谈间记录",
+      "therapy homework"
+    ],
+    "content": "CBT 常包含会谈间练习，有时用记录表或日记观察进展。治疗人员会与来访者一起寻找适合问题的做法，练习内容和安排需结合个人需要。",
+    "guidance": [],
+    "sourceTitle": "NHS — Cognitive behavioural therapy (CBT)",
+    "sourceUrl": "https://www.nhs.uk/tests-and-treatments/cognitive-behavioural-therapy-cbt/",
+    "sourceId": "nhs-cbt",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不把未完成练习归咎于用户；这张卡不提供个体治疗作业。"
+    ],
+    "evidenceSummary": "来源说明会谈间实践、进展记录及一起寻找合适方法。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Before you have CBT; What happens in CBT; What CBT sessions involve",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-guided-selfhelp",
+    "title": "有指导的自助与独自读资料不同",
+    "tags": [
+      "治疗",
+      "自助"
+    ],
+    "keywords": [
+      "有指导自助",
+      "工作手册",
+      "在线课程",
+      "guided self-help",
+      "therapy workbook",
+      "指导式自助",
+      "有指导的自助",
+      "自助手册",
+      "咨询工作簿",
+      "supported self help"
+    ],
+    "content": "有指导的自助是 CBT 的一种形式：在治疗人员协助下使用工作手册或在线课程。CBT 也可能通过个别或团体会谈开展，并采用面谈、电话或线上形式。",
+    "guidance": [],
+    "sourceTitle": "NHS — Cognitive behavioural therapy (CBT)",
+    "sourceUrl": "https://www.nhs.uk/tests-and-treatments/cognitive-behavioural-therapy-cbt/",
+    "sourceId": "nhs-cbt",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "只说明服务形式；资料或聊天应用不自动等于有指导治疗。"
+    ],
+    "evidenceSummary": "来源列举 guided self-help、个体、团体及远程形式。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Before you have CBT; What happens in CBT; What CBT sessions involve",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-mindfulness-meaning",
+    "title": "正念关注当下的觉察",
+    "tags": [
+      "正念",
+      "情绪调节"
+    ],
+    "keywords": [
+      "正念是什么",
+      "清空大脑",
+      "当下觉察",
+      "mindfulness",
+      "meditation definition",
+      "正念觉察",
+      "正念含义",
+      "没有想法",
+      "清除杂念",
+      "nonjudgmental awareness"
+    ],
+    "content": "正念强调把注意力或觉察放在当下，并尽量不作评判。冥想包含多种练习，有些专注于呼吸、声音或其他感受；正念并不等于必须让脑中没有想法。",
+    "guidance": [],
+    "sourceTitle": "NCCIH — Meditation and Mindfulness: Effectiveness and Safety",
+    "sourceUrl": "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety",
+    "sourceId": "nccih-mindfulness",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "概念信息；不强迫闭眼或关注身体，不把分心称为失败。"
+    ],
+    "evidenceSummary": "NCCIH 定义当下、不评判的注意，以及冥想的不同关注对象。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What are meditation and mindfulness?; Are meditation and mindfulness practices safe?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-mindfulness-limits",
+    "title": "正念并非对每个人都舒服",
+    "tags": [
+      "正念",
+      "适用边界"
+    ],
+    "keywords": [
+      "冥想不舒服",
+      "正念更焦虑",
+      "冥想副作用",
+      "meditation adverse effects",
+      "mindfulness safety",
+      "正念不适",
+      "冥想反而焦虑",
+      "冥想更焦虑",
+      "正念的局限",
+      "冥想负面体验",
+      "meditation makes anxiety worse"
+    ],
+    "content": "正念和冥想的研究并不能证明它们对所有人都无风险，部分参与者报告过焦虑等不适。来源提醒安全研究仍有限，因此不应把一种练习当作人人必须坚持的万能方法。",
+    "guidance": [],
+    "sourceTitle": "NCCIH — Meditation and Mindfulness: Effectiveness and Safety",
+    "sourceUrl": "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety",
+    "sourceId": "nccih-mindfulness",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "出现不适时不施压继续；是否参与正式练习可与专业人员讨论。"
+    ],
+    "evidenceSummary": "来源安全性部分说明研究不足与负面体验报告。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What are meditation and mindfulness?; Are meditation and mindfulness practices safe?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-breathing-comfort",
+    "title": "呼吸练习强调舒适和轻柔",
+    "tags": [
+      "放松",
+      "呼吸"
+    ],
+    "keywords": [
+      "呼吸练习",
+      "缓慢呼吸",
+      "不要用力",
+      "breathing exercise",
+      "gentle breathing",
+      "呼吸放松",
+      "放松呼吸",
+      "深呼吸用力",
+      "呼吸数拍",
+      "舒适呼吸",
+      "breathing gently"
+    ],
+    "content": "NHS 的减压呼吸练习强调舒适的姿势、轻柔规律地吸气和呼气，不强迫呼吸达到某种深度。数拍只是可选辅助，而不是必须达标的考试。",
+    "guidance": [],
+    "sourceTitle": "NHS — Breathing exercises for stress",
+    "sourceUrl": "https://www.nhs.uk/mental-health/self-help/guides-tools-and-activities/breathing-exercises-for-stress/",
+    "sourceId": "nhs-breathing",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "只用于一般放松信息；不能用于排除或处理急性呼吸困难、胸痛等医疗问题。"
+    ],
+    "evidenceSummary": "来源明确 comfortably、without forcing、gentle regular 与可选数拍。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Comfortable positioning and gentle unforced breathing",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-grounding-senses",
+    "title": "感官定位把注意力带回周围",
+    "tags": [
+      "放松",
+      "感官定位"
+    ],
+    "keywords": [
+      "感官定位",
+      "五四三二一",
+      "grounding",
+      "5-4-3-2-1",
+      "sensory grounding",
+      "感官锚定",
+      "五感练习",
+      "五感定位",
+      "54321",
+      "观察周围感官",
+      "sensory orientation"
+    ],
+    "content": "NHS inform 介绍感官定位：依次留意能看到、触及、听到、闻到和尝到的事物，常以 5、4、3、2、1 提示。目的是把注意力从压倒性的想法或感受移向当下环境。",
+    "guidance": [],
+    "sourceTitle": "NHS inform / Public Health Scotland — Grounding exercises",
+    "sourceUrl": "https://www.nhsinform.scot/healthy-living/mental-wellbeing/breathing-and-relaxation-exercises/grounding-exercises/",
+    "sourceId": "nhsinform-grounding",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般自助科普，可按感官能力选择；不强迫练习，不将它当作创伤治疗或紧急医疗处理。"
+    ],
+    "evidenceSummary": "官方索引展示 Exercise 1 感官列表及减轻压倒性焦虑压力的目的。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Exercise 1: sensory 5,4,3,2,1 method",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-worry-time",
+    "title": "给担忧一个集中整理的时段",
+    "tags": [
+      "担忧",
+      "自助"
+    ],
+    "keywords": [
+      "担忧时间",
+      "担心占满一天",
+      "worry time",
+      "racing worries",
+      "集中整理担忧",
+      "安排担忧时段",
+      "规定担忧时间",
+      "记录担心",
+      "scheduled worry"
+    ],
+    "content": "NHS 介绍一种可尝试的做法：先把担忧记下来，留一小段固定时间整理，其他时候再把注意力放回当前事情。目的不是保证不再担忧，而是减少它占满整天。",
+    "guidance": [],
+    "sourceTitle": "NHS Every Mind Matters — Tackling your worries",
+    "sourceUrl": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/tackling-your-worries/",
+    "sourceId": "nhs-worries",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般自助选择；不要求强行压住思想，持续困扰可能需要更多支持。"
+    ],
+    "evidenceSummary": "来源的记录、worry time 和重新关注当下支持本卡。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Write them down; Set aside worry time; Use the worry tree; Make a plan",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-worry-actions",
+    "title": "把可以行动的问题与假设性担忧分开",
+    "tags": [
+      "担忧",
+      "问题解决"
+    ],
+    "keywords": [
+      "担忧树",
+      "能控制的事",
+      "假设性担忧",
+      "实际问题",
+      "worry tree",
+      "problem solving",
+      "不确定担忧",
+      "担心万一",
+      "万一发生",
+      "可控与不可控",
+      "可行动问题",
+      "hypothetical worry"
+    ],
+    "content": "整理担忧时，可以区分当前能做点什么的实际问题，与暂时无法控制的假设。对可行动的问题，进一步明确做什么、如何做、何时做；暂时不能做的可另作安排。",
+    "guidance": [],
+    "sourceTitle": "NHS Every Mind Matters — Tackling your worries",
+    "sourceUrl": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/tackling-your-worries/",
+    "sourceId": "nhs-worries",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不暗示所有现实困难都能靠个人规划解决，也不替用户作重大决定。"
+    ],
+    "evidenceSummary": "来源 worry tree 与 make a plan 部分区分问题并制定具体行动。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Write them down; Set aside worry time; Use the worry tree; Make a plan",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-depression-concepts",
+    "title": "持续低落与兴趣改变需要综合理解",
+    "tags": [
+      "低落",
+      "抑郁"
+    ],
+    "keywords": [
+      "抑郁和难过",
+      "兴趣丧失",
+      "抑郁表现",
+      "depression",
+      "sadness",
+      "抑郁与伤心",
+      "抑郁有哪些变化",
+      "持续情绪低落",
+      "没有兴趣",
+      "signs of depression"
+    ],
+    "content": "抑郁相关困扰可能包括持续低落或失去兴趣，并影响睡眠、精力、专注和生活。不同人表现不同；类似变化也可能与身体状况或药物有关，需要综合评估。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Depression",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/depression",
+    "sourceId": "nimh-depression",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "不凭一个症状、聊天或筛查分数下诊断。"
+    ],
+    "evidenceSummary": "NIMH 说明抑郁与短暂低落的区别、表现差异以及其他可能原因。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is depression?; How is depression diagnosed?; Psychotherapy",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-ipt-overview",
+    "title": "人际心理治疗关注关系与生活事件",
+    "tags": [
+      "治疗",
+      "人际"
+    ],
+    "keywords": [
+      "人际心理治疗",
+      "IPT",
+      "interpersonal therapy",
+      "关系和情绪",
+      "人际治疗",
+      "人际关系治疗",
+      "关系生活事件",
+      "人际疗法",
+      "interpersonal psychotherapy"
+    ],
+    "content": "人际心理治疗（IPT）关注人际关系、生活事件与情绪之间的相互影响，可能涉及沟通、社会支持和对关系的期待。它是抑郁治疗中有研究支持的方法之一。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Depression",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/depression",
+    "sourceId": "nimh-depression",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "仅概述方法；不从关系困扰推定抑郁，也不承诺适合每个人。"
+    ],
+    "evidenceSummary": "来源 Psychotherapy 段介绍 IPT 的焦点和具体目标。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is depression?; How is depression diagnosed?; Psychotherapy",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-activity-accessible",
+    "title": "身体活动可以按兴趣和能力选择",
+    "tags": [
+      "运动",
+      "自我照顾"
+    ],
+    "keywords": [
+      "温和运动",
+      "散步",
+      "运动和情绪",
+      "不爱健身",
+      "physical activity",
+      "exercise mood",
+      "运动",
+      "不喜欢跑步",
+      "活动和情绪",
+      "身体活动",
+      "exercise alternatives"
+    ],
+    "content": "规律身体活动可以支持情绪、睡眠和减压。活动不只指正式健身；选择自己愿意做、适合能力的方式，更容易成为日常一部分。",
+    "guidance": [],
+    "sourceTitle": "NHS Every Mind Matters — Be active for your mental health",
+    "sourceUrl": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/be-active-for-your-mental-health/",
+    "sourceId": "nhs-activity",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般健康信息；不比较药物优劣，不用运动替代必要治疗，身体限制需个别考虑。"
+    ],
+    "evidenceSummary": "NHS 说明身体活动的心理益处及寻找适合自己的活动。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-09-14",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Mental health benefits of physical activity; Finding activity that works for you",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  }
+]

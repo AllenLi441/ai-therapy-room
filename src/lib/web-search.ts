@@ -18,6 +18,8 @@
  * speaks the same {query, include_domains, max_results} → {results:[{title,url,content}]}.
  */
 
+import { isTrustedKnowledgeUrl } from "./knowledge-source";
+
 export type WebResult = { title: string; url: string; snippet: string };
 
 // Clearly-authoritative health / research orgs only. Mirrors the KB's source tiers.
@@ -79,7 +81,9 @@ export async function searchAuthoritative(query: string, limit = 3): Promise<Web
         results?: Array<{ title?: string; url?: string; content?: string }>;
       };
       return (json.results ?? [])
-        .filter((r): r is { title: string; url: string; content?: string } => Boolean(r.url && r.title))
+        .filter((r): r is { title: string; url: string; content?: string } =>
+          Boolean(typeof r.title === "string" && r.title.trim() && isTrustedKnowledgeUrl(r.url) &&
+            typeof r.content === "string" && r.content.trim()))
         .slice(0, limit)
         .map((r) => ({
           title: r.title.slice(0, 160),

@@ -57,6 +57,12 @@ describe("composer input and attachment recovery", () => {
 });
 
 describe("always available controls", () => {
+  it("labels retrieved references without claiming they verify every generated assertion", () => {
+    render(<Bubble lang="zh" persona={personaById("linxi")} m={{ id: "sources", role: "assistant", content: "可以慢慢聊。", refs: [{ title: "心理健康资料", url: "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health", source: "NIMH" }] }} />);
+    expect(screen.getByText("本轮参考资料 · 1 条（点开核对原文）")).toBeInTheDocument();
+    expect(screen.getByText(/不代表回答中的每个判断已被验证/)).toBeInTheDocument();
+    expect(screen.queryByText(/这条回应参考了下面这些权威来源/)).not.toBeInTheDocument();
+  });
   it("allows keyboard activation of local deletion", async () => {
     const user = userEvent.setup();
     const remove = vi.fn();

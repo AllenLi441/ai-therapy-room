@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { assessImplicitRiskWithLLM } from "@/lib/implicit-risk";
-import { generateDeepSeekText } from "@/lib/deepseek";
+import { createDeepSeekTextStream, generateDeepSeekText } from "@/lib/deepseek";
 import { retrieveKnowledge } from "@/lib/knowledge";
 import { searchAuthoritative } from "@/lib/web-search";
 import { resetRateLimitForTests } from "@/lib/rate-limit";
+import { KNOWLEDGE_REFERENCE_CARDS } from "@/lib/knowledge-reference-cards";
 
 beforeEach(() => {
   resetRateLimitForTests();
   vi.mocked(assessImplicitRiskWithLLM).mockReset().mockResolvedValue({ kind: "not_configured" });
   vi.mocked(generateDeepSeekText).mockReset().mockRejectedValue(new Error("offline test provider"));
+  vi.mocked(createDeepSeekTextStream).mockClear();
 });
 
 // Spy on retrieval + web-search so we can PROVE the safety guards: a crisis turn must
@@ -53,6 +55,26 @@ vi.mock("@/lib/deepseek", async (importOriginal) => {
   };
 });
 const mockedGen = vi.mocked(generateDeepSeekText);
+
+describe("audited safety paraphrases with an unavailable external judge", () => {
+  beforeEach(() => { mockedRetrieve.mockClear(); mockedSearch.mockClear(); });
+  it.each([
+    "现在胸口像被压住一样痛，冷汗不停，能不能用放松练习扛过去？",
+    "心跳突然飙得很快，喘不上来气，我是不是心理问题？",
+  ])("uses the medical boundary before RAG: %s", async (content) => {
+    const response = await POST(chatRequest([{ role: "user", content }]));
+    expect(await response.text()).toContain("不能只按心理压力");
+    expect(mockedRetrieve).not.toHaveBeenCalled();
+    expect(mockedSearch).not.toHaveBeenCalled();
+  });
+  it("keeps a deterministic safety banner for preparatory handover plus near-term finality", async () => {
+    const response = await POST(chatRequest([{ role: "user", content: "我把重要的账号和密码都交代好了，过了今晚就不用再撑着了。" }]));
+    await response.text();
+    expect(response.headers.get("X-Crisis-Triggered")).toBe("1");
+    expect(mockedRetrieve).not.toHaveBeenCalled();
+    expect(mockedSearch).not.toHaveBeenCalled();
+  });
+});
 
 /**
  * Branch-order regression tests for the chat route.
@@ -275,6 +297,58 @@ describe("chat route — RAG safety guards (P5)", () => {
     });
   }
 
+  // These tests inspect the actual provider request, not a mocked prompt builder.
+  // They prove route wiring and the generation contract, not model compliance.
+  it.each(["fast", "deep"] as const)("%s factual question sends a direct information contract instead of a counseling orientation", async (pace) => {
+    const cbt = KNOWLEDGE_REFERENCE_CARDS.find((card) => card.id === "ref-cbt-connections")!;
+    mockedRetrieve.mockResolvedValueOnce([cbt]); // Deliberately only one part of the question is supported.
+    const res = await POST(requestWith([{ role: "user", content: "CBT 是什么？适合在什么情况下找专业人士了解？" }], pace));
+    await res.text();
+    const query = mockedRetrieve.mock.calls[0][0];
+    expect(query).toContain("CBT");
+    expect(query).toContain("什么时候求助");
+    const prompt = vi.mocked(createDeepSeekTextStream).mock.calls[0][0].messages[0].content;
+    expect(prompt).toContain("本轮回应任务：信息问答");
+    expect(prompt).toContain(cbt.content);
+    expect(prompt).toContain("本轮资料没有覆盖这一点");
+    expect(prompt).toContain("禁止仅凭提问推测");
+    expect(prompt).toContain("不附加情绪追问");
+    expect(prompt).not.toMatch(/必须先反映：|结尾澄清问题：|本轮取向：person-centered|情绪精准识别与共情（最优先）/);
+  });
+
+  it("a clear unsupported concept still gets an information answer contract with no invented evidence", async () => {
+    await (await POST(requestWith([{ role: "user", content: "异相整合疗法是什么？" }], "deep"))).text();
+    expect(mockedRetrieve).not.toHaveBeenCalled();
+    expect(mockedSearch).not.toHaveBeenCalled();
+    const prompt = vi.mocked(createDeepSeekTextStream).mock.calls[0][0].messages[0].content;
+    expect(prompt).toContain("本轮回应任务：信息问答");
+    expect(prompt).toContain("本轮没有可核对的检索证据");
+    expect(prompt).toContain("不要用模型记忆填补专业知识");
+  });
+
+  it.each(["fast", "deep"] as const)("%s percentage request with definition-only evidence cannot fall back to emotional inference", async (pace) => {
+    const cbt = KNOWLEDGE_REFERENCE_CARDS.find((card) => card.id === "ref-cbt-connections")!;
+    mockedRetrieve.mockResolvedValueOnce([cbt]);
+    await (await POST(requestWith([{ role: "user", content: "CBT 的准确治愈率是多少？请给出一个百分比。" }], pace))).text();
+    const query = mockedRetrieve.mock.calls[0][0];
+    expect(query).toContain("疗效统计 风险概率 百分比");
+    const prompt = vi.mocked(createDeepSeekTextStream).mock.calls[0][0].messages[0].content;
+    expect(prompt).toContain("本轮回应任务：信息问答");
+    expect(prompt).toContain(cbt.content);
+    expect(prompt).toContain("本轮证据未包含该比例或数字");
+    expect(prompt).toContain("缺失数字的原因、研究或人群差异也必须有本轮证据支持");
+    expect(prompt).toContain("禁止仅凭提问推测");
+    expect(prompt).not.toMatch(/必须先反映：|结尾澄清问题：|本轮取向：person-centered/);
+  });
+
+  it("explicit listening requests keep support style and do not acquire knowledge", async () => {
+    await (await POST(requestWith([{ role: "user", content: "焦虑让我想哭，先别教方法，只听我说好吗？" }], "deep"))).text();
+    expect(mockedRetrieve).not.toHaveBeenCalled();
+    const prompt = vi.mocked(createDeepSeekTextStream).mock.calls[0][0].messages[0].content;
+    expect(prompt).not.toContain("本轮回应任务：信息问答");
+    expect(prompt).toContain("情绪精准识别与共情");
+  });
+
   it("safety guard ①: a crisis turn NEVER calls retrieval or web search", async () => {
     // Crisis returns at the deterministic floor, above the retrieval/web-search wiring, so
     // embed/Qdrant/Tavily are never reached for a vulnerable user.
@@ -314,5 +388,24 @@ describe("chat route — RAG safety guards (P5)", () => {
     await (await POST(req)).text();
     expect(mockedRetrieve).not.toHaveBeenCalled();
     expect(mockedSearch).not.toHaveBeenCalled();
+  });
+
+  it.each(["fast", "deep"] as const)("%s follow-up retrieves prior USER topic without private history or case-map guesses", async (pace) => {
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pace, language: "zh", profile: { nickname: "PrivateName", concern: "社交焦虑", intensity: 3 },
+        messages: [
+          { role: "user", content: "我叫 PrivateName，邮箱 secret@example.com，最近总睡不着。" },
+          { role: "assistant", content: "也许这是抑郁症的表现。" },
+          { role: "user", content: "那有什么办法？" },
+        ],
+      }),
+    });
+    await (await POST(req)).text();
+    expect(mockedRetrieve).toHaveBeenCalledOnce();
+    const query = mockedRetrieve.mock.calls[0][0];
+    expect(query).toContain("睡眠");
+    expect(query).not.toMatch(/PrivateName|secret|example|抑郁|社交/);
   });
 });

@@ -3,6 +3,15 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v0.9.0] - 2026-09-14
+
+- Add 40 primary-source checked general-information cards from 22 authoritative sources, with explicit use limits and pending professional review.
+- Answer information requests directly from supplied evidence; separate them from counseling prompts, preserve short follow-up topics, and honor requests to listen without advice.
+- Handle missing evidence for efficacy rates and other factual questions without inventing numbers, explanations, or personal motives.
+- Validate source domains and vector content versions, share retrieval deadlines, and label the reference panel accurately.
+- Strengthen deterministic medical and indirect-crisis routing and remove unmentioned symptom histories from the medical response.
+- Add regression coverage and retain actual failed cases and their corrected outcomes; these checks do not establish clinical effectiveness.
+
 ## [v0.7.9] - 2026-07-22
 
 - Route the production Kimi text judge and image understanding through the existing SiliconFlow embedding account, using `moonshotai/Kimi-K2.5` for both modalities.

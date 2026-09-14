@@ -18,6 +18,9 @@
  */
 
 import type { KnowledgeCard } from "./types";
+import { isTrustedKnowledgeUrl } from "./knowledge-source";
+
+export type QdrantKnowledgeCard = KnowledgeCard & { retrievalScore?: number };
 
 type QdrantMatch = { key: string; match: { value: string } };
 
@@ -66,16 +69,18 @@ function strArr(v: unknown): string[] {
 /**
  * Map a Qdrant payload back into a KnowledgeCard. Preserves the verifiable-source triple
  * (sourceTitle / sourceUrl / sourceQuote) so the "信息来源" panel is byte-identical to the
- * hand-written cards. clinicalStatus is forced to "approved" — the query filter guarantees
- * it, and nothing else may reach the model.
+ * hand-written cards. Both the stored status and source are checked locally; a remote
+ * query filter alone is not proof that a payload is eligible.
  */
-function payloadToCard(point: QdrantPoint): KnowledgeCard | null {
+function payloadToCard(point: QdrantPoint): QdrantKnowledgeCard | null {
   const p = point.payload;
   if (!p) return null;
   const id = optStr(p.id) ?? optStr(p.sourceId) ?? (point.id != null ? String(point.id) : "");
-  if (!id) return null;
+  if (!id || !str(p.title).trim() || !str(p.content).trim() ||
+    !str(p.sourceTitle).trim() || !isTrustedKnowledgeUrl(p.sourceUrl)) return null;
   return {
     id,
+    retrievalScore: typeof point.score === "number" && Number.isFinite(point.score) ? point.score : undefined,
     title: str(p.title),
     tags: strArr(p.tags),
     keywords: strArr(p.keywords),
@@ -106,19 +111,19 @@ function payloadToCard(point: QdrantPoint): KnowledgeCard | null {
 /**
  * Dense nearest-neighbour search over the approved clinical corpus. Returns the mapped
  * cards, or `null` when Qdrant is unavailable / unconfigured / errors (caller falls back).
- * An empty array is possible when the collection has no match; the caller treats null and
- * empty the same (fall through), so only a genuine hit short-circuits the pipeline.
+ * An empty array means the query succeeded with no eligible result; callers preserve
+ * that relevance decision. null alone means unavailable and permits a fallback.
  */
 export async function qdrantDenseSearch(
   vector: number[],
   opts: QdrantSearchOptions
-): Promise<KnowledgeCard[] | null> {
+): Promise<QdrantKnowledgeCard[] | null> {
   try {
     const url = process.env.QDRANT_URL;
     const apiKey = process.env.QDRANT_API_KEY;
     const collection = process.env.QDRANT_COLLECTION;
     if (!url || !apiKey || !collection) return null; // unconfigured → keyword/vector fallback
-    if (!Array.isArray(vector) || vector.length === 0) return null;
+    if (!Array.isArray(vector) || vector.length === 0 || !vector.every(Number.isFinite)) return null;
     if (!opts || opts.limit <= 0) return null;
 
     // approved-only is NON-NEGOTIABLE and always first in the filter.
@@ -149,11 +154,17 @@ export async function qdrantDenseSearch(
       const json = (await response.json()) as { result?: { points?: QdrantPoint[] } };
       const points = json.result?.points ?? [];
       return points
+        // Do not rely solely on a remote score filter; invalid/missing scores cannot
+        // satisfy a requested threshold even if the remote service returns them.
+        .filter((point) => !(typeof opts.scoreThreshold === "number" && opts.scoreThreshold > 0) ||
+          (typeof point.score === "number" && Number.isFinite(point.score) && point.score >= opts.scoreThreshold))
         .map((pt) => payloadToCard(pt))
-        .filter((c): c is KnowledgeCard => c !== null)
+        .filter((c): c is QdrantKnowledgeCard => c !== null)
         // Defence-in-depth: only approved content ever reaches the model, even if the
         // server-side `must` filter were ever weakened or a stray point slipped in.
-        .filter((c) => c.clinicalStatus === "approved");
+        .filter((c) => c.clinicalStatus === "approved")
+        .filter((card, index, all) => all.findIndex((other) => other.id === card.id) === index)
+        .slice(0, opts.limit);
     } finally {
       clearTimeout(timer);
     }

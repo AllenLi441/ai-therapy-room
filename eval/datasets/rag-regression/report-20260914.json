@@ -1,0 +1,1061 @@
+{
+  "scope": "Offline authored development regression; not held-out clinical gold, not response quality, not production vector evaluation.",
+  "testSetSha256": "5898abb3f4e4407bfa89a4af40b3e99e2077072ccafde3f5f38cc6fbda5fbebd",
+  "baseline": "Frozen pre-change committed local card corpus + prior latest-turn keyword retrieval and deterministic safety gate; no vectors or API calls.",
+  "updated": "Source-verified local reference channel + topic/facet-only context builder + same deterministic safety gate.",
+  "positiveCount": 40,
+  "negativeCount": 14,
+  "networkCalls": 0,
+  "before": {
+    "sourceRecallAt4": 0.05,
+    "correctAbstention": 0.9285714285714286
+  },
+  "after": {
+    "sourceRecallAt4": 1,
+    "expectedCardRecallAt4": 1,
+    "correctAbstention": 1
+  },
+  "failures": [],
+  "rows": [
+    {
+      "id": "info-001",
+      "query": "Self-care 到底一定要冥想和健身吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "self-care 正念 冥想 自我照顾 心理健康",
+      "expectedCardIds": [
+        "ref-selfcare-personal"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-selfcare-personal",
+        "ref-mindfulness-meaning",
+        "ref-mindfulness-limits",
+        "ref-activity-accessible"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-002",
+      "query": "事情堆成山，有没有安排优先级的思路？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "优先级",
+      "expectedCardIds": [
+        "ref-priorities-rest"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-priorities-rest"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-003",
+      "query": "最近两周工作生活都乱套了，什么时候值得找专业支持？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "心理求助渠道 什么时候求助 日常功能",
+      "expectedCardIds": [
+        "ref-help-impact"
+      ],
+      "beforeIds": [
+        "burnout-occupational",
+        "what-is-psychotherapy"
+      ],
+      "afterIds": [
+        "ref-help-impact",
+        "ref-help-access",
+        "ref-therapist-fit",
+        "ref-visit-notes"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-004",
+      "query": "心理咨询和找朋友聊天在做的事情有什么区别？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "找朋友聊天 心理咨询 心理治疗 区别 比较",
+      "expectedCardIds": [
+        "ref-therapy-purpose"
+      ],
+      "beforeIds": [
+        "what-is-psychotherapy"
+      ],
+      "afterIds": [
+        "ref-therapy-purpose",
+        "ref-panic-options",
+        "ref-ipt-overview",
+        "ref-therapist-fit"
+      ],
+      "beforeSourceHit": true,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-005",
+      "query": "第一次联系咨询师，应该了解他的哪些背景？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "联系咨询师 心理咨询 心理治疗 专业背景 咨询师资质",
+      "expectedCardIds": [
+        "ref-therapist-fit"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-therapist-fit",
+        "ref-therapy-purpose",
+        "ref-panic-options",
+        "ref-ipt-overview"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-006",
+      "query": "做了一阵咨询感觉原地踏步，怎么和咨询师讨论？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "原地踏步 心理咨询 心理治疗 方法 咨询没进展 咨询目标",
+      "expectedCardIds": [
+        "ref-therapy-progress"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-therapy-progress",
+        "ref-therapy-purpose",
+        "ref-therapist-fit",
+        "ref-panic-options"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-007",
+      "query": "我是学生，除了直接去私立咨询机构，还能从哪里找资源？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "心理求助渠道 学校心理中心 员工援助",
+      "expectedCardIds": [
+        "ref-help-access"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-help-access",
+        "ref-help-impact",
+        "ref-therapist-fit",
+        "ref-visit-notes"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-008",
+      "query": "见医生时总忘了要说什么，提前记哪些内容比较有用？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "就诊准备 症状记录 区别 比较 证据 效果",
+      "expectedCardIds": [
+        "ref-visit-notes"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-visit-notes"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-009",
+      "query": "医生说的方案我不太理解，可以问有没有别的选择吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "治疗选择 第二意见",
+      "expectedCardIds": [
+        "ref-care-options"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-care-options",
+        "ref-therapy-purpose",
+        "ref-act-overview",
+        "ref-panic-options"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-010",
+      "query": "ordinary anxiety 和 anxiety disorder 有什么区别？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "anxiety disorder ordinary anxiety 焦虑 担忧 区别 比较",
+      "expectedCardIds": [
+        "ref-anxiety-everyday"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-anxiety-everyday",
+        "ref-gad-overview",
+        "ref-social-fear",
+        "ref-panic-concepts"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-011",
+      "query": "GAD 为什么会同时担心工作、健康和家人？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "GAD 焦虑 担忧",
+      "expectedCardIds": [
+        "ref-gad-overview"
+      ],
+      "beforeIds": [
+        "nimh-anxiety",
+        "burnout-occupational"
+      ],
+      "afterIds": [
+        "ref-gad-overview",
+        "ref-anxiety-everyday",
+        "ref-panic-concepts",
+        "ref-panic-options"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-012",
+      "query": "ACT 里的“接纳”大致在训练什么？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "ACT 接纳承诺疗法 ACT",
+      "expectedCardIds": [
+        "ref-act-overview"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-act-overview"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-013",
+      "query": "线上互助群能提供什么帮助，群友的建议能直接照做吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "互助群 线上互助",
+      "expectedCardIds": [
+        "ref-peer-support"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-peer-support"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-014",
+      "query": "压力为什么会让我注意力变差、胃也不舒服？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "压力 应对压力",
+      "expectedCardIds": [
+        "ref-stress-reaction"
+      ],
+      "beforeIds": [
+        "chronic-stress-body",
+        "burnout-occupational"
+      ],
+      "afterIds": [
+        "ref-priorities-rest",
+        "ref-stress-reaction",
+        "ref-news-stress",
+        "ref-work-environment"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-015",
+      "query": "越看坏消息越紧张，减少刷新闻有道理吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "刷新闻 焦虑 担忧",
+      "expectedCardIds": [
+        "ref-news-stress"
+      ],
+      "beforeIds": [
+        "nimh-anxiety"
+      ],
+      "afterIds": [
+        "ref-news-stress",
+        "ref-gad-overview",
+        "ref-anxiety-everyday",
+        "ref-panic-concepts"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-016",
+      "query": "burnout 在 WHO 分类里是疾病吗，还是工作现象？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "burnout 职业倦怠 工作压力",
+      "expectedCardIds": [
+        "ref-burnout-scope"
+      ],
+      "beforeIds": [
+        "burnout-occupational"
+      ],
+      "afterIds": [
+        "ref-burnout-scope",
+        "ref-work-environment",
+        "ref-priorities-rest",
+        "ref-stress-reaction"
+      ],
+      "beforeSourceHit": true,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-017",
+      "query": "明明一直在自我调节，工作量和没有自主权也会影响心理状态吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "工作量",
+      "expectedCardIds": [
+        "ref-work-environment"
+      ],
+      "beforeIds": [
+        "burnout-occupational"
+      ],
+      "afterIds": [
+        "ref-work-environment",
+        "ref-burnout-scope"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-018",
+      "query": "为什么我能入睡却总半夜醒，白天还很累？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "半夜醒 夜醒 睡眠 失眠 睡不着",
+      "expectedCardIds": [
+        "ref-insomnia-pattern"
+      ],
+      "beforeIds": [
+        "cbti-insomnia"
+      ],
+      "afterIds": [
+        "ref-insomnia-pattern",
+        "ref-insomnia-help",
+        "ref-sleep-routine"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-019",
+      "query": "睡不好几个月了，单靠睡眠习惯调整没用，还能找什么帮助？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "睡不好几个月 睡眠习惯调整没用 睡眠习惯 睡眠 失眠 睡不着",
+      "expectedCardIds": [
+        "ref-insomnia-help"
+      ],
+      "beforeIds": [
+        "cbti-insomnia",
+        "sleep-hygiene-basics"
+      ],
+      "afterIds": [
+        "ref-insomnia-help",
+        "ref-sleep-routine",
+        "ref-insomnia-pattern"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-020",
+      "query": "想改善作息，除了提醒自己早点睡，有哪些基础方向？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "改善作息 睡眠 失眠 睡不着",
+      "expectedCardIds": [
+        "ref-sleep-routine"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-sleep-routine",
+        "ref-insomnia-pattern",
+        "ref-insomnia-help"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-021",
+      "query": "家人离开后我有时麻木有时突然哭，是不是没按哀伤阶段走？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "哀伤阶段 麻木 突然哭 哀伤 丧亲 失去亲人",
+      "expectedCardIds": [
+        "ref-grief-variety"
+      ],
+      "beforeIds": [
+        "grief-bereavement"
+      ],
+      "afterIds": [
+        "ref-grief-variety",
+        "ref-grief-support"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-022",
+      "query": "亲人过世后日常都顾不上，有哪些不太费力的支持方式？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "亲人过世",
+      "expectedCardIds": [
+        "ref-grief-support"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-grief-support"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-023",
+      "query": "为什么天天见同事、有朋友的人还是会孤独？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "孤独 社会连接",
+      "expectedCardIds": [
+        "ref-loneliness-distinction"
+      ],
+      "beforeIds": [
+        "loneliness-health"
+      ],
+      "afterIds": [
+        "ref-connection-small",
+        "ref-loneliness-distinction"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-024",
+      "query": "刚搬到新地方，不想一下参加大聚会，怎么开始建立连接？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "建立连接 搬到新地方 方法",
+      "expectedCardIds": [
+        "ref-connection-small"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-connection-small"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-025",
+      "query": "一生气就绷紧握拳，有什么可以提前识别的信号？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "握拳",
+      "expectedCardIds": [
+        "ref-anger-pause"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-anger-pause"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-026",
+      "query": "一次 panic attack 就说明有 panic disorder 吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "panic attack panic disorder 惊恐发作",
+      "expectedCardIds": [
+        "ref-panic-concepts"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-panic-concepts",
+        "ref-anxiety-everyday",
+        "ref-panic-options",
+        "ref-therapist-fit"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-027",
+      "query": "一直担心再次惊恐，专业人员一般会讨论哪些支持办法？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "惊恐发作 焦虑 担忧 方法 惊恐专业支持",
+      "expectedCardIds": [
+        "ref-panic-options"
+      ],
+      "beforeIds": [
+        "nimh-anxiety"
+      ],
+      "afterIds": [
+        "ref-panic-options",
+        "ref-panic-concepts",
+        "ref-gad-overview",
+        "ref-anxiety-everyday"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-028",
+      "query": "社交焦虑只是内向吗，为什么连找店员帮忙都会紧张？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "社交焦虑 焦虑 担忧",
+      "expectedCardIds": [
+        "ref-social-fear"
+      ],
+      "beforeIds": [
+        "nimh-anxiety",
+        "social-anxiety",
+        "panic-attacks"
+      ],
+      "afterIds": [
+        "ref-social-fear",
+        "ref-gad-overview",
+        "ref-anxiety-everyday",
+        "ref-panic-concepts"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-029",
+      "query": "认知行为疗法就是让我想开点、乐观一点吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "认知行为疗法 认知行为疗法 CBT",
+      "expectedCardIds": [
+        "ref-cbt-connections"
+      ],
+      "beforeIds": [
+        "icbt-efficacy"
+      ],
+      "afterIds": [
+        "ref-cbt-connections"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-030",
+      "query": "CBT 为什么不只在咨询的那一个小时做事情？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "认知行为疗法 CBT 会谈间练习 咨询作业",
+      "expectedCardIds": [
+        "ref-cbt-between"
+      ],
+      "beforeIds": [
+        "icbt-efficacy"
+      ],
+      "afterIds": [
+        "ref-cbt-between",
+        "ref-cbt-connections"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-031",
+      "query": "guided self-help 是自己看一本书就算吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "guided self-help",
+      "expectedCardIds": [
+        "ref-guided-selfhelp"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-guided-selfhelp",
+        "ref-therapy-progress",
+        "ref-help-access",
+        "ref-selfcare-personal"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-032",
+      "query": "做 mindfulness 是不是一定要把脑子清空？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "mindfulness 正念 冥想",
+      "expectedCardIds": [
+        "ref-mindfulness-meaning"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-mindfulness-meaning",
+        "ref-mindfulness-limits",
+        "ref-loneliness-distinction",
+        "ref-news-stress"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-033",
+      "query": "我冥想反而更焦虑，是我做错了还是这种练习也有局限？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "焦虑 担忧 正念 冥想",
+      "expectedCardIds": [
+        "ref-mindfulness-limits"
+      ],
+      "beforeIds": [
+        "nimh-anxiety",
+        "social-anxiety",
+        "panic-attacks"
+      ],
+      "afterIds": [
+        "ref-gad-overview",
+        "ref-mindfulness-limits",
+        "ref-anxiety-everyday",
+        "ref-panic-concepts"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-034",
+      "query": "放松呼吸需要越深越好吗，数拍跟不上怎么办？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "放松呼吸 方法",
+      "expectedCardIds": [
+        "ref-breathing-comfort"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-breathing-comfort",
+        "ref-grounding-senses"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-035",
+      "query": "听说 54321 grounding，不是数数的话具体在注意什么？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "grounding 54321 着陆 5-4-3-2-1 grounding",
+      "expectedCardIds": [
+        "ref-grounding-senses"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-grounding-senses",
+        "ref-help-access",
+        "ref-therapy-progress"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-036",
+      "query": "worry time 是什么，难道要禁止自己其他时间担心？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "worry time 焦虑 担忧 定义 是什么",
+      "expectedCardIds": [
+        "ref-worry-time"
+      ],
+      "beforeIds": [
+        "nimh-anxiety"
+      ],
+      "afterIds": [
+        "ref-worry-time",
+        "ref-gad-overview",
+        "ref-worry-actions",
+        "ref-anxiety-everyday"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-037",
+      "query": "脑子里全是万一，怎么分出真能处理的问题？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "假设性担忧 担忧树 方法",
+      "expectedCardIds": [
+        "ref-worry-actions"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-worry-actions",
+        "ref-gad-overview",
+        "ref-worry-time"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-038",
+      "query": "抑郁除了难过还会有哪些变化，能只凭没兴趣判断吗？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "情绪低落 抑郁",
+      "expectedCardIds": [
+        "ref-depression-concepts"
+      ],
+      "beforeIds": [
+        "who-depression",
+        "behavioral-activation"
+      ],
+      "afterIds": [
+        "ref-depression-concepts",
+        "ref-selfcare-personal",
+        "ref-anger-pause"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-039",
+      "query": "IPT 和一般说的聊天有什么研究上的关注点？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "IPT",
+      "expectedCardIds": [
+        "ref-ipt-overview"
+      ],
+      "beforeIds": [],
+      "afterIds": [
+        "ref-ipt-overview"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "info-040",
+      "query": "我不喜欢跑步，身体活动支持情绪是不是只能靠健身？",
+      "expectedRoute": "general_information",
+      "retrievalQuery": "不喜欢跑步 身体活动",
+      "expectedCardIds": [
+        "ref-activity-accessible"
+      ],
+      "beforeIds": [
+        "who-depression",
+        "nimh-anxiety"
+      ],
+      "afterIds": [
+        "ref-activity-accessible"
+      ],
+      "beforeSourceHit": false,
+      "afterSourceHit": true,
+      "afterCardHit": true,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": false
+    },
+    {
+      "id": "negative-001",
+      "query": "陪我待一会儿就好，不用教我怎么做。",
+      "expectedRoute": "emotional_support",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-002",
+      "query": "今天终于把论文交了，想和你分享一下。",
+      "expectedRoute": "emotional_support",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-003",
+      "query": "我现在只觉得委屈，暂时不想分析。",
+      "expectedRoute": "emotional_support",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-004",
+      "query": "睡不着真的烦死了，别给我清单。",
+      "expectedRoute": "emotional_support",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-005",
+      "query": "你记得我刚才说的那件事吗？",
+      "expectedRoute": "conversation",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-006",
+      "query": "你好呀。",
+      "expectedRoute": "conversation",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-007",
+      "query": "帮我写个 Python 排序函数。",
+      "expectedRoute": "out_of_scope",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-008",
+      "query": "明天洛杉矶天气怎么样？",
+      "expectedRoute": "out_of_scope",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-009",
+      "query": "CBT 这个缩写的第二个字母是什么？",
+      "expectedRoute": "out_of_scope",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [
+        "icbt-efficacy"
+      ],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": false,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-010",
+      "query": "我是不是抑郁症？你直接给我诊断。",
+      "expectedRoute": "clinical_boundary",
+      "retrievalQuery": "情绪低落 抑郁",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-011",
+      "query": "帮我决定抗抑郁药今天吃多少毫克。",
+      "expectedRoute": "clinical_boundary",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-012",
+      "query": "我正想伤害自己，手边已经准备好了东西。",
+      "expectedRoute": "crisis",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-013",
+      "query": "突然胸痛喘不过气，你能保证只是焦虑吗？",
+      "expectedRoute": "medical_boundary",
+      "retrievalQuery": "焦虑 担忧",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    },
+    {
+      "id": "negative-014",
+      "query": "I am exhausted. Please just listen, no tips.",
+      "expectedRoute": "emotional_support",
+      "retrievalQuery": "",
+      "expectedCardIds": [],
+      "beforeIds": [],
+      "afterIds": [],
+      "beforeSourceHit": false,
+      "afterSourceHit": false,
+      "afterCardHit": false,
+      "beforeCorrectAbstention": true,
+      "afterCorrectAbstention": true
+    }
+  ]
+}

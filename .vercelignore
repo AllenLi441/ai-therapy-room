@@ -6,6 +6,7 @@ coverage/
 
 # Evaluation data and local experiment artifacts are never deployment inputs.
 eval/
+scripts/eval-rag-local.ts
 *.jsonl
 *.jsonl.bak
 *.csv

@@ -55,4 +55,15 @@ describe("searchAuthoritative", () => {
     }));
     expect(await searchAuthoritative("x")).toEqual([]);
   });
+
+  it("checks returned hosts locally even if the provider ignores include_domains", async () => {
+    vi.stubEnv("SEARCH_API_KEY", "tvly-x");
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ results: [
+      { title: "Spoof", url: "https://nhs.uk.attacker.example/fact", content: "a purported fact" },
+      { title: "Unsafe", url: "javascript:alert(1)", content: "text" },
+      { title: "Empty", url: "https://www.nhs.uk/conditions/insomnia/", content: " " },
+      { title: "Real", url: "https://www.nhs.uk/conditions/insomnia/", content: "Source excerpt" },
+    ] }) })));
+    expect((await searchAuthoritative("睡眠")).map((result) => result.title)).toEqual(["Real"]);
+  });
 });

@@ -2,9 +2,12 @@ import type { KnowledgeCard } from "./types";
 import type { EmbeddingProvider } from "./embeddings";
 import { getEmbeddingProvider } from "./embeddings";
 import { KNOWLEDGE_CARDS, cardEmbedText } from "./knowledge-cards";
+import { KNOWLEDGE_REFERENCE_CARDS } from "./knowledge-reference-cards";
+import { isTrustedKnowledgeUrl } from "./knowledge-source";
 import { rerankByRelevance, getRerankMinScore } from "./rerank";
 import { qdrantDenseSearch, isQdrantConfigured } from "./qdrant";
 import generated from "./knowledge-embeddings.generated.json";
+import { createHash } from "node:crypto";
 
 // Reranking pipeline (the "检索完先整理" step): pull a wider VECTOR recall set above a
 // lenient cosine floor, then let the cross-encoder reranker judge true relevance and keep
@@ -59,10 +62,12 @@ export function isInfoSeeking(text: string): boolean {
 /**
  * Retrieval-augmented knowledge lookup (P4 RAG 流①).
  *
- * Two paths, vector-first with a keyword safety net:
+ * Local source-verified general-information cards are tried first. This channel
+ * preserves pending professional review and accepts only exact local registry objects.
+ * The legacy approved clinical corpus then uses two paths:
  *   1. Vector: if an embedding provider is configured AND the committed vectors
  *      in knowledge-embeddings.generated.json were built by the SAME provider
- *      (providerId + dim match), embed the query, cosine-rank the cards, keep
+ *      (providerId + dim + card content hash match), embed the query, cosine-rank the cards, keep
  *      those above RAG_MIN_SCORE, return the top-k.
  *   2. Keyword fallback: provider null / embed throws / no or mismatched
  *      vectors / no cards → score by keyword (1.0) / tag (0.5) / title (0.8)
@@ -70,7 +75,7 @@ export function isInfoSeeking(text: string): boolean {
  *
  * FAIL-SAFE CONTRACT:
  *   - retrieveKnowledge NEVER throws and NEVER blocks the request beyond the
- *     embed timeout (any failure falls back to keyword scoring immediately).
+ *     shared fast/deep deadline (any failure falls back to keyword scoring).
  *   - Crisis / safety routing runs BEFORE retrieval in the chat route and does
  *     NOT depend on this module. RAG must never affect the deterministic safety
  *     floor. Returning [] is always acceptable (the prompt degrades to generic
@@ -82,9 +87,22 @@ type GeneratedEmbeddings = {
   model: string;
   dim: number;
   vectors: Record<string, number[]>;
+  contentHashes?: Record<string, string>;
 };
 
 const GENERATED = generated as GeneratedEmbeddings;
+
+/** Old vectors without a content fingerprint are deliberately inert. This prevents
+ * edited/revoked claims from silently retaining an embedding of the previous text. */
+export function currentCardVectors(cards: KnowledgeCard[], gen: GeneratedEmbeddings): Record<string, number[]> {
+  return Object.fromEntries(cards.flatMap((card) => {
+    const hash = createHash("sha256").update(cardEmbedText(card)).digest("hex");
+    return gen.contentHashes?.[card.id] === hash && Array.isArray(gen.vectors[card.id])
+      ? [[card.id, gen.vectors[card.id]]]
+      : [];
+  }));
+}
+export const EMBEDDING_CARD_VECTORS = currentCardVectors(KNOWLEDGE_CARDS, GENERATED);
 
 /** Default cosine threshold; override with RAG_MIN_SCORE (0..1).
  *  0.50 (was 0.30): with Qwen3/bge vectors, same-domain cosine baselines run high
@@ -105,7 +123,7 @@ function getMinScore(): number {
   const raw = process.env.RAG_MIN_SCORE;
   if (!raw) return DEFAULT_MIN_SCORE;
   const n = Number.parseFloat(raw);
-  return Number.isFinite(n) ? n : DEFAULT_MIN_SCORE;
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : DEFAULT_MIN_SCORE;
 }
 
 // ---------------------------------------------------------------------------
@@ -284,7 +302,28 @@ function vectorsMatchProvider(
  * without deleting it.
  */
 function approvedCards(): KnowledgeCard[] {
-  return KNOWLEDGE_CARDS.filter((c) => c.clinicalStatus === "approved");
+  return KNOWLEDGE_CARDS.filter((c) => c.clinicalStatus === "approved" && isTrustedKnowledgeUrl(c.sourceUrl));
+}
+
+/** This separate information channel is a LOCAL reviewed source registry. A flag on a
+ * Qdrant payload (or an arbitrary pending clinical card) can never enter it. Source
+ * verification permits general information, not diagnosis, treatment or clinical advice. */
+export function isLocalSourceVerifiedCard(card: KnowledgeCard): boolean {
+  return KNOWLEDGE_REFERENCE_CARDS.some((registered) => registered === card &&
+    registered.channel === "grounded_information" &&
+    registered.clinicalStatus === "pending" &&
+    registered.professionalReview === "not_performed" &&
+    registered.sourceReview.status === "verified_primary" &&
+    registered.sourceReview.allowedUse === "general_information" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(registered.sourceReview.verifiedAt) &&
+    Number.isFinite(Date.parse(registered.sourceReview.verifiedAt)) &&
+    registered.guidance.length === 0 &&
+    Boolean(registered.sourceId && registered.sourceTitle && registered.content.trim()) &&
+    isTrustedKnowledgeUrl(registered.sourceUrl));
+}
+
+function referenceCards(): KnowledgeCard[] {
+  return KNOWLEDGE_REFERENCE_CARDS.filter(isLocalSourceVerifiedCard);
 }
 
 /**
@@ -318,8 +357,7 @@ async function rerankCards(
     .filter((c): c is KnowledgeCard => Boolean(c));
 }
 
-/** Options for retrieveKnowledge. `fastMode` skips rerank and tightens the Tier-1
- *  wall-clock budget (the chat route passes it based on session pace). */
+/** `fastMode` skips rerank. timeoutMs bounds the whole remote waterfall, not each tier. */
 export type RetrieveOptions = { fastMode?: boolean; timeoutMs?: number };
 
 /**
@@ -348,27 +386,26 @@ function withDeadline<T>(p: Promise<T>, ms: number): Promise<T | null> {
  * a dense Qdrant search over the approved cards.
  *   - deep mode: broad recall (RECALL_N) → rerank to true relevance (reused rerank.ts).
  *   - fast mode: top-k straight from Qdrant, NO rerank (keeps the ≤6s budget).
- * Returns the cards to use, or `null` when Tier-1 is unavailable / found nothing (embed
- * provider unset, Qdrant unconfigured/empty/errored) so the caller falls through to the
- * committed-vector path and then keyword. When Qdrant DID return hits, we commit to the
+ * Returns cards, an empty relevance decision, or `null` when Tier-1 is unavailable
+ * (provider/Qdrant unconfigured or errored) so the caller falls through to the
+ * committed-vector path and then keyword. When Qdrant answered, we commit to the
  * (possibly reranked, possibly empty) Tier-1 answer rather than re-admitting keyword noise
  * — mirroring the committed-vector path's "trust the reranker" contract.
  */
 async function tier1QdrantRetrieve(
   q: string,
   limit: number,
-  fastMode: boolean
+  fastMode: boolean,
+  provider: EmbeddingProvider,
+  deadline: number
 ): Promise<KnowledgeCard[] | null> {
   // Skip BEFORE embedding when Qdrant isn't configured: no wasted embed API call, and
   // retrieval stays fully inert until the vector store is stood up (the merge-safety
   // property the runbook relies on). Also avoids double-embedding on the fall-through.
   if (!isQdrantConfigured()) return null;
 
-  const provider = getEmbeddingProvider();
-  if (!provider) return null;
-
   const [queryVec] = await provider.embed([q]);
-  if (!queryVec || queryVec.length === 0) return null;
+  if (!queryVec || queryVec.length === 0 || Date.now() >= deadline) return null;
 
   const recall = fastMode ? limit : RECALL_N;
   // Fast mode has NO rerank, so weak cosine hits would attach irrelevant sources on the
@@ -377,15 +414,33 @@ async function tier1QdrantRetrieve(
   // set and lets the reranker judge precision (floor would starve it).
   const candidates = await qdrantDenseSearch(queryVec, {
     limit: recall,
+    timeoutMs: Math.max(1, deadline - Date.now()),
     ...(fastMode ? { scoreThreshold: fastScoreFloor() } : {})
   });
-  if (!candidates || candidates.length === 0) return null;
+  if (candidates === null) return null;
+  // A successful empty result is a relevance decision, not a network error.
+  if (candidates.length === 0) return [];
 
-  if (fastMode) return candidates.slice(0, limit);
+  // Locally revoked or corrected cards must not reappear as stale remote payloads.
+  // Other clinical corpus IDs still need their existing explicit approval and source.
+  const currentCandidates = candidates.flatMap((candidate) => {
+    const current = KNOWLEDGE_CARDS.find((card) => card.id === candidate.id);
+    if (current && cardEmbedText(current) !== cardEmbedText(candidate)) return [];
+    const card = current ?? candidate;
+    return card.clinicalStatus === "approved" && isTrustedKnowledgeUrl(card.sourceUrl)
+      ? [{ ...card, retrievalScore: candidate.retrievalScore }]
+      : [];
+  });
 
-  const reranked = await rerankCards(q, candidates, limit);
+  if (fastMode) return currentCandidates.slice(0, limit);
+  if (Date.now() >= deadline) return null;
+
+  const reranked = await rerankCards(q, currentCandidates, limit);
   if (reranked !== null) return reranked;
-  return candidates.slice(0, limit);
+  // Broad recall is not evidence. Without a reranker, require a finite strict cosine
+  // score locally as well; previously every deep-mode neighbour was accepted.
+  return currentCandidates.filter((card) => Number.isFinite(card.retrievalScore) &&
+    (card.retrievalScore ?? -1) >= getMinScore()).slice(0, limit);
 }
 
 export async function retrieveKnowledge(
@@ -396,44 +451,48 @@ export async function retrieveKnowledge(
   try {
     const q = (query ?? "").trim();
     const cards = approvedCards();
-    if (!q || limit <= 0 || cards.length === 0) {
-      return keywordRetrieve(q, limit, cards);
-    }
+    if (!q || limit <= 0) return [];
+    // Locally verified general-information cards work without keys or a re-ingest.
+    // Their source-review status is preserved; they are never relabelled approved.
+    const information = keywordRetrieve(q, limit, referenceCards());
+    if (information.length > 0) return information;
+    if (cards.length === 0) return [];
 
-    // Tier-1: Qdrant dense retrieval, ABOVE the committed-vector path. Hard-timeout
-    // bounded so a slow/stale endpoint can never stall the reply (fix: defence not
-    // env-assumption). A hit short-circuits; null/empty falls through unchanged.
     const fastMode = opts.fastMode ?? false;
-    const tier1Budget = opts.timeoutMs ?? (fastMode ? TIER1_FAST_TIMEOUT_MS : TIER1_DEEP_TIMEOUT_MS);
-    const tier1 = await withDeadline(tier1QdrantRetrieve(q, limit, fastMode), tier1Budget);
-    if (tier1 !== null) return tier1;
-
-    // Fast mode (≤6s reply budget): do NOT run the committed-vector fallback — its embed
-    // uses the provider's own long timeout and it reranks (network), which could stack on
-    // top of the Tier-1 budget and blow the fast budget. Go straight to keyword. Deep mode
-    // keeps the full waterfall below.
-    if (fastMode) return keywordRetrieve(q, limit, cards);
-
-    const provider = getEmbeddingProvider();
-    if (provider && vectorsMatchProvider(provider, GENERATED)) {
-      try {
+    const defaultBudget = fastMode ? TIER1_FAST_TIMEOUT_MS : TIER1_DEEP_TIMEOUT_MS;
+    const requestedBudget = opts.timeoutMs ?? defaultBudget;
+    const budget = Number.isFinite(requestedBudget) && requestedBudget > 0 ? Math.min(requestedBudget, defaultBudget) : defaultBudget;
+    const deadline = Date.now() + budget;
+    const rawProvider = getEmbeddingProvider();
+    if (!rawProvider) return keywordRetrieve(q, limit, cards);
+    // Share one query embedding across Qdrant and committed-vector fallback, including
+    // the strict-floor pass after reranker failure. No repeated transmission or billing.
+    let embedding: Promise<number[][]> | undefined;
+    const provider: EmbeddingProvider = {
+      id: rawProvider.id,
+      dim: rawProvider.dim,
+      embed: () => embedding ??= rawProvider.embed([q]),
+    };
+    const remote = await withDeadline((async (): Promise<KnowledgeCard[] | null> => {
+      const tier1 = await tier1QdrantRetrieve(q, limit, fastMode, provider, deadline);
+      if (tier1 !== null) return tier1;
+      if (fastMode || Date.now() >= deadline) return null;
+      if (vectorsMatchProvider(provider, GENERATED) && Object.keys(EMBEDDING_CARD_VECTORS).length > 0) {
         // 1) Broad vector recall (lenient cosine floor — recall, not precision).
-        const candidates = await vectorRetrieve(q, RECALL_N, provider, cards, GENERATED.vectors, RECALL_FLOOR);
-        if (candidates.length > 0) {
+        const candidates = await vectorRetrieve(q, RECALL_N, provider, cards, EMBEDDING_CARD_VECTORS, RECALL_FLOOR);
+        if (candidates.length > 0 && Date.now() < deadline) {
           // 2) Rerank to TRUE relevance. If it ran (non-null), trust it — even an empty
           //    result means "nothing is actually relevant" (don't re-admit cosine noise).
           const reranked = await rerankCards(q, candidates, limit);
           if (reranked !== null) return reranked;
           // 3) Reranker unavailable → cosine top-k at the stricter cosine threshold.
-          const cosineHits = await vectorRetrieve(q, limit, provider, cards, GENERATED.vectors, getMinScore());
+          const cosineHits = await vectorRetrieve(q, limit, provider, cards, EMBEDDING_CARD_VECTORS, getMinScore());
           if (cosineHits.length > 0) return cosineHits;
         }
-      } catch {
-        // embed / rerank failed or timed out → fall through to keywords.
       }
-    }
-
-    return keywordRetrieve(q, limit, cards);
+      return null;
+    })(), budget);
+    return remote ?? keywordRetrieve(q, limit, cards);
   } catch {
     // Absolute backstop: retrieval must never throw into the chat path.
     return [];
