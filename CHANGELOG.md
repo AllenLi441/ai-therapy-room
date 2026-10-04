@@ -3,6 +3,13 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v0.10.0] - 2026-10-04
+
+- Judge implicit risk with DeepSeek first (median 1.6s, so the fast tier's 5s parallel budget no longer drops verdicts); Kimi becomes an optional backup, and `/api/health` reports the effective `judgePrimary`.
+- Stop releasing self-directed coded speech: `emoji_coded`, `coded_euphemism` and `uncertain_ambivalent` judge results now go through the severity ladder instead of being treated as "not about the user" (e.g. "今晚🪦见" labelled plan_preparation was previously released).
+- Recognize perceived burdensomeness, wished non-existence and wished not-waking as death cues for passive ideation; a confident (≥0.7) passive call without a listed cue now gets a warm gentle check instead of release.
+- Re-baseline the 344-unit detection set and add a frozen 110-unit teen holdout; see `docs/SAFETY_REBASELINE_20261004.md`. Labels are AI-authored and not clinically validated.
+
 ## [v0.9.0] - 2026-09-14
 
 - Add 40 primary-source checked general-information cards from 22 authoritative sources, with explicit use limits and pending professional review.

@@ -489,6 +489,64 @@ function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Which model judges first. DeepSeek is the default whenever it is configured
+ * (2026-10-04: median 1.6s / p95 2.4s / 0 of 344 over 5s, so the fast-tier 5s
+ * parallel budget no longer drops verdicts the way ~6s Kimi calls did). Kimi then
+ * serves only as an optional backup. IMPLICIT_JUDGE_PRIMARY=kimi restores the
+ * previous Kimi-first order when that key is configured.
+ */
+export function resolveJudgePrimary(): "deepseek" | "kimi" | "none" {
+  const pinned = process.env.IMPLICIT_JUDGE_PRIMARY?.trim().toLowerCase();
+  const deepseek = Boolean(getDeepSeekConfig().apiKey);
+  const kimi = isKimiConfigured();
+  if (pinned === "kimi" && kimi) return "kimi";
+  if (deepseek) return "deepseek";
+  return kimi ? "kimi" : "none";
+}
+
+async function judgeDeepSeekFirst(
+  userContent: string,
+  kimiPayload: ReturnType<typeof buildKimiPayload>,
+  timeoutMs: number,
+  backupTimeoutMs: number
+): Promise<ImplicitOutcome> {
+  let lastReason = "unknown error";
+  try {
+    const payload = buildDeepSeekPayload({
+      systemPrompt: CLASSIFIER_SYSTEM,
+      messages: [{ role: "user", content: userContent }],
+      apiModel: "deepseek-v4-flash",
+      stream: false,
+      maxTokens: 320
+    });
+    const parsed = parseImplicitOutput(await withPromiseTimeout(generateDeepSeekText(payload), timeoutMs));
+    if (parsed) return { kind: "ok", result: { ...parsed, judgedBy: "deepseek" } };
+    lastReason = "parse failed";
+  } catch (err) {
+    lastReason = err instanceof Error ? err.message : "unknown error";
+  }
+
+  // Optional Kimi backup — only when configured and not known-down (billing/auth).
+  if (isKimiConfigured() && Date.now() >= kimiDownUntil) {
+    try {
+      const parsed = parseImplicitOutput(await generateKimiText(kimiPayload, backupTimeoutMs));
+      if (parsed) {
+        console.warn(`[implicit-risk] DeepSeek judge failed (${lastReason}); Kimi backup judge answered.`);
+        return { kind: "ok", result: { ...parsed, judgedBy: "kimi", fallbackReason: "deepseek_failed" } };
+      }
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "unknown error";
+      if (classifyKimiJudgeError(reason).permanent) tripKimiCircuit(reason);
+    }
+  }
+
+  console.warn(
+    `[implicit-risk] judge unavailable (${lastReason}); falling back to lexicon-only this turn — implicit-only self-harm signals may be missed.`
+  );
+  return { kind: "error", reason: lastReason };
+}
+
 export async function assessImplicitRiskWithLLM(
   messages: ChatMessage[],
   // Raised 5s→12s after a live eval: real classifier calls (300-line prompt + JSON,
@@ -501,7 +559,8 @@ export async function assessImplicitRiskWithLLM(
   // maxDuration.
   backupTimeoutMs = 6_000
 ): Promise<ImplicitOutcome> {
-  if (!isKimiConfigured()) {
+  const primary = resolveJudgePrimary();
+  if (primary === "none") {
     return { kind: "not_configured" };
   }
   if (messages.filter((m) => m.role === "user").length === 0) {
@@ -523,6 +582,10 @@ export async function assessImplicitRiskWithLLM(
     maxTokens: 320,
     jsonMode: true
   });
+
+  if (primary === "deepseek") {
+    return judgeDeepSeekFirst(userContent, payload, timeoutMs, backupTimeoutMs);
+  }
 
   // Error-aware Kimi attempt — this gate blocks the user's first token, so latency
   // matters. classifyKimiJudgeError sorts failures: retry Kimi exactly once, and
@@ -641,10 +704,26 @@ const DEATH_CUE_MARKERS = [
   "不想活", "活不下去", "想死", "不想醒", "醒不来", "不想再醒", "睡过去就", "永远睡",
   "消失", "从这个世界", "离开这个世界", "解脱", "一了百了", "结束这一切", "结束自己", "结束生命",
   "没有未来", "看不到希望", "绝望", "不如死", "死了算了", "不如不在", "没人会想念我", "活着是负担",
+  // Perceived burdensomeness / wished non-existence / wished not to wake — indirect
+  // passive-ideation phrasings the 2026-10-04 re-baseline found released at judge
+  // confidence 0.72–0.82 (e.g. "要是我不在了，爸妈是不是就不用这么操心了"). Specific
+  // to self-absence, so plain sleep/venting complaints still release.
+  "要是没有我", "如果没有我", "没有我的话", "要是我不在", "如果我不在", "我不在了", "拖累",
+  "从没存在", "没存在过", "不存在就好", "没被生下来", "不该出生", "没出生就好",
+  "不用醒来", "不要醒来", "别再醒来", "一睡不醒",
   "no point in living", "not worth living", "want to disappear", "don't want to be here",
   "dont want to be here", "end it all", "no reason to live", "no future", "better off without me",
-  "wish i was gone", "want to die", "don't want to wake up"
+  "wish i was gone", "want to die", "don't want to wake up",
+  "a burden", "if i wasn't here", "if i weren't here", "if i wasn't around", "never existed",
+  "never been born", "not wake up"
 ];
+
+const NON_SELF_PRAGMATIC: ReadonlySet<PragmaticForm> = new Set<PragmaticForm>([
+  "other",
+  "quote_fictional",
+  "sarcasm_hyperbole",
+  "rhetorical_complaint"
+]);
 
 function hasRealDeathCue(evidence: string[]): boolean {
   const hay = evidence.join(" ").toLowerCase();
@@ -658,8 +737,13 @@ export function decideImplicitIntercept(
   if (outcome.kind === "ok") {
     const r = outcome.result;
 
-    // Bias: pragmatic-non-self releases (the message isn't about user themselves).
-    if (r.pragmatic !== "self") {
+    // Release only forms where the user is NOT the subject (another person, a quote,
+    // hyperbole, a rhetorical complaint). emoji_coded / coded_euphemism describe HOW the
+    // user speaks about THEMSELVES ("今晚🪦见", "歹匕") and uncertain_ambivalent is not a
+    // release reason — those continue to the severity/confidence ladder below. The
+    // 2026-10-04 re-baseline found farewell/plan messages labelled plan_preparation +
+    // emoji_coded being released by the old `pragmatic !== "self"` check.
+    if (NON_SELF_PRAGMATIC.has(r.pragmatic)) {
       return {
         intercept: false,
         source: "non_self_pragmatic",
@@ -732,6 +816,18 @@ export function decideImplicitIntercept(
         };
       }
       if (!hasRealDeathCue(r.evidence)) {
+        // A confident judge call without a listed cue is usually an indirect phrasing
+        // the marker list can't anticipate ("要是这一觉能一直睡下去该多好", "人间蒸发").
+        // Ask warmly instead of releasing; only lower-confidence calls (the typical
+        // sleep/venting mislabel) still release. Teen-vertical decision, 2026-10-04.
+        if (r.confidence >= 0.7) {
+          return {
+            intercept: true,
+            mode: "gentle_check",
+            source: "llm",
+            rationale: `passive_death_wish, no listed cue, conf=${r.confidence.toFixed(2)} → gentle: ${r.rationale}`
+          };
+        }
         return {
           intercept: false,
           source: "none",

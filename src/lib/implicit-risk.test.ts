@@ -88,13 +88,21 @@ describe("decideImplicitIntercept — over-triage policy", () => {
     if (decision.intercept) expect(decision.mode).toBe("gentle_check");
   });
 
-  it("JUDGE-ONLY passive_death_wish with NO death cue (judge mislabeled plain venting) → RELEASE", () => {
+  it("JUDGE-ONLY passive_death_wish with NO death cue → never the crisis/grading template", () => {
     const lex = assessRisk("我好伤心"); // lexicon clean
-    const decision = decideImplicitIntercept(
+    // Confident no-cue call → warm gentle check only (2026-10-04 teen-vertical change).
+    const confident = decideImplicitIntercept(
       ok(build({ severity: "passive_death_wish", confidence: 0.8, pragmatic: "self", evidence: ["我好伤心", "最近老是睡不着"] })),
       lex
     );
-    expect(decision.intercept).toBe(false); // no real death cue → not re-admitted as a crisis
+    expect(confident.intercept).toBe(true);
+    if (confident.intercept) expect(confident.mode).toBe("gentle_check");
+    // Lower-confidence no-cue call (typical venting mislabel) → release.
+    const weak = decideImplicitIntercept(
+      ok(build({ severity: "passive_death_wish", confidence: 0.6, pragmatic: "self", evidence: ["我好伤心", "最近老是睡不着"] })),
+      lex
+    );
+    expect(weak.intercept).toBe(false);
   });
 
   it("pragmatic=other never intercepts on implicit alone (lexicon may still escalate)", () => {
