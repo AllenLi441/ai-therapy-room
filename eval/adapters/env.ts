@@ -7,6 +7,7 @@ const EVAL_CREDENTIALS = [
   ["EVAL_DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY"],
   ["EVAL_KIMI_API_KEY", "KIMI_API_KEY"],
   ["EVAL_EMBEDDING_API_KEY", "EMBEDDING_API_KEY"],
+  ["EVAL_SILICONFLOW_API_KEY", "SILICONFLOW_API_KEY"],
 ] as const;
 
 /**
@@ -18,6 +19,14 @@ export function isolateEvalCredentials(
   env: NodeJS.ProcessEnv = process.env
 ): Record<string, string> {
   const allowProduction = env.EVAL_ALLOW_PRODUCTION_KEYS === "1";
+  const provider = env.EVAL_KIMI_PROVIDER?.trim();
+  const moonshot = Boolean(env.EVAL_KIMI_API_KEY?.trim());
+  const siliconflow = Boolean(env.EVAL_SILICONFLOW_API_KEY?.trim());
+  if ((provider && !["moonshot", "siliconflow"].includes(provider)) ||
+      (moonshot && siliconflow) || (siliconflow && provider !== "siliconflow") ||
+      (provider === "siliconflow" && !siliconflow) || (provider === "moonshot" && !moonshot)) {
+    throw new Error("评测判官配置冲突：Moonshot 使用 EVAL_KIMI_API_KEY；SiliconFlow 需 EVAL_KIMI_PROVIDER=siliconflow 与 EVAL_SILICONFLOW_API_KEY");
+  }
   const sources: Record<string, string> = {};
   for (const [evalName, runtimeName] of EVAL_CREDENTIALS) {
     const dedicated = env[evalName]?.trim();
@@ -31,29 +40,19 @@ export function isolateEvalCredentials(
       sources[runtimeName] = "disabled-no-dedicated-eval-key";
     }
   }
-  // The unified production Kimi path may use a dedicated SiliconFlow key.
-  // Never let that key bypass the EVAL_* budget boundary.
-  if (allowProduction) {
-    sources.SILICONFLOW_API_KEY = env.SILICONFLOW_API_KEY ? "explicit-production-override" : "missing";
-  } else {
-    delete env.SILICONFLOW_API_KEY;
-    sources.SILICONFLOW_API_KEY = "disabled-production-key";
-  }
-  // EVAL_KIMI_API_KEY retains the historical direct-Moonshot contract. Pinning
-  // the provider prevents an independently supplied EVAL_EMBEDDING_API_KEY from
-  // being mistaken for the production SiliconFlow Kimi account.
-  if (sources.KIMI_API_KEY === "EVAL_KIMI_API_KEY") {
-    env.KIMI_PROVIDER = "moonshot";
-  } else if (!allowProduction) {
-    delete env.KIMI_PROVIDER;
-  }
+  // Pin even an unconfigured judge to Moonshot: auto-detection otherwise borrows
+  // a SiliconFlow embedding key and silently spends a different evaluation budget.
+  if (provider || moonshot || !allowProduction) env.KIMI_PROVIDER = provider ?? "moonshot";
   return sources;
 }
 
 /** 评测入口必须最先调用(且只需一次)。幂等。 */
-export function setupEvalEnv(): { appRoot: string; workdir: string; logsDir: string } {
-  if (paths) return paths;
-  const appRoot = process.cwd();
+export function setupEvalEnv(options: { appRoot?: string; workdir?: string } = {}): { appRoot: string; workdir: string; logsDir: string } {
+  if (paths) {
+    if (options.workdir && path.resolve(options.workdir) !== paths.workdir) throw new Error("评测进程不能切换 run workdir");
+    return paths;
+  }
+  const appRoot = path.resolve(options.appRoot ?? process.cwd());
   if (!existsSync(path.join(appRoot, "src/lib/safety.ts"))) {
     throw new Error("必须从 app 仓库根运行(npm run eval:* / 在仓库根 npx tsx …)");
   }
@@ -74,7 +73,7 @@ export function setupEvalEnv(): { appRoot: string; workdir: string; logsDir: str
   process.env.QUIET_ROOM_DECISION_LOG_RAW = "1";
   // 3) 隔离 workdir:决策日志按 process.cwd()/logs 落盘。研究管线(w1:harvest-logs)
   //    读 app/logs —— 评测流量绝不能混进去污染 W1 标注队列。chdir 到 eval/.workdir。
-  const workdir = path.join(appRoot, "eval/.workdir");
+  const workdir = path.resolve(options.workdir ?? path.join(appRoot, "eval/.workdir"));
   mkdirSync(path.join(workdir, "logs"), { recursive: true });
   process.chdir(workdir);
   paths = { appRoot, workdir, logsDir: path.join(workdir, "logs") };
@@ -86,8 +85,12 @@ export function getEvalPaths() {
   return paths;
 }
 
-export function requireKimi() {
-  if (!process.env.KIMI_API_KEY) throw new Error("需要 EVAL_KIMI_API_KEY(判官/全管线评测臂)");
+/** The judge is DeepSeek-first when a DeepSeek key exists (resolveJudgePrimary);
+ *  otherwise a provider-matched Kimi key is required. */
+export function requireJudge() {
+  const kimi = process.env.KIMI_PROVIDER === "siliconflow" ? process.env.SILICONFLOW_API_KEY : process.env.KIMI_API_KEY;
+  const deepseekFirst = process.env.IMPLICIT_JUDGE_PRIMARY?.trim().toLowerCase() !== "kimi" || !kimi;
+  if (!(deepseekFirst ? process.env.DEEPSEEK_API_KEY : kimi)) throw new Error("需要评测判官 key:EVAL_DEEPSEEK_API_KEY(默认)或与 provider 匹配的 Kimi key");
 }
 export function requireDeepSeek() {
   if (!process.env.DEEPSEEK_API_KEY) throw new Error("需要 EVAL_DEEPSEEK_API_KEY(全管线评测臂)");

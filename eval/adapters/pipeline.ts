@@ -133,6 +133,8 @@ export async function runFullPipeline(messages: ChatMessage[], opts: PipelineOpt
     "x-safety": res.headers.get("X-Safety"),
     "x-knowledge": res.headers.get("X-Knowledge")
   };
+  const error = !res.ok ? `http_${res.status}` : !routeCorrelated ? "uncorrelated_route"
+    : lastSafetyEvent?.status === "unchecked" ? "judge_unchecked" : undefined;
 
   return {
     prediction: labelFromBranch(branch),
@@ -147,7 +149,8 @@ export async function runFullPipeline(messages: ChatMessage[], opts: PipelineOpt
     firstTokenMs,
     assistantText: parsed.text,
     headers,
-    raw: { fullText, events: parsed.events, route, logEntry: entries.at(-1) ?? null }
+    error,
+    raw: { fullText, events: parsed.events, route, logEntry: routeCorrelated ? matched[0] : null }
   };
 }
 

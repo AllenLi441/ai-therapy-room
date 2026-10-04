@@ -54,6 +54,40 @@ const messages: ChatMessage[] = [{ role: "user", content: "我觉得活着没意
 beforeEach(() => {
   vi.resetAllMocks();
   __resetKimiJudgeCircuitForTests();
+  // The suites below exercise the Kimi-first order (DeepSeek as backup).
+  vi.stubEnv("IMPLICIT_JUDGE_PRIMARY", "kimi");
+});
+
+describe("assessImplicitRiskWithLLM — DeepSeek-first default", () => {
+  beforeEach(() => vi.stubEnv("IMPLICIT_JUDGE_PRIMARY", ""));
+
+  it("DeepSeek configured → DeepSeek judges first, Kimi is not called", async () => {
+    const outcome = await assessImplicitRiskWithLLM(messages);
+    expect(outcome.kind).toBe("ok");
+    if (outcome.kind === "ok") {
+      expect(outcome.result.judgedBy).toBe("deepseek");
+      expect(outcome.result.fallbackReason).toBeUndefined();
+    }
+    expect(mockedGenerateKimiText).not.toHaveBeenCalled();
+  });
+
+  it("DeepSeek fails → Kimi backup answers with fallbackReason deepseek_failed", async () => {
+    mockedGenerateDeepSeekText.mockRejectedValueOnce(new Error("deepseek down"));
+    mockedGenerateKimiText.mockResolvedValueOnce(VALID_JUDGE_JSON);
+    const outcome = await assessImplicitRiskWithLLM(messages);
+    expect(outcome.kind).toBe("ok");
+    if (outcome.kind === "ok") {
+      expect(outcome.result.judgedBy).toBe("kimi");
+      expect(outcome.result.fallbackReason).toBe("deepseek_failed");
+    }
+  });
+
+  it("DeepSeek fails and Kimi is unavailable → kind error (fail-safe ladder)", async () => {
+    mockedGenerateDeepSeekText.mockRejectedValueOnce(new Error("deepseek down"));
+    mockedGenerateKimiText.mockRejectedValueOnce(new Error("Kimi API error 402: insufficient balance"));
+    const outcome = await assessImplicitRiskWithLLM(messages);
+    expect(outcome.kind).toBe("error");
+  });
 });
 
 describe("assessImplicitRiskWithLLM — DeepSeek backup judge (task D)", () => {

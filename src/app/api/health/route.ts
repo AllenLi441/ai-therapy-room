@@ -1,5 +1,6 @@
 import { getKimiConfig, isKimiConfigured } from "@/lib/kimi";
 import { getChatLlmHealth } from "@/lib/chat-monitoring";
+import { resolveJudgePrimary } from "@/lib/implicit-risk";
 import { DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_MAX_RETRIES } from "@/lib/net";
 import { APP_VERSION } from "@/lib/version";
 
@@ -44,28 +45,30 @@ export function GET(request?: Request) {
   const kimiConfigured = isKimiConfigured();
   const deepseekConfigured = Boolean(process.env.DEEPSEEK_API_KEY);
   const conversationLlm = getChatLlmHealth();
+  const judgePrimary = resolveJudgePrimary();
 
   const observedFailure = conversationLlm.healthy === false;
-  const degraded = !deepseekConfigured || !kimiConfigured || observedFailure;
+  const degraded = !deepseekConfigured || judgePrimary === "none" || observedFailure;
   const okStatus = deepseekConfigured && !observedFailure;
 
   const note = !deepseekConfigured
     ? "DEGRADED: conversation provider key missing"
     : observedFailure
       ? `DEGRADED: conversation LLM failing (${conversationLlm.consecutiveFailures} consecutive fallbacks, ${conversationLlm.recentFailures} in 5m). Check DEEPSEEK_API_KEY / quota / DEEPSEEK_MODEL.`
-    : kimiConfigured
+    : judgePrimary !== "none"
       ? conversationLlm.healthy === true
         ? "provider configuration present; recent conversation calls observed healthy on this instance"
         : "provider configuration present; no recent conversation call observed on this instance (provider availability unverified)"
-      : `DEGRADED: ${kimiConfig.provider} Kimi key missing — implicit-risk LLM layer OFF (lexicon/regex fail-closed layer still active)`;
+      : "DEGRADED: no judge model configured — implicit-risk LLM layer OFF (lexicon/regex fail-closed layer still active)";
 
   const body = {
     ...release,
     check: "configuration-and-observed-errors",
     ok: okStatus,
-    implicitRiskLayerActive: kimiConfigured,
+    implicitRiskLayerActive: judgePrimary !== "none",
     models: {
       deepseekConfigured,
+      judgePrimary,
       kimiConfigured,
       kimiProvider: kimiConfig.provider,
       kimiModel: kimiConfig.model,

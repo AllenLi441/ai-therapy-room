@@ -6,38 +6,44 @@
  *
  * 臂:
  *   lexicon        runWordlistOnly(history)            本地词表,瞬间
- *   judge          runJudgeOnly(history)               Kimi 语义判官(并发≤2,resume)
+ *   judge          runJudgeOnly(history)               语义判官(串行,resume)
  *   pipeline_fast  runFullPipeline(mode=fast)          全管线快速档(真调 DeepSeek+尾部判官)
  *   pipeline_deep  runFullPipeline(mode=deep)          全管线深度档(阻塞判官)
  *   baseline       纯 deepseek-chat 零样本 4 类分类 —— 与标注员 A 同一协议,直接复用
  *                  eval/annotations/annotator_A.jsonl 的输出(报告中注明)。
  *
- * 用法: npx tsx eval/experiments/detection_arms.ts --arm lexicon|judge|pipeline_fast|pipeline_deep|report [--limit N] [--concurrency C]
- *   resume 永远开启(结果 jsonl 已有 id#turn 跳过);--arm report 汇总全部已有结果出 MD。
+ * 用法: tsx eval/experiments/detection_arms.ts --run-id NAME --arm lexicon|judge|pipeline_fast|pipeline_deep|report [--limit N]
+ *   新运行隔离存储并冻结输入；无 run-id 的 report 只打印历史报告，绝不写历史文件。
  */
-import { readFileSync, existsSync, mkdirSync, appendFileSync, writeFileSync, readdirSync } from "node:fs";
+import { readFileSync, mkdirSync, appendFileSync, writeFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { setupEvalEnv } from "../adapters/env";
+import { setupEvalEnv, requireJudge, requireDeepSeek } from "../adapters/env";
 import { runWordlistOnly } from "../adapters/wordlist";
 import { runJudgeOnly } from "../adapters/judge";
-import { runFullPipeline, runConversation } from "../adapters/pipeline";
+import { runConversation } from "../adapters/pipeline";
 import { labelFromBranch } from "../adapters/label-maps";
 import type { UnifiedLabel, Branch } from "../adapters/result";
-
-setupEvalEnv();
+import { getKimiConfig } from "../../src/lib/kimi";
+import { getDeepSeekConfig, buildDeepSeekPayload } from "../../src/lib/deepseek";
+import { resolveJudgePrimary } from "../../src/lib/implicit-risk";
+import { acquireRunLock, assertKnownRun, decisionAudit, freezeManifest, inputSnapshot, readRows, RUN_ARMS, runPaths, validateRows, type ResultRow } from "./run-state";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = join(HERE, "../..");
 const DS = join(HERE, "..", "datasets");
-const OUT = join(HERE, "results");
-const REPORTS = join(HERE, "..", "reports");
+// Default = the frozen 344-unit seed set; EVAL_DATASET_DIRS=teen runs a separate holdout.
+const DATASET_DIRS = (process.env.EVAL_DATASET_DIRS ?? "safety,multiturn").split(",").map((d) => d.trim()).filter(Boolean);
+let OUT: string;
+let REPORTS: string;
+let runId: string;
 const LABELS: UnifiedLabel[] = ["none", "passive_ideation", "active_ideation", "crisis"];
 
 type Unit = { id: string; turn: number; history: string[]; gold: UnifiedLabel };
 
 function loadUnits(): Unit[] {
   const units: Unit[] = [];
-  for (const dir of [join(DS, "safety"), join(DS, "multiturn")]) {
+  for (const dir of DATASET_DIRS.map((d) => join(DS, d))) {
     for (const f of readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort()) {
       for (const line of readFileSync(join(dir, f), "utf8").split("\n")) {
         if (!line.trim()) continue;
@@ -54,13 +60,11 @@ function loadUnits(): Unit[] {
   return units;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 // 完整对话样例(保留多轮结构 + 逐轮金标),供管线臂真实多轮回放。
 type Item = { id: string; turns: string[]; perTurnGold: UnifiedLabel[] };
 function loadItems(): Item[] {
   const items: Item[] = [];
-  for (const dir of [join(DS, "safety"), join(DS, "multiturn")]) {
+  for (const dir of DATASET_DIRS.map((d) => join(DS, d))) {
     for (const f of readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort()) {
       for (const line of readFileSync(join(dir, f), "utf8").split("\n")) {
         if (!line.trim()) continue;
@@ -75,14 +79,10 @@ function loadItems(): Item[] {
   return items;
 }
 
-function loadDone(outPath: string): Set<string> {
-  const done = new Set<string>();
-  if (existsSync(outPath)) {
-    for (const l of readFileSync(outPath, "utf8").split("\n")) {
-      if (!l.trim()) continue;
-      done.add(`${JSON.parse(l).id}#${JSON.parse(l).turn}`);
-    }
-  }
+function loadDone(outPath: string, wholeConversations = false): Set<string> {
+  const rows = readRows(outPath);
+  const done = validateRows(rows, loadUnits(), runId, wholeConversations);
+  if (rows.some((r) => r.error || r.prediction === null)) process.exitCode = 1;
   return done;
 }
 
@@ -92,8 +92,8 @@ async function runPipelineArm(arm: string, limit: number) {
   mkdirSync(OUT, { recursive: true });
   const mode = arm === "pipeline_deep" ? "deep" : "fast";
   const outPath = join(OUT, `${arm}.jsonl`);
-  const done = loadDone(outPath);
-  let items = loadItems().filter((it) => !done.has(`${it.id}#0`)); // 以首轮是否完成为整条 resume 单位
+  const done = loadDone(outPath, true);
+  let items = loadItems().filter((it) => !done.has(`${it.id}#0`)); // 已验证整个会话完整
   const totalUnits = loadItems().reduce((s, it) => s + it.turns.length, 0);
   if (limit > 0) items = items.slice(0, limit);
   console.log(`[${arm}] 串行多轮回放 · 条目=${items.length} 单元总数=${totalUnits} 并发=1`);
@@ -102,21 +102,27 @@ async function runPipelineArm(arm: string, limit: number) {
   for (const it of items) {
     try {
       const results = await runConversation(it.turns, { mode });
+      const rows: object[] = [];
       for (const r of results) {
         const gold = it.perTurnGold[r.turnIndex];
         const prediction = labelFromBranch(r.branch);
         if (r.routeCorrelated) corr++; else uncorr++;
-        appendFileSync(outPath, JSON.stringify({
-          id: it.id, turn: r.turnIndex, gold, prediction, branch: r.branch,
+        const log = (r.raw as { logEntry?: unknown }).logEntry;
+        rows.push({
+          runId, id: it.id, turn: r.turnIndex, gold, prediction: r.error ? null : prediction, branch: r.branch,
           route: r.route, routeCorrelated: r.routeCorrelated,
           crisisSticky: r.headers["x-crisis-triggered"] === "1", ms: Math.round(r.latencyMs),
-        }) + "\n");
+          firstTokenMs: r.firstTokenMs, interventionTiming: r.interventionTiming, tailEvent: r.tailEvent,
+          headers: r.headers, error: r.error, ...decisionAudit(log),
+        });
+        if (r.error) { errc++; process.exitCode = 1; }
         okc++;
       }
-    } catch (e) {
-      errc++;
-      console.log(`  ✗ ${it.id} ${(e as Error).message?.slice(0, 80)}`);
-      await sleep(2000);
+      appendFileSync(outPath, rows.map((row) => JSON.stringify(row)).join("\n") + "\n");
+    } catch {
+      // Stop instead of silently retrying a partly generated conversation later.
+      appendFileSync(outPath, it.perTurnGold.map((gold, turn) => JSON.stringify({ runId, id: it.id, turn, gold, prediction: null, error: "pipeline_failed" })).join("\n") + "\n");
+      throw new Error(`管线会话 ${it.id} 失败，已记录 null；本轮终止，请检查日志后另起 run-id`);
     }
     if ((okc + errc) % 20 === 0) console.log(`  ${done.size + okc}/${totalUnits}  err=${errc}  route唯一匹配=${corr}/${corr + uncorr}`);
   }
@@ -124,17 +130,17 @@ async function runPipelineArm(arm: string, limit: number) {
   console.log(`  ⟹ route 唯一相关率 ${corr}/${corr + uncorr} = ${((corr / Math.max(1, corr + uncorr)) * 100).toFixed(1)}%(串线修复审计:应≈100%)`);
 }
 
-// 无状态臂(词表/判官):按单元评测即可,可并发。
-async function runStatelessArm(arm: string, limit: number, conc: number) {
+// 无状态臂也串行，统一请求与资源预算。
+async function runStatelessArm(arm: string, limit: number) {
   mkdirSync(OUT, { recursive: true });
   const outPath = join(OUT, `${arm}.jsonl`);
   const done = loadDone(outPath);
   let units = loadUnits().filter((u) => !done.has(`${u.id}#${u.turn}`));
   const total = units.length + done.size;
   if (limit > 0) units = units.slice(0, limit);
-  console.log(`[${arm}] 单元=${total} 已完成=${done.size} 本次=${units.length} 并发=${conc}`);
+  console.log(`[${arm}] 单元=${total} 已完成=${done.size} 本次=${units.length} 并发=1`);
 
-  let idx = 0, okc = 0, errc = 0;
+  let okc = 0, errc = 0;
   async function one(u: Unit) {
     const t0 = Date.now();
     try {
@@ -142,43 +148,42 @@ async function runStatelessArm(arm: string, limit: number, conc: number) {
       let branch: Branch | null = null;
       // judge 臂逐行审计字段(EXPERIMENT_SPEC.md 的既有要求):error 如实落盘;
       // judgedBy/fallbackReason 标记备胎判官(kimi | deepseek + 落备胎原因)。存在才写。
-      const audit: { judgedBy?: string; fallbackReason?: string; error?: string } = {};
+      const audit: Record<string, unknown> = {};
       if (arm === "lexicon") {
         const r = runWordlistOnly(u.history);
         prediction = r.prediction as UnifiedLabel; branch = r.branch;
       } else if (arm === "judge") {
         const r = await runJudgeOnly(u.history, { timeoutMs: 30000 });
         prediction = (r.prediction as UnifiedLabel) ?? null; branch = r.branch;
-        const outcome = (r.raw as { outcome?: { kind: string; result?: { judgedBy?: string; fallbackReason?: string } } }).outcome;
+        const raw = r.raw as { outcome?: { kind: string; result?: { judgedBy?: string; fallbackReason?: string } }; decision?: unknown };
+        const outcome = raw.outcome;
+        Object.assign(audit, decisionAudit({ implicit: outcome?.kind === "ok" ? { kind: "ok", ...outcome.result } : outcome, implicitDecision: raw.decision }));
         if (outcome?.kind === "ok" && outcome.result?.judgedBy) audit.judgedBy = outcome.result.judgedBy;
         if (outcome?.kind === "ok" && outcome.result?.fallbackReason) audit.fallbackReason = outcome.result.fallbackReason;
-        if (r.error !== undefined) audit.error = r.error;
+        if (r.error !== undefined) { audit.error = "judge_unavailable"; prediction = null; }
       } else throw new Error(`unknown stateless arm ${arm}`);
       appendFileSync(outPath, JSON.stringify({
-        id: u.id, turn: u.turn, gold: u.gold, prediction, branch, route: null,
+        runId, id: u.id, turn: u.turn, gold: u.gold, prediction, branch, route: null,
         ok: prediction === u.gold, ms: Date.now() - t0, ...audit,
       }) + "\n");
+      if (prediction === null || audit.error) { errc++; process.exitCode = 1; }
       okc++;
-    } catch (e) {
-      errc++;
-      console.log(`  ✗ ${u.id}#${u.turn} ${(e as Error).message?.slice(0, 80)}`);
-      await sleep(2000);
+    } catch {
+      appendFileSync(outPath, JSON.stringify({ runId, id: u.id, turn: u.turn, gold: u.gold, prediction: null, error: "evaluation_failed" }) + "\n");
+      throw new Error(`单元 ${u.id}#${u.turn} 失败，已记录 null；本轮终止`);
     }
   }
-  async function worker() {
-    while (idx < units.length) { const u = units[idx++]; await one(u); if ((okc + errc) % 25 === 0) console.log(`  ${done.size + okc + errc}/${total} err=${errc}`); }
-  }
-  await Promise.all(Array.from({ length: Math.min(conc, Math.max(1, units.length)) }, worker));
+  for (const unit of units) await one(unit);
   console.log(`[${arm}] 完成:+${okc} 失败=${errc} 累计=${done.size + okc}/${total} → ${outPath}`);
 }
 
-async function runArm(arm: string, limit: number, conc: number) {
+async function runArm(arm: string, limit: number) {
   if (arm === "pipeline_fast" || arm === "pipeline_deep") return runPipelineArm(arm, limit);
-  return runStatelessArm(arm, limit, conc);
+  return runStatelessArm(arm, limit);
 }
 
 // ---------- 汇总 ----------
-type Row = { id: string; turn: number; gold: UnifiedLabel; prediction: UnifiedLabel | null; branch?: string | null };
+type Row = ResultRow;
 function prf(rows: Row[]) {
   const per: Record<string, { p: number; r: number; f1: number; support: number }> = {};
   let mf = 0, wf = 0;
@@ -211,7 +216,7 @@ function confusion(rows: Row[]) {
 
 function loadBranchGold(): Map<string, { expected: string; acceptable: string[] }> {
   const m = new Map<string, { expected: string; acceptable: string[] }>();
-  for (const dir of [join(DS, "safety"), join(DS, "multiturn")]) {
+  for (const dir of DATASET_DIRS.map((d) => join(DS, d))) {
     for (const f of readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort()) {
       for (const line of readFileSync(join(dir, f), "utf8").split("\n")) {
         if (!line.trim()) continue;
@@ -265,17 +270,16 @@ function push4ClassSection(lines: string[], arm: string, rows: Row[], s: ReturnT
 function report() {
   mkdirSync(REPORTS, { recursive: true });
   const arms: Record<string, Row[]> = {};
-  for (const f of existsSync(OUT) ? readdirSync(OUT).filter((f) => f.endsWith(".jsonl")) : []) {
-    arms[f.replace(".jsonl", "")] = readFileSync(join(OUT, f), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
-  }
-  // baseline = annotator_A 输出(同协议纯 DeepSeek 零样本),join 金标
-  const annPath = join(HERE, "..", "annotations", "annotator_A.jsonl");
-  if (existsSync(annPath)) {
-    const goldByKey = new Map(loadUnits().map((u) => [`${u.id}#${u.turn}`, u.gold]));
-    arms["baseline_deepseek"] = readFileSync(annPath, "utf8").split("\n").filter(Boolean).map((l) => {
-      const r = JSON.parse(l);
-      return { id: r.id, turn: r.turn, gold: goldByKey.get(`${r.id}#${r.turn}`)!, prediction: r.label };
-    }).filter((r) => r.gold);
+  const coverage: string[] = [];
+  for (const arm of RUN_ARMS) {
+    const rows = readRows(join(OUT, `${arm}.jsonl`));
+    validateRows(rows, loadUnits(), runId);
+    const byKey = new Map(rows.map((r) => [`${r.id}#${r.turn}`, r]));
+    // Missing/failed units stay in the denominator; a partial run cannot pass.
+    arms[arm] = loadUnits().map((u) => byKey.get(`${u.id}#${u.turn}`) ?? { ...u, prediction: null, error: "missing" });
+    const errors = arms[arm].filter((r) => r.error || r.prediction === null).length;
+    coverage.push(`${arm}: 已记录 ${rows.length}/${arms[arm].length}，缺失/失败 ${errors}`);
+    if (errors) process.exitCode = 1;
   }
   // 串线修复审计:管线臂逐行的 routeCorrelated 命中率(应≈100%)。
   const corrLine = (arm: string) => {
@@ -291,12 +295,14 @@ function report() {
   for (const a of orderedArms) stats[a] = prf(arms[a]);
 
   const lines: string[] = [
-    "# 检测臂 vs 纯 DeepSeek 基线 — 端到端安全与干预路由(2026-07-13)", "",
+    `# 安全路由本地集成评测 — ${runId}（${new Date().toISOString()}）`, "",
     `金标 = 数据集种子 label(4 类,多轮取 per_turn);单元 = id#turn。`,
-    `baseline_deepseek = 与标注员 A 同一协议的纯 deepseek-chat 零样本(复用其输出)。`, "",
-    "**判官归属证据边界:** 历史 `judge.jsonl` 没有逐行 `judgedBy`。同一账户状态下的归属探针" +
-    " 10/10 由 DeepSeek 兜底(证据 `results/judge_attrib_probe.jsonl`)，只能证明探针当时状态，不能反推" +
-    "全部 344 条历史行。该臂在正文中应标为“供应商逐行归属缺失的历史结果”；新运行已在代码中落盘 `judgedBy`。", "",
+    "256 个合成会话展开为 344 个相关逐轮单元；非真人专家金标，非临床效果证明。",
+    "直接调用本地 POST；不包含 Vercel 网络、部署配置或浏览器交互验证。模型和源码以本 run manifest 为准。",
+    "判官单臂预算 30s；产品判官阻塞 12s、快速尾判 5s，另有备胎预算。不同预算可能影响差距。",
+    "旧 annotator_A 和 7 月结果不并入本次；历史参照见 eval/reports/detection_arms.md，供应商和协议可能不同。",
+    ...coverage,
+    `完整性状态：${process.exitCode ? "未完成或有失败，不可判定验收通过" : "四臂完整；是否满足安全门槛仍需独立审查"}。null/缺失保留在分母，FPR 须同时看失败数。`, "",
     "**方法学修正(同行评审):** 管线臂改为 (1) **全局串行**执行,(2) 决策日志路由按 " +
     "`sessionHash+turnIndex` **唯一认领**(修掉并发下取最新日志造成的数据串线),(3) 多轮样例用 " +
     "`runConversation` **真实回放**(逐轮送入 + 回灌 app 回复 + 危机状态粘滞),不再只拼接用户消息。",
@@ -330,7 +336,7 @@ function report() {
   for (const a of pipeArms) {
     const scored = (arms[a] as any[]).map((r) => {
       const g = bg.get(`${r.id}#${r.turn}`);
-      return { expected: (g?.expected ?? "?") as string, okB: g ? (r.branch === g.expected || g.acceptable.includes(r.branch)) : false };
+      return { expected: (g?.expected ?? "?") as string, okB: !r.error && r.prediction !== null && g ? (r.branch === g.expected || g.acceptable.includes(r.branch)) : false };
     });
     const by: Record<string, { hit: number; n: number }> = {};
     for (const r of scored) { by[r.expected] = by[r.expected] || { hit: 0, n: 0 }; by[r.expected].n++; if (r.okB) by[r.expected].hit++; }
@@ -379,8 +385,7 @@ function report() {
     lines.push(`| ${ARM_LABEL[arm]} | ${x.intervened}/${x.rows.length}(${(x.intervened / x.rows.length * 100).toFixed(1)}%) | ${x.released}/${x.rows.length}(${(x.released / x.rows.length * 100).toFixed(1)}%) | ${[...x.counts].sort().map(([key, n]) => `${key} ${n}`).join("；")} |`);
   }
   lines.push("",
-    "4 类投影中没有 `passive_ideation` 输出，是因为当前分支映射没有 passive 专用槽位；" +
-    "这会让 passive 的四分类 recall 变成 0。可是**是否放行必须依据实际 branch/prediction 逐行统计**，" +
+    "当前 gentle_check 映射为 passive_ideation；其余分支映射以冻结源码为准。**是否干预依据实际 branch/prediction 逐行统计**，" +
     "不能把 30 条 expected=suspected 自动称为“结构假象”，也不能把 30 条 expected=gentle_check 自动称为“真实漏检”。", "");
   for (const arm of pipeArms) push4ClassSection(lines, arm, arms[arm], stats[arm]);
   const outMd = join(REPORTS, "detection_arms.md");
@@ -393,9 +398,46 @@ async function main() {
   const get = (k: string, d: string) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
   const arm = get("--arm", "report");
   const limit = Number(get("--limit", "0"));
-  const conc = Number(get("--concurrency", arm === "lexicon" ? "1" : arm === "judge" ? "2" : "4"));
-  if (arm === "report") return report();
-  await runArm(arm, limit, conc);
+  runId = get("--run-id", "");
+  if (![...RUN_ARMS, "report"].includes(arm) || !Number.isInteger(limit) || limit < 0 || get("--concurrency", "1") !== "1") {
+    throw new Error("无效参数；四臂统一 --concurrency 1，--limit 必须为非负整数");
+  }
+  if (!runId) {
+    if (arm !== "report") throw new Error("执行评测必须显式传 --run-id，不能追加历史结果");
+    console.log(readFileSync(join(HERE, "../reports/detection_arms.md"), "utf8"));
+    return;
+  }
+  const paths = runPaths(APP_ROOT, runId);
+  const release = acquireRunLock(APP_ROOT, runId);
+  const stop = () => { release(); process.exit(130); };
+  process.once("SIGINT", stop); process.once("SIGTERM", stop); process.once("exit", release);
+  try {
+    assertKnownRun(paths, arm !== "report");
+    OUT = paths.results; REPORTS = paths.reports;
+    const snapshot = inputSnapshot(APP_ROOT, DATASET_DIRS);
+    if (arm === "report") {
+      const stored = JSON.parse(readFileSync(paths.manifest, "utf8"));
+      freezeManifest(paths, { ...stored.protocol, inputs: snapshot });
+      return report();
+    }
+    setupEvalEnv({ appRoot: APP_ROOT, workdir: paths.workdir });
+    const kimi = getKimiConfig(), deepseek = getDeepSeekConfig();
+    const model = (name: string) => {
+      const p = buildDeepSeekPayload({ systemPrompt: "", messages: [], apiModel: name });
+      return { model: p.model, thinking: p.thinking, temperature: p.temperature, maxTokens: p.max_tokens };
+    };
+    freezeManifest(paths, {
+      runId, scope: "local-POST-synthetic-seed", inputs: snapshot, concurrency: 1,
+      judge: { primary: resolveJudgePrimary(), provider: kimi.provider, origin: new URL(kimi.baseUrl).origin, model: kimi.model, configured: Boolean(kimi.apiKey), timeoutMs: 30000, fastTimeoutMs: 5000, blockingTimeoutMs: 12000 },
+      generator: { origin: new URL(deepseek.baseUrl).origin, configured: Boolean(deepseek.apiKey), fast: model("deepseek-v4-flash"), deep: model("deepseek-v4-pro") },
+      credentials: process.env.EVAL_ALLOW_PRODUCTION_KEYS === "1" ? "explicit-production-override" : "dedicated-eval-only",
+    });
+    if (arm !== "lexicon") requireJudge();
+    if (arm.startsWith("pipeline")) requireDeepSeek();
+    await runArm(arm, limit);
+  } finally {
+    release(); process.removeListener("SIGINT", stop); process.removeListener("SIGTERM", stop); process.removeListener("exit", release);
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -104,13 +104,14 @@ export type ImplicitRiskAssessment = {
   suggestedFlags: RiskFlag[];
   /** Brief explanation, < 120 chars. */
   rationale: string;
-  /** Which classifier actually produced this result — Kimi (primary) or the
-   *  DeepSeek backup judge invoked when Kimi failed. Optional so existing
-   *  callers/tests that build an ImplicitRiskAssessment literal stay valid. */
+  /** Which classifier actually produced this result (see resolveJudgePrimary in
+   *  implicit-risk.ts). Optional so existing callers/tests that build an
+   *  ImplicitRiskAssessment literal stay valid. */
   judgedBy?: "kimi" | "deepseek";
-  /** Why the DeepSeek backup judge answered instead of Kimi. Set only when
-   *  judgedBy="deepseek"; categories from classifyKimiJudgeError (implicit-risk.ts). */
+  /** Why the backup judge answered instead of the primary. Kimi-first failures use
+   *  classifyKimiJudgeError categories; "deepseek_failed" = DeepSeek-first failed. */
   fallbackReason?:
+    | "deepseek_failed"
     | "kimi_billing"
     | "kimi_rate"
     | "kimi_transient"
