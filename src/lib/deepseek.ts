@@ -27,7 +27,12 @@ type DeepSeekPayload = {
   thinking?: {
     type: "enabled" | "disabled";
   };
+  // Thinking depth (DeepSeek docs: none / low / high / max, default high). Sent only
+  // when thinking is enabled.
+  reasoning_effort?: "low" | "high" | "max";
 };
+
+export type ReasoningEffort = "none" | "low" | "high" | "max";
 
 const DEFAULT_BASE_URL = "https://api.deepseek.com";
 
@@ -88,12 +93,14 @@ export function buildDeepSeekPayload(input: {
   apiModel?: string;              // real API model: deepseek-v4-pro | deepseek-v4-flash
   stream?: boolean;
   maxTokens?: number;
+  /** User-chosen thinking depth. Omitted → legacy default (pro thinks, flash doesn't). */
+  reasoningEffort?: ReasoningEffort;
 }) {
   // The real API model: an explicit, VALID apiModel (the deep/fast → v4-pro/v4-flash
   // choice) overrides the env default. Unknown values fall back to env so a bad
   // value never 400s the provider.
   const model = isValidApiModel(input.apiModel) ? input.apiModel : getDeepSeekConfig().model;
-  const isDeepThinking = model === "deepseek-v4-pro";
+  const isDeepThinking = input.reasoningEffort ? input.reasoningEffort !== "none" : model === "deepseek-v4-pro";
 
   return {
     model,
@@ -107,7 +114,10 @@ export function buildDeepSeekPayload(input: {
     max_tokens: input.maxTokens ?? (isDeepThinking ? 8192 : 900),
     stream: input.stream ?? true,
     // deep → think before answering; fast → no chain-of-thought, quicker reply.
-    thinking: { type: isDeepThinking ? "enabled" : "disabled" }
+    thinking: { type: isDeepThinking ? "enabled" : "disabled" },
+    ...(isDeepThinking && input.reasoningEffort && input.reasoningEffort !== "none"
+      ? { reasoning_effort: input.reasoningEffort }
+      : {})
   } satisfies DeepSeekPayload;
 }
 
@@ -142,7 +152,8 @@ async function requestDeepSeek(payload: DeepSeekPayload) {
   // deepseek-v4-pro thinks before any token and can take tens of seconds; too short a
   // cap aborts it mid-thought (→ fallback, reads as broken). Target: deep ≤ 30s (per
   // product spec), fast tier far quicker. Both stay under the route maxDuration (60s).
-  const timeoutMs = payload.model === "deepseek-v4-pro" ? 30_000 : 20_000;
+  const thinkingOn = payload.thinking?.type === "enabled";
+  const timeoutMs = !thinkingOn ? 20_000 : payload.reasoning_effort === "max" ? 45_000 : 30_000;
   const { controller, clear } = withTimeout(timeoutMs);
 
   try {
@@ -169,12 +180,11 @@ async function requestDeepSeek(payload: DeepSeekPayload) {
 
 /**
  * Stream the assistant reply as raw text chunks. With `opts.includeReasoning`
- * (deep tier only — the thinking model emits `reasoning_content` BEFORE the
- * answer), the reasoning is forwarded as a leading block delimited by the
- * REASONING_OPEN/REASONING_CLOSE control chars, so the caller can route it to a
- * separate "思考过程" UI channel without it being mistaken for the answer. The
- * default (no opts) is byte-for-byte the previous content-only behaviour, so
- * fast-tier and crisis callers are unaffected.
+ * (thinking enabled), the thinking phase is marked with REASONING_OPEN /
+ * REASONING_CLOSE so the client can show "思考了 N 秒". The reasoning TEXT itself is
+ * never forwarded: it contains internal risk judgments and system-prompt guidance
+ * that must not reach users (2026-10-04 decision). The default (no opts) is
+ * byte-for-byte the previous content-only behaviour.
  */
 export async function createDeepSeekTextStream(
   payload: DeepSeekPayload,
@@ -222,7 +232,6 @@ export async function createDeepSeekTextStream(
             pendingTexts.push(REASONING_OPEN);
             reasoningOpen = true;
           }
-          pendingTexts.push(reasoning);
         }
 
         if (content) {

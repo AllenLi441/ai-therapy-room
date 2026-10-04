@@ -891,9 +891,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .safety-flag svg { width: 13px; height: 13px; opacity: .9; }
 
-.think-trace, .kb-refs { margin: 2px 0 6px; font-size: 0.78125rem; color: var(--ink-3); }
+.kb-refs { margin: 2px 0 6px; font-size: 0.78125rem; color: var(--ink-3); }
 .kb-refs { margin-top: 10px; }
-.think-trace summary, .kb-refs summary {
+.kb-refs summary {
   cursor: pointer; user-select: none; list-style: none;
   display: inline-flex; align-items: center; gap: 6px;
   color: var(--sage-deep); font-weight: 500;
@@ -901,21 +901,25 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--sage-tint); border: 1px solid transparent;
   transition: border-color .2s, background .2s;
 }
-.think-trace summary::-webkit-details-marker, .kb-refs summary::-webkit-details-marker { display: none; }
-.think-trace summary:hover, .kb-refs summary:hover { border-color: var(--sage-soft); }
-.think-trace summary svg, .kb-refs summary svg { width: 14px; height: 14px; opacity: .9; }
+.kb-refs summary::-webkit-details-marker { display: none; }
+.kb-refs summary:hover { border-color: var(--sage-soft); }
+.kb-refs summary svg { width: 14px; height: 14px; opacity: .9; }
 
-.think-body, .kb-body {
+.kb-body {
   margin-top: 8px; padding: 12px 14px;
   border-radius: var(--r-md);
   background: var(--surface-2);
   border: 1px solid var(--hairline);
 }
-.think-body {
-  white-space: pre-wrap; line-height: 1.65; max-height: 260px; overflow-y: auto;
-  color: var(--ink-2); font-size: 0.78125rem;
+/* Thinking content is never shown — only its duration. */
+.think-done { display: inline-flex; align-items: center; gap: 5px; margin: 2px 0 6px; font-size: 0.75rem; color: var(--ink-3); }
+.think-done svg { width: 13px; height: 13px; opacity: .85; }
+.think-select {
+  font: inherit; font-size: 0.75rem; color: var(--ink-2);
+  background: none; border: none; border-bottom: 1px solid var(--hairline);
+  padding: 2px 2px; cursor: pointer;
 }
-.think-hint { margin-top: 5px; font-size: 0.71875rem; color: var(--ink-3); opacity: .85; }
+.think-select:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
 
 .kb-note { color: var(--ink-3); margin-bottom: 10px; line-height: 1.55; }
 .kb-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }

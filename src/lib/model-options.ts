@@ -34,6 +34,24 @@ export function getPipelineMode(pace: unknown): ModelPipelineMode {
   return resolveSessionPace(pace) === "fast" ? "fast" : "deep";
 }
 
+// User-facing thinking depth, independent of pace. Defaults: fast → off, deep → high.
+// "off" maps to DeepSeek reasoning_effort "none". Crisis turns always force "off".
+export const THINKING_LEVELS = ["off", "low", "high", "max"] as const;
+export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
+
+export function isThinkingLevel(value: unknown): value is ThinkingLevel {
+  return typeof value === "string" && (THINKING_LEVELS as readonly string[]).includes(value);
+}
+
+export function resolveThinkingLevel(value: unknown, pace: unknown): ThinkingLevel {
+  if (isThinkingLevel(value)) return value;
+  return resolveSessionPace(pace) === "fast" ? "off" : "high";
+}
+
+export function reasoningEffortFor(level: ThinkingLevel): "none" | "low" | "high" | "max" {
+  return level === "off" ? "none" : level;
+}
+
 // The real DeepSeek API model name (env-driven; used by the summary route and as
 // the chat fallback). Defaults to the cheap fast tier.
 export const DEFAULT_DEEPSEEK_API_MODEL = "deepseek-v4-flash";

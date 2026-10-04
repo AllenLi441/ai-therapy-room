@@ -409,3 +409,37 @@ describe("chat route — RAG safety guards (P5)", () => {
     expect(query).not.toMatch(/PrivateName|secret|example|抑郁|社交/);
   });
 });
+
+describe("thinking level wiring", () => {
+  function post(body: Record<string, unknown>) {
+    return POST(new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "这周作业有点多，感觉有点累" }], language: "zh", ...body })
+    }));
+  }
+  const lastPayload = () => vi.mocked(createDeepSeekTextStream).mock.calls.at(-1)![0];
+
+  it("rejects an unknown thinking level", async () => {
+    const res = await post({ pace: "deep", thinking: "ultra" });
+    expect(res.status).toBe(400);
+  });
+
+  it.each([
+    ["deep", undefined, "enabled", "high"],
+    ["deep", "low", "enabled", "low"],
+    ["deep", "off", "disabled", undefined],
+    ["fast", undefined, "disabled", undefined],
+    ["fast", "max", "enabled", "max"]
+  ] as const)("%s pace + thinking=%s → thinking %s, effort %s", async (pace, thinking, type, effort) => {
+    await (await post({ pace, thinking })).text();
+    expect(lastPayload().thinking).toEqual({ type });
+    expect(lastPayload().reasoning_effort).toBe(effort);
+  });
+
+  it("an active crisis session never thinks, whatever the user chose", async () => {
+    await (await post({ pace: "deep", thinking: "max", crisisModeActive: true })).text();
+    expect(lastPayload().thinking).toEqual({ type: "disabled" });
+    expect(lastPayload().reasoning_effort).toBeUndefined();
+  });
+});
