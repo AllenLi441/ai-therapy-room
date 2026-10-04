@@ -36,7 +36,8 @@ export type Message = {
   errored?: boolean; // the reply failed (truthful error state, not "still generating")
   visionPending?: boolean; // image(s) are being read by /api/vision (transient)
   refs?: KnowledgeRef[]; // RAG sources consulted for this reply (visible 数据来源)
-  thinking?: string; // deep-tier reasoning ("思考过程"), shown in a collapsible panel
+  thinking?: string; // thinking-phase buffer; the server sends markers only (no reasoning text)
+  thinkingMs?: number; // how long the model thought before answering → "思考了 N 秒"
   pace?: "deep" | "fast"; // which tier produced this reply (for the mode badge)
   safety?: "safe" | "unchecked" | "gentle" | "suicide_concern" | "crisis"; // Kimi danger-check result
   feedback?: "up" | "down"; // per-turn beta feedback ("有帮到 / 没帮到"), device-local only
@@ -94,8 +95,9 @@ export const STR = {
     status_connecting: "连接中", status_thinking: "思考中", status_writing: "正在回应",
     err_busy: "消息有点频繁，先歇一会儿再发。", err_connect: "连接出错了，请稍后再试。", err_too_long: "这段话太长了，请分几次发给我。", retry: "重试", vision_loading: "正在看图…",
     pace_deep: "深度", pace_fast: "快速",
-    pace_hint: "深度：先推理再回应、展示思考过程，更慢更细致；快速：跳过推理、即时回应。",
-    think_label: "思考过程", think_hint: "深度模式下 AI 回应前的推理草稿，可能粗糙、不完整，仅作透明参考——它不是给你的建议。",
+    pace_hint: "深度：带规划和复核的完整流程，更细致；快速：即时回应。",
+    think_label: "思考", think_done: "思考了 {s} 秒",
+    think_levels: { off: "不思考", low: "思考：低", high: "思考：高", max: "思考：最强" },
     safety_label: "安全识别", safety_checking: "识别中…", safety_safe: "未见风险", safety_unchecked: "未启用", safety_flagged: "检测到风险，请看下方资源", safety_gentle: "附了一句温和确认",
     disclaimer: "我是 AI 陪伴，不是医生或持证咨询师",
     switch_persona: "更换陪伴者", persona_title: "选择此刻陪你的人", persona_sub: "切换会改变陪伴的方式，随时可以换回来。",
@@ -171,8 +173,9 @@ export const STR = {
     status_connecting: "Connecting", status_thinking: "Thinking", status_writing: "Replying",
     err_busy: "A bit too many messages — please wait a moment.", err_connect: "Connection error — please try again.", err_too_long: "That message was too long — please send it in a few parts.", retry: "Retry", vision_loading: "Looking at the image…",
     pace_deep: "Depth", pace_fast: "Quick",
-    pace_hint: "Depth: reasons first and shows its thinking — slower, more considered. Quick: skips reasoning, replies instantly.",
-    think_label: "Reasoning", think_hint: "The model's working-out before replying (deep mode) — rough, for transparency only, not advice for you.",
+    pace_hint: "Depth: full pipeline with planning and review — more considered. Quick: replies instantly.",
+    think_label: "Thinking", think_done: "Thought for {s}s",
+    think_levels: { off: "No thinking", low: "Thinking: low", high: "Thinking: high", max: "Thinking: max" },
     safety_label: "Safety check", safety_checking: "checking…", safety_safe: "no risk flagged", safety_unchecked: "not run", safety_flagged: "risk flagged — see resources below", safety_gentle: "added a gentle check-in",
     disclaimer: "I'm an AI companion — not a doctor or licensed therapist",
     switch_persona: "Change companion", persona_title: "Who's with you right now", persona_sub: "Switching changes how I support you. You can switch back anytime.",

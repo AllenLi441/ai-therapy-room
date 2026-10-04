@@ -6,6 +6,7 @@ import { Ic } from "./icons";
 import { STR, personaById, type Lang, type Media, type Message, type Persona } from "./data";
 import { CN_PRIMARY_HOTLINES, CN_SUPPLEMENTAL, INTL_RESOURCES } from "@/lib/crisis-resources";
 import { MAX_IMAGE_BYTES } from "@/lib/media-limits";
+import { THINKING_LEVELS, type ThinkingLevel } from "@/lib/model-options";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -263,15 +264,11 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
             <span>{STR[lang].safety_label} · {STR[lang].safety_gentle}</span>
           </div>
         )}
-        {isAI && m.thinking && m.thinking.trim() && (
-          <details className="think-trace" open={!!m.streaming && m.content === ""}>
-            <summary>
-              <Ic.insight />
-              {STR[lang].think_label}{m.streaming && m.content === "" ? "…" : ""}
-            </summary>
-            <div className="think-body">{m.thinking}</div>
-            <div className="think-hint">{STR[lang].think_hint}</div>
-          </details>
+        {isAI && m.thinkingMs !== undefined && (
+          <div className="think-done">
+            <Ic.insight />
+            <span>{STR[lang].think_done.replace("{s}", String(Math.max(1, Math.round(m.thinkingMs / 1000))))}</span>
+          </div>
         )}
         <div className={"bubble" + (hasMedia && !hasText ? " media-only" : "") + (m.errored ? " bubble-error" : "")}>
           {hasMedia && (
@@ -423,9 +420,10 @@ export function Stream({ messages, persona, lang, onRetry, onFeedback, onDelete 
   );
 }
 
-export function Composer({ lang, pace, busy, onSend, onPace, onStop }: {
-  lang: Lang; pace: "deep" | "fast"; busy: boolean; tone?: string;
+export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinking, onStop }: {
+  lang: Lang; pace: "deep" | "fast"; thinking: ThinkingLevel; busy: boolean; tone?: string;
   onSend: (text: string, atts: Media[]) => void; onPace: (p: "deep" | "fast") => void;
+  onThinking: (level: ThinkingLevel) => void;
   onStop?: () => void;
 }) {
   const t = STR[lang];
@@ -533,6 +531,9 @@ export function Composer({ lang, pace, busy, onSend, onPace, onStop }: {
           <button className={pace === "deep" ? "on" : ""} aria-pressed={pace === "deep"} onClick={() => onPace("deep")} title={t.pace_hint}>{t.pace_deep}</button>
           <button className={pace === "fast" ? "on" : ""} aria-pressed={pace === "fast"} onClick={() => onPace("fast")} title={t.pace_hint}>{t.pace_fast}</button>
         </div>
+        <select className="think-select" value={thinking} aria-label={t.think_label} onChange={(e) => onThinking(e.target.value as ThinkingLevel)}>
+          {THINKING_LEVELS.map((level) => <option key={level} value={level}>{t.think_levels[level]}</option>)}
+        </select>
       </div>
     </div>
   );

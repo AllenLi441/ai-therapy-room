@@ -35,7 +35,7 @@ import {
   createSuicideConcernResponse,
   detectActiveCrisisFromHistory
 } from "@/lib/safety";
-import { resolveApiModelForPace, resolveDeepSeekModel, resolveSessionPace, type DeepSeekModelId, type SessionPaceId } from "@/lib/model-options";
+import { isThinkingLevel, reasoningEffortFor, resolveApiModelForPace, resolveDeepSeekModel, resolveSessionPace, resolveThinkingLevel, type DeepSeekModelId, type SessionPaceId, type ThinkingLevel } from "@/lib/model-options";
 import type {
   CaseMap,
   ChatMessage,
@@ -68,6 +68,8 @@ type ChatRequest = {
   language?: AppLanguage;
   supportRegion?: SupportRegionInput;
   ageRange?: "adult" | "minor" | "unspecified";
+  /** Thinking depth chosen in the composer; defaults by pace (fast off, deep high). */
+  thinking?: ThinkingLevel;
   continuationNote?: string;
   availableScale?: "PHQ-9" | "GAD-7" | "ISI" | null;
   // Set by the frontend when the user taps "我没事了" to leave safety mode. When
@@ -155,6 +157,7 @@ export async function POST(request: Request) {
       (body.continuationNote !== undefined && (typeof body.continuationNote !== "string" || body.continuationNote.length > 3000)) ||
       (body.supportRegion !== undefined && parseSupportRegion(body.supportRegion) === null) ||
       (body.ageRange !== undefined && !["adult", "minor", "unspecified"].includes(body.ageRange)) ||
+      (body.thinking !== undefined && !isThinkingLevel(body.thinking)) ||
       (body.availableScale != null && !["PHQ-9", "GAD-7", "ISI"].includes(body.availableScale)) ||
       (body.scaleResults !== undefined && (!Array.isArray(body.scaleResults) || body.scaleResults.length > 300 || body.scaleResults.some((scale) =>
         !scale || !["PHQ-9", "GAD-7", "ISI"].includes(scale.id) || !Number.isFinite(scale.total) || typeof scale.severity !== "string" ||
@@ -401,11 +404,13 @@ export async function POST(request: Request) {
       earlierUserContext: buildEarlierUserDigest(messages, fastRecent.length),
       responseMode: retrievalQuery.responseMode,
     });
+    const fastEffort = reasoningEffortFor(resolveThinkingLevel(body.thinking, "fast"));
     const fastPayload = buildDeepSeekPayload({
       systemPrompt: fastSystemPrompt,
       messages: fastRecent,
       apiModel: "deepseek-v4-flash",
-      stream: true
+      stream: true,
+      reasoningEffort: fastEffort
     });
     // Kick the danger judge off NOW so it runs while v4-flash writes the reply. Tight 5s
     // budget (vs 12s in deep mode) so the reply + trailing safety event close within ~6s;
@@ -437,7 +442,11 @@ export async function POST(request: Request) {
     const fastHeaders: Record<string, string> = { "X-Pace": "fast", "X-Safety": "parallel" };
     if (fastRefs.length) fastHeaders["X-Knowledge"] = encodeURIComponent(JSON.stringify(fastRefs));
     try {
-      const answer = sanitizeReplyStream(createAssistantTextStream(await createDeepSeekTextStream(fastPayload)));
+      const fastThinking = fastEffort !== "none";
+      const fastRaw = await createDeepSeekTextStream(fastPayload, { includeReasoning: fastThinking });
+      const answer = fastThinking
+        ? createAssistantTextStreamWithThinking(fastRaw)
+        : sanitizeReplyStream(createAssistantTextStream(fastRaw));
       return streamTextResponse(appendParallelSafety(observeReplyStream(answer, language), resolveSafety), fastHeaders);
     } catch {
       recordChatLlmFallback(true);
@@ -611,12 +620,16 @@ export async function POST(request: Request) {
     responseMode: crisisModeActive ? "support" : retrievalQuery.responseMode,
   });
 
+  // Thinking depth is the user's choice, except during an active crisis (fast,
+  // deterministic replies — no deliberation).
+  const effort = crisisModeActive ? "none" : reasoningEffortFor(resolveThinkingLevel(body.thinking, body.pace));
   const payload = buildDeepSeekPayload({
     systemPrompt,
     messages: recentMessages,
     model,
     apiModel: resolveApiModelForPace(body.pace), // deep→v4-pro, fast→v4-flash
-    stream: true
+    stream: true,
+    reasoningEffort: effort
   });
 
   // On a continuation crisis turn (engaging in context instead of re-dumping the
@@ -644,12 +657,10 @@ export async function POST(request: Request) {
     ? { "X-Knowledge": encodeURIComponent(JSON.stringify(refs)) }
     : undefined;
 
-  // Deep tier streams the model's reasoning ("思考过程") as a leading block the
-  // client shows in a collapsible panel — this is what makes 深度 vs 快速 visible.
-  // Never during an active crisis (keep those replies fast + free of raw risk
-  // deliberation): fall back to the plain content-only cleaning path.
+  // When thinking is on, the stream carries only thinking-phase MARKERS so the client
+  // can show "思考了 N 秒"; the reasoning text never leaves the server (deepseek.ts).
   const pace = resolveSessionPace(body.pace);
-  const wantThinking = pace === "deep" && !crisisModeActive;
+  const wantThinking = effort !== "none";
   const replyHeaders = { ...crisisHeader, ...knowledgeHeader, "X-Pace": pace };
 
   // The danger judge already ran (blocking) above and did NOT intercept, so prepend a

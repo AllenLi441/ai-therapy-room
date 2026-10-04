@@ -10,6 +10,7 @@ import { assessRisk } from "@/lib/safety";
 import { normalizeSupportRegion } from "@/lib/support-regions";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { REASONING_OPEN, REASONING_CLOSE, EVENT_DELIM } from "@/lib/stream-markers";
+import type { ThinkingLevel } from "@/lib/model-options";
 import styles from "./session-panels.module.css";
 
 const uid = () => crypto.randomUUID();
@@ -49,6 +50,9 @@ function ClientApp() {
   const [lang, setLang] = useState<Lang>(initial.lang);
   const [theme, setTheme] = useState(initial.theme);
   const [pace, setPace] = useState<"deep" | "fast">("deep");
+  // Thinking depth per pace (defaults: fast off, deep high); the composer edits the current pace's level.
+  const [thinkingByPace, setThinkingByPace] = useState<Record<"deep" | "fast", ThinkingLevel>>({ deep: "high", fast: "off" });
+  const thinking = thinkingByPace[pace];
   const [supportRegion, setSupportRegion] = useState<SupportRegion>(initial.supportRegion);
   const [ageRange, setAgeRange] = useState<AgeRange>(initial.ageRange);
   const persona = personaById("linxi");
@@ -193,7 +197,7 @@ function ClientApp() {
       const payload = modelMessages(messagesRef.current.slice(0, index));
       const response = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: request.signal,
-        body: JSON.stringify({ messages: payload, pace, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, crisisModeActive: previouslyInCrisis, scaleResults, caseMap, supportRegion, ageRange, continuationNote: continuation, availableScale: detectScaleNeed(user.content) }),
+        body: JSON.stringify({ messages: payload, pace, thinking, personaId: "linxi", language: lang, exitedCrisis: exitedCrisisRef.current, crisisModeActive: previouslyInCrisis, scaleResults, caseMap, supportRegion, ageRange, continuationNote: continuation, availableScale: detectScaleNeed(user.content) }),
       });
       if (!request.current()) return;
       if (response.headers.get("X-Crisis-Triggered") === "1") updateCrisis(true);
@@ -204,6 +208,7 @@ function ClientApp() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let phase: "answer" | "thinking" | "event" = "answer";
+      let thinkingStartedAt = 0;
       let event = "";
       let interrupted = false;
       let answerLength = 0;
@@ -229,8 +234,11 @@ function ClientApp() {
               }
             } catch { /* malformed optional event */ }
             event = ""; phase = "answer";
-          } else if (char === REASONING_OPEN) { phase = "thinking"; }
-          else if (char === REASONING_CLOSE) { phase = "answer"; }
+          } else if (char === REASONING_OPEN) { phase = "thinking"; thinkingStartedAt = Date.now(); }
+          else if (char === REASONING_CLOSE) {
+            phase = "answer";
+            if (thinkingStartedAt) { const thinkingMs = Date.now() - thinkingStartedAt; updateAi({ thinkingMs }); thinkingStartedAt = 0; }
+          }
           else if (char === EVENT_DELIM) { flush(); phase = "event"; }
           else if (phase === "thinking") thinking += char;
           else answer += char;
@@ -430,7 +438,7 @@ function ClientApp() {
     <main className="chat-wrap">
       {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onDelete={onDeleteMessage} /> : <Welcome lang={lang} companion={persona} onStart={(text) => void send(text, [])} />}
       {suggestedScale && !scaleId && !crisis && <div className="scale-suggest" role="status"><span className="ss-ico"><Ic.clipboard /></span><span className="ss-text">{STR[lang].scale_suggest}（{SCALES[suggestedScale].name[lang].split(" · ")[1]}）</span><button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button><button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button></div>}
-      <Composer key={draftRevision} lang={lang} pace={pace} busy={busy || !consented || !hydrated} tone={persona.av} onSend={(text, attachments) => void send(text, attachments)} onPace={setPace} onStop={busy ? stopReply : undefined} />
+      <Composer key={draftRevision} lang={lang} pace={pace} busy={busy || !consented || !hydrated} tone={persona.av} onSend={(text, attachments) => void send(text, attachments)} onPace={setPace} thinking={thinking} onThinking={(level) => setThinkingByPace((current) => ({ ...current, [pace]: level }))} onStop={busy ? stopReply : undefined} />
     </main>
     {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} onExportData={exportData} onImportData={(file) => void importData(file)} dataError={dataError} />}
     {overlay === "support" && <SupportSheet lang={lang} region={supportRegion} onRegionChange={setSupportRegion} onClose={() => setOverlay(null)} />}

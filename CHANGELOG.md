@@ -3,6 +3,12 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v0.11.0] - 2026-10-04
+
+- Add a thinking selector beside 深度/快速: off / low / high / max, mapped to DeepSeek `reasoning_effort` (defaults: quick off, depth high). Active crisis turns and internal calls (judge, crisis reply, summary) never think.
+- Stop sending the model's reasoning text to the browser: it contained internal risk judgments and system-prompt guidance. The stream now carries only thinking-phase markers and the UI shows "思考了 N 秒".
+- Size the provider timeout by thinking state (30s, 45s at max) instead of by model name.
+
 ## [v0.10.0] - 2026-10-04
 
 - Judge implicit risk with DeepSeek first (median 1.6s, so the fast tier's 5s parallel budget no longer drops verdicts); Kimi becomes an optional backup, and `/api/health` reports the effective `judgePrimary`.
