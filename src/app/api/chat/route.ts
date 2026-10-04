@@ -186,7 +186,11 @@ export async function POST(request: Request) {
   }
   const latestUserText = latestUserMessage.content;
   const supportRegion = normalizeSupportRegion(body.supportRegion);
-  const productContext = { supportRegion, ageRange: body.ageRange, continuationNote: body.continuationNote, availableScale: body.availableScale };
+  // Teen vertical: an explicit age choice wins; with no choice, school-age cues in the
+  // recent user turns switch on the teen guidance (never overriding an "adult" pick).
+  const recentUserForAge = messages.filter((m) => m.role === "user").slice(-4).map((m) => m.content).join("\n");
+  const ageInferred = body.ageRange !== "adult" && body.ageRange !== "minor" && hasMinorContextCue(recentUserForAge);
+  const productContext = { supportRegion, ageRange: ageInferred ? "minor" as const : body.ageRange, ageInferred, continuationNote: body.continuationNote, availableScale: body.availableScale };
   // Only ground in the KB / web when the user is actually asking for info or methods —
   // venting gets pure warm companionship with no bolted-on sources (see isInfoSeeking).
   const retrievalQuery = buildKnowledgeQuery(messages);

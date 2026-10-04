@@ -65,6 +65,17 @@ describe("buildCounselorSystemPrompt", () => {
     expect(prompt).toContain("不要仅凭旧笔记升级当前风险");
     expect(prompt).toContain("A user-confirmed note about school.");
   });
+  it("teen mode: an explicit under-18 choice or inferred school-age cues add the teen guide; adults and unspecified do not", () => {
+    const base = { risk: assessRisk("普通一天"), knowledge: [], turnPlan: defaultTurnPlan() };
+    const chosen = buildCounselorSystemPrompt({ ...base, ageRange: "minor" });
+    expect(chosen).toContain("【青少年模式】");
+    expect(chosen).toContain("用户自选未满18岁");
+    const inferred = buildCounselorSystemPrompt({ ...base, ageRange: "minor", ageInferred: true });
+    expect(inferred).toContain("【青少年模式】");
+    expect(inferred).toContain("不要追问或确认年龄");
+    expect(buildCounselorSystemPrompt({ ...base, ageRange: "adult" })).not.toContain("【青少年模式】");
+    expect(buildCounselorSystemPrompt({ ...base, ageRange: "unspecified" })).not.toContain("【青少年模式】");
+  });
   it("injects boundaries, profile, safety, knowledge, turn plan, and case map", async () => {
     const prompt = buildCounselorSystemPrompt({
       profile: { nickname: "小林", concern: "焦虑压力", intensity: 7 },

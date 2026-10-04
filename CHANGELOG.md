@@ -3,6 +3,12 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v0.12.0] - 2026-10-04
+
+- Add a teen mode (12–18) to the counselor prompt: plain, non-lecturing language and concrete guidance for exam stress, family conflict and abuse, bullying and cyberbullying, self-harm, romance, body image and eating, sleep, phones and games, plus clear boundaries (no diagnosis, medication advice, running away or secrecy promises).
+- Turn teen mode on when the user chooses "under 18", or when no age is chosen but recent messages carry school-age cues (月考, 班主任, …); an explicit adult choice always wins.
+- Answer privacy questions truthfully: the assistant cannot contact anyone, history stays in this browser, and messages are processed by the server and model to produce a reply. A live probe had previously claimed it would "make an exception" and tell an adult.
+
 ## [v0.11.0] - 2026-10-04
 
 - Add a thinking selector beside 深度/快速: off / low / high / max, mapped to DeepSeek `reasoning_effort` (defaults: quick off, depth high). Active crisis turns and internal calls (judge, crisis reply, summary) never think.

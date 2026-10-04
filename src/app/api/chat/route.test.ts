@@ -443,3 +443,30 @@ describe("thinking level wiring", () => {
     expect(lastPayload().reasoning_effort).toBeUndefined();
   });
 });
+
+describe("teen mode age inference", () => {
+  function post(content: string, ageRange?: string) {
+    return POST(new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content }], language: "zh", pace: "deep", ...(ageRange ? { ageRange } : {}) })
+    }));
+  }
+  const systemPrompt = () => vi.mocked(createDeepSeekTextStream).mock.calls.at(-1)![0].messages[0].content;
+
+  it("school-age cues with no age choice switch on the teen guide", async () => {
+    await (await post("月考又没考好，班主任找我谈话了")).text();
+    expect(systemPrompt()).toContain("【青少年模式】");
+    expect(systemPrompt()).toContain("不要追问或确认年龄");
+  });
+
+  it("an explicit adult choice is respected even with school words", async () => {
+    await (await post("月考又没考好，班主任找我谈话了", "adult")).text();
+    expect(systemPrompt()).not.toContain("【青少年模式】");
+  });
+
+  it("no cues and no choice keeps the neutral prompt", async () => {
+    await (await post("最近工作有点累")).text();
+    expect(systemPrompt()).not.toContain("【青少年模式】");
+  });
+});
