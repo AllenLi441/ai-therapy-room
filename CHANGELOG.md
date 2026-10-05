@@ -6,6 +6,8 @@ original commit history. Versions that were never released are not backfilled.
 ## [v0.12.0] - 2026-10-04
 
 - Add a teen mode (12–18) to the counselor prompt: plain, non-lecturing language and concrete guidance for exam stress, family conflict and abuse, bullying and cyberbullying, self-harm, romance, body image and eating, sleep, phones and games, plus clear boundaries (no diagnosis, medication advice, running away or secrecy promises).
+- Add 9 source-verified teen knowledge cards (WHO, NIMH, NHS, CDC): adolescent mental health, exam stress, bullying and cyberbullying, signs of teen depression, self-harm help, teen sleep, eating disorders, gaming disorder, and bereavement. Each is an AI-written Chinese paraphrase checked against the primary source on 2026-10-05 and remains pending professional review. Tests retrieve them through the route's own topic-query builder.
+- When a teen explicitly asks "怎么办 / 有什么方法 / 正常吗", give one or two concrete, doable suggestions (preferring the supplied card) after acknowledging feelings, instead of only asking back.
 - Teen mode also covers online grooming and sextortion (don't send, keep screenshots, block and report, tell a trusted adult, never pay; 110 / 12355) and states that the assistant will not role-play a boyfriend or girlfriend.
 - Turn teen mode on when the user chooses "under 18", or when no age is chosen but recent messages carry school-age cues (月考, 班主任, …); an explicit adult choice always wins.
 - Answer privacy questions truthfully: the assistant cannot contact anyone, history stays in this browser, and messages are processed by the server and model to produce a reply. A live probe had previously claimed it would "make an exception" and tell an adult.
