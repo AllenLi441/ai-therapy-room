@@ -70,6 +70,8 @@ describe("buildCounselorSystemPrompt", () => {
     const chosen = buildCounselorSystemPrompt({ ...base, ageRange: "minor" });
     expect(chosen).toContain("【青少年模式】");
     expect(chosen).toContain("用户自选未满18岁");
+    expect(chosen).toContain("· 网络安全：");
+    expect(chosen).toContain("不扮演用户的男女朋友");
     const inferred = buildCounselorSystemPrompt({ ...base, ageRange: "minor", ageInferred: true });
     expect(inferred).toContain("【青少年模式】");
     expect(inferred).toContain("不要追问或确认年龄");

@@ -6,6 +6,7 @@ original commit history. Versions that were never released are not backfilled.
 ## [v0.12.0] - 2026-10-04
 
 - Add a teen mode (12–18) to the counselor prompt: plain, non-lecturing language and concrete guidance for exam stress, family conflict and abuse, bullying and cyberbullying, self-harm, romance, body image and eating, sleep, phones and games, plus clear boundaries (no diagnosis, medication advice, running away or secrecy promises).
+- Teen mode also covers online grooming and sextortion (don't send, keep screenshots, block and report, tell a trusted adult, never pay; 110 / 12355) and states that the assistant will not role-play a boyfriend or girlfriend.
 - Turn teen mode on when the user chooses "under 18", or when no age is chosen but recent messages carry school-age cues (月考, 班主任, …); an explicit adult choice always wins.
 - Answer privacy questions truthfully: the assistant cannot contact anyone, history stays in this browser, and messages are processed by the server and model to produce a reply. A live probe had previously claimed it would "make an exception" and tell an adult.
 
