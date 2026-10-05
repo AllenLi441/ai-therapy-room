@@ -1667,5 +1667,393 @@
     },
     "sourceSection": "Mental health benefits of physical activity; Finding activity that works for you",
     "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-mental-health-common",
+    "title": "青少年的心理困扰很常见，也可以求助",
+    "tags": [
+      "青少年",
+      "心理健康"
+    ],
+    "keywords": [
+      "青少年心理",
+      "青春期心理",
+      "中学生心理",
+      "青春期情绪",
+      "青少年心理问题",
+      "学生心理问题",
+      "是不是只有我这样",
+      "adolescent mental health",
+      "teen mental health"
+    ],
+    "content": "WHO 估计，全球约七分之一的 10–19 岁青少年有心理健康问题，但多数没有被发现或得到帮助。规律睡眠、运动、学习应对和管理情绪，以及来自家庭和学校的支持，都有助于保护心理健康。",
+    "guidance": [],
+    "sourceTitle": "WHO — Mental health of adolescents",
+    "sourceUrl": "https://www.who.int/news-room/fact-sheets/detail/adolescent-mental-health",
+    "sourceId": "who-adolescent-mh",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般科普：说明困扰常见、可以求助；不能据此判断个人是否患病。"
+    ],
+    "evidenceSummary": "来源给出青少年心理健康问题的全球估计，并列出睡眠、运动、应对技能和支持性环境等保护因素。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Key facts; Introduction; Mental health determinants",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-exam-stress",
+    "title": "考试压力可以从复习计划和休息开始",
+    "tags": [
+      "青少年",
+      "学业"
+    ],
+    "keywords": [
+      "考试压力",
+      "考前焦虑",
+      "考试焦虑",
+      "考前紧张",
+      "期末考试压力",
+      "中考压力",
+      "高考压力",
+      "月考压力",
+      "复习计划",
+      "怎么复习",
+      "考砸了",
+      "exam stress",
+      "revision tips"
+    ],
+    "content": "NHS 建议把复习拆成能完成的小块，定期短暂休息，用往年试卷熟悉题型；压力大时找信任的家人、老师或朋友聊聊。考试当天紧张时可以试试呼吸：鼻子吸气数 4、屏住数 2、呼气数 7。考完就不要反复对答案。",
+    "guidance": [],
+    "sourceTitle": "NHS — Tips on preparing for exams",
+    "sourceUrl": "https://www.nhs.uk/mental-health/children-and-young-adults/help-for-teenagers-young-adults-and-students/tips-on-preparing-for-exams/",
+    "sourceId": "nhs-teen-exams",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "学习与考试的一般建议；不承诺成绩，也不能替代持续焦虑时的专业帮助。"
+    ],
+    "evidenceSummary": "来源列出复习计划、休息、真题、运动、求助和考试当天的呼吸练习等建议。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Revision tips; How to handle exam days",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-bullying",
+    "title": "霸凌包括当面和网络两种，伤害是真实的",
+    "tags": [
+      "青少年",
+      "霸凌"
+    ],
+    "keywords": [
+      "霸凌",
+      "校园霸凌",
+      "被欺负",
+      "被孤立",
+      "被排挤",
+      "网络欺凌",
+      "网暴",
+      "被起外号",
+      "被造谣",
+      "同学欺负我",
+      "被同学欺负",
+      "bullying",
+      "cyberbullying"
+    ],
+    "content": "CDC 把霸凌定义为反复发生、力量不对等的攻击行为，包括打人、起外号、散布谣言、孤立别人，也包括网络欺凌。美国调查中约五分之一的高中生在学校被霸凌过。霸凌会增加抑郁、焦虑和睡眠问题的风险；旁观者站出来制止或找大人帮忙也能起作用。",
+    "guidance": [],
+    "sourceTitle": "CDC — Bullying (Youth Violence Prevention)",
+    "sourceUrl": "https://www.cdc.gov/youth-violence/about/about-bullying.html",
+    "sourceId": "cdc-bullying",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般科普；统计来自美国，不代表中国的情况。处理具体霸凌需要学校和可信赖的成年人参与。"
+    ],
+    "evidenceSummary": "来源给出霸凌的定义和类型、美国高中生的发生比例、后果，以及旁观者和成年人可以做的事。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is bullying?; Quick facts and stats; Outcomes; Prevention",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-depression-signs",
+    "title": "低落持续几周，可以和信任的大人谈谈",
+    "tags": [
+      "青少年",
+      "抑郁"
+    ],
+    "keywords": [
+      "青少年抑郁",
+      "中学生抑郁",
+      "学生抑郁",
+      "我是不是抑郁了",
+      "一直很难过",
+      "对什么都没兴趣",
+      "提不起劲",
+      "成绩下降",
+      "不想和人说话",
+      "teen depression"
+    ],
+    "content": "NIMH 提醒：如果几周以上大部分时间都很难过、没法专心，或对以前喜欢的事失去兴趣，可以和父母、老师或学校心理老师谈谈。其他常见表现包括容易烦躁、疏远朋友家人、成绩下降、饮食或睡眠改变。抑郁可以治疗；保持活动、规律作息、和亲友相处也有帮助。",
+    "guidance": [],
+    "sourceTitle": "NIMH — Teen Depression: More Than Just Moodiness",
+    "sourceUrl": "https://www.nimh.nih.gov/health/publications/teen-depression",
+    "sourceId": "nimh-teen-depression",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "帮助识别何时需要求助；不能自我诊断，也不是筛查工具。有伤害自己的想法时应立即找人帮助。"
+    ],
+    "evidenceSummary": "来源列出青少年抑郁的常见表现和求助途径，并建议保持活动、规律睡眠和与人联系。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Do I have depression?; How do I get help for depression?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-self-harm-help",
+    "title": "有自伤的念头或行为，可以先找一个信任的人说",
+    "tags": [
+      "青少年",
+      "自伤"
+    ],
+    "keywords": [
+      "自伤",
+      "自残",
+      "划手",
+      "伤害自己",
+      "控制不住伤害自己",
+      "想伤害自己怎么办",
+      "怎么跟别人说我自伤",
+      "自伤冲动",
+      "self harm",
+      "self-harm help"
+    ],
+    "content": "NHS 指出，任何自伤或想自伤的人都可以得到支持；可以先看医生，小伤口不处理也有感染风险。可以先写下来或想好怎么开口，再找信任的朋友、家人或专业人员谈。冲动来时，可以先散步、听音乐、写下感受或做放松呼吸，等冲动慢慢过去。",
+    "guidance": [],
+    "sourceTitle": "NHS — Self-harm (getting help; how to tell someone; ways to help avoid self-harm)",
+    "sourceUrl": "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/behaviours/self-harm/",
+    "sourceId": "nhs-self-harm",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般支持信息，不提供任何方法细节。有生命危险或伤口严重时需立即就医或报警；部分自伤者自杀风险更高，需尽早获得专业支持。"
+    ],
+    "evidenceSummary": "来源说明支持可得、就医与伤口护理、如何告诉别人，以及延缓冲动的做法。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Where to get help for self-harm; How to tell someone about self-harm; Ways to help avoid self-harm",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-sleep",
+    "title": "青少年每天需要 8–10 小时睡眠",
+    "tags": [
+      "青少年",
+      "睡眠"
+    ],
+    "keywords": [
+      "青少年睡眠",
+      "中学生睡多久",
+      "学生睡眠",
+      "熬夜写作业",
+      "睡前玩手机",
+      "早上起不来",
+      "作息不规律",
+      "teen sleep",
+      "how much sleep teenager",
+      "睡多久",
+      "睡几个小时",
+      "要睡多少",
+      "睡几小时"
+    ],
+    "content": "CDC 建议 13–17 岁青少年每天睡 8–10 小时。每天固定时间上床和起床、睡前至少 30 分钟关掉电子设备、下午和晚上不喝含咖啡因的饮料，都有助于睡好。长期睡不好可以看医生。",
+    "guidance": [],
+    "sourceTitle": "CDC — About Sleep",
+    "sourceUrl": "https://www.cdc.gov/sleep/about/index.html",
+    "sourceId": "cdc-sleep",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般睡眠建议；长期失眠或白天严重困倦需就医评估。"
+    ],
+    "evidenceSummary": "来源给出各年龄段建议睡眠时长和改善睡眠的习惯。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Getting enough sleep; What to do; Management",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-eating",
+    "title": "节食、暴食或很怕胖，值得早点求助",
+    "tags": [
+      "青少年",
+      "进食"
+    ],
+    "keywords": [
+      "节食",
+      "不吃饭减肥",
+      "暴食",
+      "催吐",
+      "吃完就吐",
+      "怕胖",
+      "身材焦虑",
+      "体重焦虑",
+      "进食障碍",
+      "厌食",
+      "eating disorder",
+      "anorexia",
+      "bulimia"
+    ],
+    "content": "NHS 说明，进食障碍是用控制食物来应对情绪的心理健康问题，青少年和年轻人最常见。常见表现包括总担心体重身材、吃得很少、吃完催吐、过度运动，以及头晕、乏力、月经不来等。可以尽早看医生，带上信任的人陪同；经过治疗，大多数人可以康复。",
+    "guidance": [],
+    "sourceTitle": "NHS — Eating disorders: overview",
+    "sourceUrl": "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/behaviours/eating-disorders/overview/",
+    "sourceId": "nhs-eating-disorders",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "帮助识别求助时机；不能自我诊断。出现晕倒、心慌等身体症状应尽快就医。"
+    ],
+    "evidenceSummary": "来源说明进食障碍的含义、常见类型和表现、就医建议，以及多数人经治疗可以康复。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Overview; Check if you have an eating disorder; Getting help for an eating disorder",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-gaming",
+    "title": "爱玩游戏不等于游戏成瘾",
+    "tags": [
+      "青少年",
+      "游戏"
+    ],
+    "keywords": [
+      "游戏成瘾",
+      "沉迷游戏",
+      "网瘾",
+      "游戏上瘾",
+      "打游戏上瘾",
+      "玩游戏时间太长",
+      "爸妈说我游戏上瘾",
+      "gaming addiction",
+      "gaming disorder"
+    ],
+    "content": "WHO 把游戏障碍定义为：对游戏失去控制、把游戏放在其他兴趣和日常活动之前、出现不良后果仍继续甚至加重；通常要持续 12 个月以上并明显影响学习、家庭或社交才会诊断。研究提示只有少数玩游戏的人会出现。值得留意的是游戏有没有挤掉睡眠、学习和其他活动。",
+    "guidance": [],
+    "sourceTitle": "WHO — Addictive behaviours: Gaming disorder",
+    "sourceUrl": "https://www.who.int/news-room/questions-and-answers/item/addictive-behaviours-gaming-disorder",
+    "sourceId": "who-gaming-disorder",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般科普；不能据此给自己或他人下诊断。"
+    ],
+    "evidenceSummary": "来源给出 ICD-11 对游戏障碍的定义和诊断门槛，并说明只影响少数玩家。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "What is gaming disorder?; Should all people who engage in gaming be concerned about developing gaming disorder?",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-teen-grief",
+    "title": "年轻时失去亲人，怎样的感受都正常",
+    "tags": [
+      "青少年",
+      "哀伤"
+    ],
+    "keywords": [
+      "爷爷去世",
+      "奶奶去世",
+      "外公去世",
+      "外婆去世",
+      "爸爸去世",
+      "妈妈去世",
+      "亲人去世没有哭",
+      "失去亲人走不出来",
+      "学生失去亲人",
+      "bereavement young people",
+      "grief teenager",
+      "奶奶走了",
+      "爷爷走了",
+      "外婆走了",
+      "外公走了",
+      "奶奶过世",
+      "爷爷过世",
+      "外婆过世",
+      "外公过世"
+    ],
+    "content": "NHS 指出，失去亲人后的感受没有固定规则，悲伤、震惊、内疚、愤怒、焦虑都可能出现；慢慢好起来也不代表忘了对方。可以和家人、朋友或信任的老师谈谈，学校也可能在作业和考试上体谅你。如果几个月后仍难以应对、吃不下睡不好或想伤害自己，可以看医生。",
+    "guidance": [],
+    "sourceTitle": "NHS — Bereavement and young people",
+    "sourceUrl": "https://www.nhs.uk/mental-health/children-and-young-adults/help-for-teenagers-young-adults-and-students/bereavement-and-young-people/",
+    "sourceId": "nhs-teen-bereavement",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般支持信息；不强迫讲述丧失细节，不保证某种方法立即有效。"
+    ],
+    "evidenceSummary": "来源说明丧亲后的常见情绪、找谁倾诉、学校可提供的体谅，以及何时看医生。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-05",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Your emotions after a bereavement; Finding support for bereavement",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
   }
 ]
