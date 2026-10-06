@@ -5,7 +5,7 @@ export const STR_KO: Dict = {
     sub: "QUIET ROOM",
     privacy_a: "기록은 이 브라우저에 저장돼요", privacy_b: "언제든", privacy_del: "로컬 기록 삭제",
     delete_title: "이 브라우저의 대화 기록을 삭제할까요?", delete_body: "이 브라우저에 있는 현재와 이전 대화, 마무리 요약, 임시 글, 자가 점검, '당신에 대한 이해', 피드백, 나이와 지역 설정을 지우고 진행 중인 요청을 멈춰요. 서비스 쪽에서 이미 처리된 데이터는 되돌릴 수 없고, 이미 내려받거나 공유한 파일도 삭제되지 않아요. 이 작업은 되돌릴 수 없어요.", delete_confirm: "로컬 기록 삭제", delete_cancel: "취소",
-    placeholder: "천천히 써도 괜찮아요. 듣고 있어요…",
+    placeholder: "천천히 써요. 듣고 있어요…",
     import_image: "이미지 추가", import_video: "동영상 추가", import_media: "이미지나 동영상 추가",
     voice_start: "음성 입력", voice_hint: "브라우저에 내장된 음성 인식으로 글자로 바꿔요(일부 브라우저는 음성을 브라우저 회사 서버로 보내요). 글자는 먼저 입력창에 들어가니 확인한 뒤 보내면 돼요.", voice_stop: "음성 입력 중지", voice_denied: "마이크 권한이 허용되지 않았어요. 브라우저 설정에서 허용하거나 직접 입력해 주세요.", voice_network: "이 브라우저의 음성 인식 서비스에 연결할 수 없어요. Safari나 Edge를 쓰거나 직접 입력해 주세요.", voice_failed: "잘 듣지 못했어요. 다시 시도해 주세요.",
     att_too_many: "이미지는 최대 {n}장까지예요", att_not_image: "이미지만 추가할 수 있어요", att_too_big: "이미지가 {mb}MiB를 넘어요. 크기를 줄이거나 압축한 뒤 다시 시도해 주세요.", att_read_failed: "이미지를 읽지 못했어요. 다시 선택해 주세요.", att_remove: "이미지 삭제", att_error_close: "이미지 안내 닫기",
