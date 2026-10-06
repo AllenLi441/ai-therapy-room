@@ -50,6 +50,8 @@ import { checkRateLimit, rateLimitResponse, readRateLimitEnv } from "@/lib/rate-
 import { recordChatLlmFallback } from "@/lib/chat-monitoring";
 import { EVENT_DELIM, REASONING_OPEN, REASONING_CLOSE } from "@/lib/stream-markers";
 import { normalizeSupportRegion, parseSupportRegion, type SupportRegionInput } from "@/lib/support-regions";
+import { normalizeLanguage, parseLanguage } from "@/lib/languages";
+import { LOCAL_SAFETY_TEXT } from "@/lib/safety-texts";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -157,6 +159,7 @@ export async function POST(request: Request) {
       (body.continuationNote !== undefined && (typeof body.continuationNote !== "string" || body.continuationNote.length > 3000)) ||
       (body.supportRegion !== undefined && parseSupportRegion(body.supportRegion) === null) ||
       (body.ageRange !== undefined && !["adult", "minor", "unspecified"].includes(body.ageRange)) ||
+      (body.language !== undefined && parseLanguage(body.language) === null) ||
       (body.thinking !== undefined && !isThinkingLevel(body.thinking)) ||
       (body.availableScale != null && !["PHQ-9", "GAD-7", "ISI"].includes(body.availableScale)) ||
       (body.scaleResults !== undefined && (!Array.isArray(body.scaleResults) || body.scaleResults.length > 300 || body.scaleResults.some((scale) =>
@@ -167,10 +170,10 @@ export async function POST(request: Request) {
 
   // Reject overlong current input rather than silently truncating safety signals.
   // The conversation sanitizer below uses the same 4000-character cap.
-  const language: AppLanguage = body.language === "en" ? "en" : "zh";
+  const language: AppLanguage = normalizeLanguage(body.language);
   const rawLastUserMessage = [...(body.messages ?? [])].reverse().find((m) => m?.role === "user");
   if (typeof rawLastUserMessage?.content === "string" && rawLastUserMessage.content.length > 4000) {
-    return new Response(language === "en" ? "That message is a little long. Please split it into a few shorter messages." : "这段有点长,我一次接不住。可以分几次发给我吗?每次说一部分就好。", {
+    return new Response(LOCAL_SAFETY_TEXT[language]?.tooLong ?? (language === "en" ? "That message is a little long. Please split it into a few shorter messages." : "这段有点长,我一次接不住。可以分几次发给我吗?每次说一部分就好。"), {
       status: 413,
       headers: { "Content-Type": "text/plain; charset=utf-8" }
     });
@@ -408,7 +411,7 @@ export async function POST(request: Request) {
       earlierUserContext: buildEarlierUserDigest(messages, fastRecent.length),
       responseMode: retrievalQuery.responseMode,
     });
-    const fastEffort = reasoningEffortFor(resolveThinkingLevel(body.thinking, "fast"));
+    const fastEffort = reasoningEffortFor(resolveThinkingLevel(body.thinking));
     const fastPayload = buildDeepSeekPayload({
       systemPrompt: fastSystemPrompt,
       messages: fastRecent,
@@ -626,7 +629,7 @@ export async function POST(request: Request) {
 
   // Thinking depth is the user's choice, except during an active crisis (fast,
   // deterministic replies — no deliberation).
-  const effort = crisisModeActive ? "none" : reasoningEffortFor(resolveThinkingLevel(body.thinking, body.pace));
+  const effort = crisisModeActive ? "none" : reasoningEffortFor(resolveThinkingLevel(body.thinking));
   const payload = buildDeepSeekPayload({
     systemPrompt,
     messages: recentMessages,

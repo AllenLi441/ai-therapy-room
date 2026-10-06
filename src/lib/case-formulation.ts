@@ -1,5 +1,6 @@
 import { buildKimiPayload, generateKimiText, isKimiConfigured } from "./kimi";
 import { formatPersonaForPrompt, type TherapyPersona } from "./personas";
+import { replyLanguageName, type AppLanguage } from "./languages";
 import {
   crisisTurnPlan,
   defaultTurnPlan,
@@ -183,7 +184,7 @@ export async function generateSessionPlan(input: {
   risk: RiskAssessment;
   consultGoal?: ConsultGoal | null;
   persona?: TherapyPersona | null;
-  language?: "zh" | "en";
+  language?: AppLanguage;
   requireFresh?: boolean;
 }): Promise<SessionPlan> {
   const fallbackCase = input.priorCaseMap ?? emptyCaseMap();
@@ -241,7 +242,11 @@ export async function generateSessionPlan(input: {
   try {
     const raw = await generateKimiText(
       buildKimiPayload({
-        systemPrompt: PLANNER_SYSTEM + (input.language === "en" ? "\n当前用户使用英文。上面的中文字段值要求在此改为英文：保持JSON键名不变，所有面向用户的字段值必须使用自然英文。" : ""),
+        systemPrompt: PLANNER_SYSTEM + (input.language === "zh-Hant"
+          ? "\n当前用户使用繁体中文。保持JSON键名不变，所有面向用户的字段值必须使用繁体字（正體字）。"
+          : input.language && input.language !== "zh"
+            ? `\n当前用户使用${replyLanguageName(input.language)}。上面的中文字段值要求在此改为${replyLanguageName(input.language)}：保持JSON键名不变，所有面向用户的字段值必须使用自然的${replyLanguageName(input.language)}。`
+            : ""),
         messages: [{ role: "user", content: userPrompt }],
         temperature: 0.2,
         maxTokens: 900,

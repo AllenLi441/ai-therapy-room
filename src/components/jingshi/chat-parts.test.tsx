@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Bubble, Composer, PrivacyRibbon, TopBar } from "./chat-parts";
@@ -53,6 +53,57 @@ describe("composer input and attachment recovery", () => {
     render(<Bubble lang="zh" persona={personaById("linxi")} m={{ id: "m2", role: "assistant", content: "图片未能处理", errored: true, retryable: false, hadImages: true }} onRetry={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "重试" })).not.toBeInTheDocument();
     expect(screen.getByText("请重新添加图片后发送。")).toBeInTheDocument();
+  });
+});
+
+describe("voice input", () => {
+  class FakeRecognition {
+    static last: FakeRecognition;
+    lang = ""; continuous = false; interimResults = false;
+    onresult: ((event: { results: Array<Array<{ transcript: string }>> }) => void) | null = null;
+    onerror: ((event: { error: string }) => void) | null = null;
+    onend: (() => void) | null = null;
+    start = vi.fn(); abort = vi.fn();
+    stop = vi.fn(() => this.onend?.());
+    constructor() { FakeRecognition.last = this; }
+  }
+
+  it("is hidden when the browser has no speech recognition", () => {
+    render(<Composer lang="zh" pace="fast" busy={false} onSend={vi.fn()} onPace={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: STR.zh.voice_start })).not.toBeInTheDocument();
+  });
+
+  it("appends what was heard to the draft for review, and never sends by itself", async () => {
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    const send = vi.fn();
+    const user = userEvent.setup();
+    render(<Composer lang="zh" pace="fast" busy={false} onSend={send} onPace={vi.fn()} />);
+    await user.type(screen.getByRole("textbox"), "今天");
+    await user.click(screen.getByRole("button", { name: STR.zh.voice_start }));
+    const rec = FakeRecognition.last;
+    expect(rec.lang).toBe("zh-CN");
+    expect(rec.start).toHaveBeenCalledOnce();
+    act(() => rec.onresult?.({ results: [[{ transcript: "有点累" }], [{ transcript: "，想早点睡" }]] }));
+    expect(screen.getByRole("textbox")).toHaveValue("今天有点累，想早点睡");
+    await user.click(screen.getByRole("button", { name: STR.zh.voice_stop }));
+    expect(rec.stop).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: STR.zh.voice_start })).toHaveAttribute("aria-pressed", "false");
+    expect(send).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("explains a blocked microphone or unreachable speech service", async () => {
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    const user = userEvent.setup();
+    render(<Composer lang="en" pace="fast" busy={false} onSend={vi.fn()} onPace={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: STR.en.voice_start }));
+    expect(FakeRecognition.last.lang).toBe("en-US");
+    act(() => { FakeRecognition.last.onerror?.({ error: "network" }); FakeRecognition.last.onend?.(); });
+    expect(screen.getByRole("alert")).toHaveTextContent(STR.en.voice_network);
+    await user.click(screen.getByRole("button", { name: STR.en.voice_start }));
+    act(() => { FakeRecognition.last.onerror?.({ error: "not-allowed" }); FakeRecognition.last.onend?.(); });
+    expect(screen.getByRole("alert")).toHaveTextContent(STR.en.voice_denied);
+    vi.unstubAllGlobals();
   });
 });
 

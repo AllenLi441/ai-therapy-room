@@ -8,6 +8,8 @@ import type {
   RiskLevel
 } from "./types";
 import { formatSupportResourceList, minorSupportResources, supportResources, type SupportRegionInput } from "./support-regions";
+import { LOCAL_SAFETY_TEXT, fillTemplate } from "./safety-texts";
+import { toSimplified } from "./traditional-chars";
 
 type RiskRule = {
   category: RiskCategory;
@@ -350,14 +352,10 @@ const LEVEL_SCORE: Record<RiskLevel, number> = {
   high: 3
 };
 
-const TRADITIONAL_RISK_CHARACTERS: Record<string, string> = {
-  殺: "杀", 輕: "轻", 結: "结", 樓: "楼", 沒: "没", 著: "着", 覺: "觉", 傷: "伤", 藥: "药", 殘: "残",
-  繩: "绳", 槍: "枪", 頭: "头", 燒: "烧", 氣: "气", 會: "会", 個: "个", 這: "这", 們: "们", 後: "后", 遺: "遗", 書: "书"
-};
 function normalizeText(text: string) {
-  return text.normalize("NFKC").toLowerCase()
+  // 繁體 input is folded onto the simplified lexicon.
+  return toSimplified(text.normalize("NFKC").toLowerCase())
     .replace(/[\u200b-\u200d\u2060\ufeff'’‘]/g, "")
-    .replace(/[殺輕結樓沒著覺傷藥殘繩槍頭燒氣會個這們後遺書]/g, (char) => TRADITIONAL_RISK_CHARACTERS[char])
     // Dashes/middle dots inside CJK words are obfuscation. Sentence punctuation
     // stays intact so “结束。生命在于运动” never becomes a danger token.
     .replace(/(?<=[\u3400-\u9fff])[-‐‑‒–—―·・~*_]+(?=[\u3400-\u9fff])/g, "")
@@ -387,6 +385,40 @@ function englishIntentMatches(text: string): ReturnType<typeof collectMatches> {
 // Objective combinations missing from the literal lexicon. Require both the
 // means/action and its dangerous framing; ordinary travel or medication use
 // must not inherit the risk of a nearby keyword.
+// Interface languages beyond zh / en: explicit first-person suicide and self-harm
+// wording. These lack the hand-tuned negation/idiom handling of the zh / en lexicon,
+// so they route as MEDIUM suicide_concern: the turn always waits for the multilingual
+// danger judge (crisis / concern / gentle check), and a judge outage still fails safe.
+const MULTILINGUAL_DENIALS = [
+  /\bno\s+(?:me\s+)?(?:quiero|voy\s+a)\s+(?:morir(?:me)?|matarme|suicidarme|desaparecer|hacerme\s+daño)/g,
+  /\bne\s+(?:veux|vais|voudrais|compte)\s+(?:pas|jamais)\s+(?:me\s+(?:tuer|suicider|faire\s+du\s+mal|scarifier)|mourir|disparaître)/g,
+  /\b(?:pas|jamais)\s+envie\s+de\s+mourir/g,
+  /\bkeine\s+(?:selbstmord|suizid)gedanken/g,
+  /자살할\s*(?:생각|마음)\S*\s*없/g,
+];
+const MULTILINGUAL_SUICIDE = new RegExp([
+  "死にたい", "自殺(?:したい|しよう|する)", "生きて(?:い)?たくない", "命を絶ちたい", "消えたい", "いなくなりたい",
+  "죽고\\s*싶(?!\\s*지\\s*않|진\\s*않)", "자살(?:하고\\s*싶|할)", "살고\\s*싶지\\s*않", "목숨을\\s*끊", "사라지고\\s*싶",
+  "\\b(?:me\\s+)?quiero\\s+morir", "\\bquiero\\s+(?:matarme|suicidarme|desaparecer)", "\\bme\\s+(?:voy|quiero)\\s+(?:a\\s+)?(?:matar|suicidar)",
+  "\\bno\\s+quiero\\s+(?:vivir|seguir\\s+viviendo)", "\\bquitarme\\s+la\\s+vida",
+  "\\bje\\s+veux\\s+(?:mourir|disparaître)", "\\benvie\\s+de\\s+mourir", "\\bje\\s+(?:veux|vais)\\s+me\\s+tuer", "\\bme\\s+suicider",
+  "\\bne\\s+veux\\s+plus\\s+vivre", "\\b(?:mettre\\s+fin\\s+à|en\\s+finir\\s+avec)\\s+(?:mes\\s+jours|ma\\s+vie|la\\s+vie)",
+  "\\bich\\s+(?:will|möchte|wollte)\\s+(?:sterben|verschwinden)", "\\b(?:mich|mir)\\s+(?:umbringen|das\\s+leben\\s+nehmen)", "\\bbringe\\s+mich\\s+um",
+  "\\b(?:will|möchte)\\s+nicht\\s+mehr\\s+leben", "(?:selbstmord|suizid)gedanken", "\\bsuizidal",
+].join("|"));
+const MULTILINGUAL_SELF_HARM = /リスカ|リストカット|自傷|자해|\b(?:cortarme|autolesionarme|me\s+corto)\b|\bme\s+(?:scarifier|faire\s+du\s+mal)|\b(?:ritze\s+mich|mich\s+ritzen|mir\s+(?:etwas|was)\s+antun)/;
+
+function multilingualIntentMatches(text: string): ReturnType<typeof collectMatches> {
+  let lowered = text.normalize("NFKC").toLowerCase();
+  for (const denial of MULTILINGUAL_DENIALS) lowered = lowered.replace(denial, " ");
+  const matches: ReturnType<typeof collectMatches> = [];
+  const suicide = lowered.match(MULTILINGUAL_SUICIDE);
+  if (suicide) matches.push({ category: "suicide", level: "medium", term: suicide[0], flags: ["suicide_concern"] });
+  const selfHarm = lowered.match(MULTILINGUAL_SELF_HARM);
+  if (selfHarm) matches.push({ category: "self_harm", level: "medium", term: selfHarm[0], flags: ["suicide_concern"] });
+  return matches;
+}
+
 function contextualDangerMatches(text: string): ReturnType<typeof collectMatches> {
   // Scope reporting/denial to its own statement. A later first-person statement
   // or contrast remains assessable: a news quotation must not hide "但我也…".
@@ -535,7 +567,7 @@ export function assessRisk(text: string): RiskAssessment {
     ...collectMatches(text, MEDICAL_RED_FLAG_RULES),
     ...collectMatches(text, MEDIUM_RISK_RULES),
     ...collectMatches(text, LOW_RISK_RULES)
-  ]), ...englishIntentMatches(text), ...contextualDangerMatches(text), ...contextualMedicalMatches(text)];
+  ]), ...englishIntentMatches(text), ...multilingualIntentMatches(text), ...contextualDangerMatches(text), ...contextualMedicalMatches(text)];
 
   const base: RiskAssessment =
     matches.length === 0
@@ -575,6 +607,11 @@ export function createCrisisResponse(
   assessment: RiskAssessment,
   options?: { continuation?: boolean; language?: AppLanguage }
 ) {
+  const local = options?.language ? LOCAL_SAFETY_TEXT[options.language] : undefined;
+  if (local) {
+    const hint = assessment.categories.includes("harm_to_others") ? local.crisisHint.others : local.crisisHint.self;
+    return [fillTemplate(options?.continuation ? local.crisisOpening.continuation : local.crisisOpening.first, { hint }), "", local.crisisSteps].join("\n");
+  }
   if (options?.language === "en") {
     const categoryHint = assessment.categories.includes("harm_to_others")
       ? "Your safety and other people's safety matter more than analyzing the reasons right now."
@@ -616,6 +653,8 @@ export function createCrisisResponse(
 }
 
 export function createMedicalRedFlagResponse(language: AppLanguage = "zh") {
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return local.medicalRedFlag;
   if (language === "en") {
     return [
       "Put physical safety first. Physical symptoms like these should not be explained only as stress or panic. This chat cannot determine the cause or replace an in-person medical assessment.",
@@ -636,6 +675,8 @@ export function createMedicalRedFlagResponse(language: AppLanguage = "zh") {
 }
 
 export function createMedicationBoundaryResponse(language: AppLanguage = "zh") {
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return local.medication;
   if (language === "en") {
     return [
       "Wanting to know whether to take something or adjust it usually means you've been worn down by all this and are looking for something that actually helps — that makes sense, and I hear it.",
@@ -664,6 +705,8 @@ export function createMedicationBoundaryResponse(language: AppLanguage = "zh") {
 }
 
 export function createDiagnosisBoundaryResponse(language: AppLanguage = "zh") {
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return local.diagnosis;
   if (language === "en") {
     return [
       "Wanting to know whether something is wrong usually comes from a real place — things have felt off and you want to understand what's going on and whether it can get better. That's a very normal thing to want.",
@@ -688,6 +731,8 @@ export function createDiagnosisBoundaryResponse(language: AppLanguage = "zh") {
 }
 
 export function createSuicideConcernResponse(language: AppLanguage = "zh") {
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return local.suicideConcern;
   if (language === "en") {
     return [
       "I am going to take that seriously. It sounds like part of you may be thinking about disappearing, not waking up, or not having to keep living. We should not treat that as a normal venting line.",
@@ -709,6 +754,8 @@ export function createSuicideConcernResponse(language: AppLanguage = "zh") {
 
 export function createGlobalSafetyFooter(language: AppLanguage = "zh", supportRegion?: SupportRegionInput): string {
   const resources = formatSupportResourceList(supportResources(supportRegion), language);
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return fillTemplate(local.footer, { resources });
   if (language === "en") {
     return `📞 If you are in danger or need immediate help, call your local emergency service or reach someone you trust. Resources for your selected region are also in Human support: ${resources}.`;
   }
@@ -1051,7 +1098,13 @@ const CRISIS_RESPONSE_MARKERS = [
   "我听见这里有很强的危险信号",
   "我们先继续停留在安全模式",
   "这句话我会认真对待",
-  "If you have a plan, a method nearby"
+  "If you have a plan, a method nearby",
+  // Same markers for the other interface languages: the fixed opening lines.
+  ...Object.values(LOCAL_SAFETY_TEXT).flatMap((text) => [
+    text.crisisOpening.first.split("{hint}")[0].trim(),
+    text.crisisOpening.continuation.split("{hint}")[0].trim(),
+    text.suicideConcern.split("\n")[0].slice(0, 30)
+  ])
 ];
 // NOTE: bare hotline numbers (12356 / 010-… / 400-…) were removed from the markers
 // on purpose — a normal safety-toned reply that mentions a hotline must NOT count as
@@ -1255,6 +1308,8 @@ export function getDangerLevel(assessment: RiskAssessment): DangerLevel {
   return 1;
 }
 export function createGentleCheckResponse(cue: string | undefined, language: AppLanguage = "zh") {
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return [cue ? fillTemplate(local.gentleLeadCue, { cue }) : local.gentleLead, "", local.gentleBody].join("\n");
   if (language === "en") {
     const lead = cue
       ? `I noticed what you just said — "${cue}" — it sounds like there's a fair bit weighing on you.`
@@ -1280,6 +1335,8 @@ export function createGentleCheckResponse(cue: string | undefined, language: App
 }
 export function createMinorSupportLine(language: AppLanguage = "zh", supportRegion?: SupportRegionInput): string {
   const resource = formatSupportResourceList(minorSupportResources(supportRegion), language);
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return fillTemplate(local.minorLine, { resources: resource });
   return language === "en"
     ? `If you are under 18, reach a trusted adult who can support you in person, such as a safe relative, school counselor or teacher. If a caregiver is causing harm, choose another safe adult. You can also use the local support links on this page: ${resource}.`
     : `如果你未满18岁，请找一位信任的成年人在现实里支持你，例如安全的亲属、学校心理老师或老师。若照顾者正在伤害你，可以选择其他安全的成年人。也可使用页面的当地支持入口：${resource}。`;
@@ -1293,6 +1350,8 @@ export function hasMinorContextCue(text: string): boolean {
 }
 export function createCrisisReplyResponse(tier: CrisisReplyTier, language: AppLanguage = "zh", supportRegion?: SupportRegionInput) {
   const resources = formatSupportResourceList(supportResources(supportRegion), language);
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return tier === "escalate" ? fillTemplate(local.crisisEscalate, { resources }) : local.crisisSupport;
   if (language === "en") {
     if (tier === "escalate") {
       return [

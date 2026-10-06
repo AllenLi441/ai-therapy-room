@@ -3,13 +3,14 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Ic } from "./icons";
-import { Presence, Avatar } from "./chat-parts";
+import { Presence, Avatar, LanguageSelect } from "./chat-parts";
 import { STR, SCALES, SCALE_OPTS, type Lang, type Persona, type SupportRegion, type AgeRange } from "./data";
 import { emptyCaseMap, isCaseMapPopulated, type CaseMap, type ScaleResult, type ScaleId } from "@/lib/types";
 import { INTL_RESOURCES } from "@/lib/crisis-resources";
 import { normalizeSupportRegion, SUPPORT_REGION_CODES, SUPPORT_REGIONS, supportResources } from "@/lib/support-regions";
 import { scoreScale } from "@/lib/scales";
 import { APP_VERSION } from "@/lib/version";
+import { contentLanguage, localized } from "@/lib/languages";
 
 const modalStack: HTMLElement[] = [];
 const backgroundStates = new Map<HTMLElement, { inert: boolean; ariaHidden: string | null }>();
@@ -127,8 +128,8 @@ export function ConfirmSheet({ lang, onConfirm, onClose }: { lang: Lang; onConfi
 // who/what this is, crisis-first guidance (hotline wording pulled from the existing
 // safety_tip string, never a hardcoded new number), on-device privacy, and beta status
 // + per-turn feedback.
-export function ConsentGate({ lang, onAccept, region, onRegionChange, ageRange, onAgeRangeChange }: {
-  lang: Lang; onAccept: () => void; region?: SupportRegion; onRegionChange?: (region: SupportRegion) => void;
+export function ConsentGate({ lang, onLang, onAccept, region, onRegionChange, ageRange, onAgeRangeChange }: {
+  lang: Lang; onLang?: (lang: Lang) => void; onAccept: () => void; region?: SupportRegion; onRegionChange?: (region: SupportRegion) => void;
   ageRange?: AgeRange; onAgeRangeChange?: (age: AgeRange) => void;
 }) {
   const t = STR[lang];
@@ -142,6 +143,7 @@ export function ConsentGate({ lang, onAccept, region, onRegionChange, ageRange, 
   ];
   return (
     <ModalFrame backdropClassName="consent-gate" className="consent-card scroll" label={t.consent_title}>
+        {onLang && <LanguageSelect lang={lang} onLang={onLang} className="support-select consent-lang" />}
         <div className="consent-hero">
           <Presence size={64} glow breathe />
           <h2>{t.consent_title}</h2>
@@ -233,11 +235,11 @@ export function AboutSheet({ lang, companion, onClose, onExportData, onImportDat
         </div>
         <div className="about-export">
           {(onExportData || onImportData) && <section className="data-backup">
-            <h3>{lang === "zh" ? "备份与更换域名" : "Backup and moving to a new domain"}</h3>
-            <p>{lang === "zh" ? "不同域名不会自动共享浏览器记录。你可以导出后在新域名导入。文件包含敏感的对话内容，请自行妥善保管，仅在可信设备导入。每段最多保留最近120条消息。原图不包含在记录备份中；历史图片描述可能保留。" : "Browser records do not move automatically between domains. Export them here, then import on the new domain. The file contains sensitive conversations: keep it private and import only on a trusted device. Each conversation keeps up to 120 recent messages. Original images are not included in backups; descriptions of earlier images may be retained."}</p>
+            <h3>{t.backup_title}</h3>
+            <p>{t.backup_body}</p>
             <div className="backup-actions">
-              {onExportData && <button className="btn ghost" onClick={onExportData}>{lang === "zh" ? "导出我的记录" : "Export my records"}</button>}
-              {onImportData && <label className="backup-file"><span>{lang === "zh" ? "导入记录" : "Import records"}</span><input type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImportData(file); event.target.value = ""; }} /></label>}
+              {onExportData && <button className="btn ghost" onClick={onExportData}>{t.backup_export}</button>}
+              {onImportData && <label className="backup-file"><span>{t.backup_import}</span><input type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImportData(file); event.target.value = ""; }} /></label>}
             </div>
             {dataError && <p role="alert">{dataError}</p>}
           </section>}
@@ -264,20 +266,20 @@ export function SupportResources({ lang, region, onRegionChange }: ResourceProps
     <label className="support-select"><span>{t.support_region}</span><select value={selected} onChange={(event) => {
       const next = normalizeSupportRegion(event.target.value); setLocalRegion(next); onRegionChange?.(next);
     }}>
-      <option value="OTHER">{SUPPORT_REGIONS.OTHER.label[lang]}</option>
-      {SUPPORT_REGION_CODES.filter((code) => code !== "OTHER").map((code) => <option key={code} value={code}>{SUPPORT_REGIONS[code].label[lang]}</option>)}
-      {selected === "UK_IE" && <option value="UK_IE">{SUPPORT_REGIONS.UK_IE.label[lang]}</option>}
+      <option value="OTHER">{localized(lang, SUPPORT_REGIONS.OTHER.label)}</option>
+      {SUPPORT_REGION_CODES.filter((code) => code !== "OTHER").map((code) => <option key={code} value={code}>{localized(lang, SUPPORT_REGIONS[code].label)}</option>)}
+      {selected === "UK_IE" && <option value="UK_IE">{localized(lang, SUPPORT_REGIONS.UK_IE.label)}</option>}
     </select></label>
     <p className="support-note">{t.support_region_note}</p>
     {selected !== "OTHER" && <p className="support-note">{t.support_call_note}</p>}
     {selected === "OTHER" && <p className="support-note">{t.support_other_note}</p>}
     <div className="crisis-hotlines" role="group" aria-label={t.hotline_label}>
       {resources.map((resource) => <a key={resource.href} className="crisis-hotline" href={resource.href} target={resource.href.startsWith("https:") ? "_blank" : undefined} rel={resource.href.startsWith("https:") ? "noopener noreferrer" : undefined}>
-        {resource.number && <><Ic.phone /><span className="ch-num">{resource.number}</span></>}<span className="ch-label">{resource.label[lang]}{resource.kind === "directory" ? " ↗" : ""}{resource.note && <span style={{ display: "block", marginTop: 4 }}>{resource.note[lang]}</span>}</span>
+        {resource.number && <><Ic.phone /><span className="ch-num">{resource.number}</span></>}<span className="ch-label">{localized(lang, resource.label)}{resource.kind === "directory" ? " ↗" : ""}{resource.note && <span style={{ display: "block", marginTop: 4 }}>{localized(lang, resource.note)}</span>}</span>
       </a>)}
       {!resources.some((resource) => resource.href === "https://" + INTL_RESOURCES.finder) && <a className="crisis-hotline" href={"https://" + INTL_RESOURCES.finder} target="_blank" rel="noopener noreferrer"><span className="ch-label">{t.h_finder} ↗</span></a>}
     </div>
-    {sources.length > 0 && <p className="support-note">{t.support_sources}{sources.map((resource, index) => <span key={resource.sourceUrl}>{index > 0 ? " · " : ""}<a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer">{resource.label[lang]}</a></span>)}</p>}
+    {sources.length > 0 && <p className="support-note">{t.support_sources}{sources.map((resource, index) => <span key={resource.sourceUrl}>{index > 0 ? " · " : ""}<a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer">{localized(lang, resource.label)}</a></span>)}</p>}
   </section>;
 }
 
@@ -319,8 +321,9 @@ export function ScalePicker({ lang, onPick, onClose }: { lang: Lang; onPick: (id
         <div className="scale-pick-list">
           {ids.map((id) => {
             const S = SCALES[id];
-            const title = S.name[lang].split(" · ")[1] || S.name[lang];
-            const n = S.items[lang].length;
+            const content = contentLanguage(lang);
+            const title = S.name[content].split(" · ")[1] || S.name[content];
+            const n = S.items[content].length;
             return (
               <button key={id} className="scale-pick" onClick={() => onPick(id)}>
                 <span className="sp-tag">{id}</span>
@@ -351,8 +354,10 @@ function ScaleSafetyCheck({ lang, region, onRegionChange }: ResourceProps) {
 export function ScaleModal({ lang, scaleId, onClose, onComplete, region, onRegionChange }: ResourceProps & { scaleId: string; onClose: () => void; onComplete?: (r: ScaleResult) => void }) {
   const t = STR[lang];
   const S = SCALES[scaleId];
-  const opts = SCALE_OPTS[S.opts][lang];
-  const items = S.items[lang];
+  // Validated instruments exist only in Chinese and English; other languages see a note.
+  const content = contentLanguage(lang);
+  const opts = SCALE_OPTS[S.opts][content];
+  const items = S.items[content];
   const [step, setStep] = useState(0);
   const [ans, setAns] = useState<Array<number | null>>(Array(items.length).fill(null));
   const [done, setDone] = useState(false);
@@ -380,7 +385,7 @@ export function ScaleModal({ lang, scaleId, onClose, onComplete, region, onRegio
     const C = 2 * Math.PI * 64;
     return (
       <Sheet onClose={onClose}>
-        <div className="sheet-head"><div><h2>{S.name[lang]}</h2></div>
+        <div className="sheet-head"><div><h2>{S.name[content]}</h2></div>
           <button className="icon-btn sheet-x" onClick={onClose} aria-label={t.close}><Ic.close /></button></div>
         <div className="scale-result">
           <div className="result-ring">
@@ -390,8 +395,8 @@ export function ScaleModal({ lang, scaleId, onClose, onComplete, region, onRegio
             </svg>
             <div className="result-num"><b>{total}</b><span>/ {maxTotal}</span></div>
           </div>
-          <div className="result-band">{selfHarmConcern ? t.scale_score_reference : band[lang]}</div>
-          {selfHarmConcern ? safetyCheck : <div className="result-desc">{band.desc[lang]}</div>}
+          <div className="result-band">{selfHarmConcern ? t.scale_score_reference : band[content]}</div>
+          {selfHarmConcern ? safetyCheck : <div className="result-desc">{band.desc[content]}</div>}
           <div className="result-foot">{t.result_foot}</div>
           <div className="scale-nav" style={{ justifyContent: "center", gap: 12 }}>
             <button className="btn ghost" onClick={() => { setAns(Array(items.length).fill(null)); setStep(0); setDone(false); }}>{t.retake}</button>
@@ -403,7 +408,7 @@ export function ScaleModal({ lang, scaleId, onClose, onComplete, region, onRegio
   }
   return (
     <Sheet onClose={onClose}>
-      <div className="sheet-head"><div><h2 style={{ fontSize: "var(--fs-lg)" }}>{S.name[lang]}</h2><p>{S.intro[lang]}</p></div>
+      <div className="sheet-head"><div><h2 style={{ fontSize: "var(--fs-lg)" }}>{S.name[content]}</h2><p>{S.intro[content]}</p>{t.scale_lang_note && <p className="support-note">{t.scale_lang_note}</p>}</div>
         <button className="icon-btn sheet-x" onClick={onClose} aria-label={t.close}><Ic.close /></button></div>
       <div className="scale-progress"><i style={{ width: (step / items.length) * 100 + "%" }} /></div>
       <div className="scale-q">
@@ -453,16 +458,16 @@ export function CaseDrawer({ lang, caseMap, loading, onClose, error, notice, onR
   return <ModalFrame className="case-drawer" label={t.case_title} onClose={onClose} backdropClassName="scrim case-scrim">
     <div className="case-head"><Avatar size={32} /><h2>{t.case_title}</h2><button className="icon-btn case-x" onClick={onClose} aria-label={t.close}><Ic.close /></button></div>
     <div className="case-body scroll">
-      {notice && <div className="case-note"><p>{notice}</p>{onRetry && <button className="btn ghost" onClick={onRetry} disabled={loading}>{lang === "zh" ? "重新整理" : "Update understanding"}</button>}</div>}
+      {notice && <div className="case-note"><p>{notice}</p>{onRetry && <button className="btn ghost" onClick={onRetry} disabled={loading}>{t.case_update}</button>}</div>}
       {error && <div className="case-error" role="alert"><p>{error}</p>{onRetry && <button className="btn ghost" onClick={onRetry} disabled={loading}>{t.retry}</button>}</div>}
       {loading ? <div className="case-note" role="status">{t.case_loading}</div> : editing ? <form className="case-edit" onSubmit={(event) => {
         event.preventDefault(); onChange?.({ ...draft, presenting: draft.presenting.trim(), workingHypothesis: draft.workingHypothesis.trim(), triggers: draft.triggers.map((value) => value.trim()).filter(Boolean).slice(0, 12), resources: draft.resources.map((value) => value.trim()).filter(Boolean).slice(0, 12), updatedAt: new Date().toISOString() }); setEditing(false);
       }}>
-        <p className="case-note">{lang === "zh" ? "你可以修正不准确的内容，或留空删除。多条触发因素和力量请各写一行。保存后的理解会用于后续对话。" : "Correct anything inaccurate, or leave it blank to remove it. Use one line per trigger or strength. Your saved understanding will inform future conversations."}</p>
+        <p className="case-note">{t.case_edit_note}</p>
         {fields.map(({ key, label }) => <label key={key}><span>{label}</span><textarea rows={3} maxLength={1800} value={Array.isArray(draft[key]) ? (draft[key] as string[]).join("\n") : draft[key] as string} onChange={(event) => {
           const value = event.target.value; setDraft((prior) => ({ ...prior, [key]: key === "triggers" || key === "resources" ? value.split("\n") : value }));
         }} /></label>)}
-        <div className="case-actions"><button className="btn solid" type="submit">{lang === "zh" ? "保存修改" : "Save changes"}</button><button className="btn ghost" type="button" onClick={() => setEditing(false)}>{t.delete_cancel}</button></div>
+        <div className="case-actions"><button className="btn solid" type="submit">{t.case_save}</button><button className="btn ghost" type="button" onClick={() => setEditing(false)}>{t.delete_cancel}</button></div>
       </form> : !populated ? <div className="case-note">{t.case_empty}</div> : <>
         <div className="case-note">{t.case_note}</div>
         {caseMap!.presenting && <div className="case-sec"><h3>{t.case_main}</h3><p>{caseMap!.presenting}</p></div>}
@@ -470,7 +475,7 @@ export function CaseDrawer({ lang, caseMap, loading, onClose, error, notice, onR
         {caseMap!.workingHypothesis && <div className="case-sec"><h3>{t.case_hyp}</h3><p className="case-hyp">{caseMap!.workingHypothesis}</p></div>}
         {caseMap!.resources.length > 0 && <div className="case-sec"><h3>{t.case_strength}</h3><div className="case-tags">{caseMap!.resources.map((x, i) => <span className="case-tag" key={i}>{x}</span>)}</div></div>}
       </>}
-      {onChange && !editing && !loading && <div className="case-actions"><button className="btn ghost" onClick={startEdit}>{lang === "zh" ? "修正我的理解" : "Edit this understanding"}</button>{populated && <button className="btn ghost" onClick={() => onChange(emptyCaseMap())}>{lang === "zh" ? "清空理解" : "Clear understanding"}</button>}</div>}
+      {onChange && !editing && !loading && <div className="case-actions"><button className="btn ghost" onClick={startEdit}>{t.case_edit}</button>{populated && <button className="btn ghost" onClick={() => onChange(emptyCaseMap())}>{t.case_clear}</button>}</div>}
     </div>
   </ModalFrame>;
 }

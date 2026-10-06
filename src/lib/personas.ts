@@ -94,7 +94,7 @@ export function resolvePersona(_id?: string | null): TherapyPersona {
 }
 
 export function getPersonaDisplay(persona: TherapyPersona, language: AppLanguage = "zh"): PersonaDisplay {
-  if (language === "en") {
+  if (language !== "zh" && language !== "zh-Hant") {
     return PERSONA_DISPLAY_EN[persona.id];
   }
 

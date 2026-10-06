@@ -2,6 +2,7 @@ import { buildDeepSeekPayload, generateDeepSeekText } from "@/lib/deepseek";
 import { cleanAssistantText } from "@/lib/output-style";
 import { buildSummaryPrompt } from "@/lib/prompts";
 import { assessRisk } from "@/lib/safety";
+import { localized, normalizeLanguage, replyLanguageName } from "@/lib/languages";
 import type { AppLanguage, CaseMap, ChatMessage, IntakeProfile, ScaleResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -44,19 +45,23 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid messages" }, { status: 400 });
   }
   const messages = sanitizeMessages(body.messages);
-  const language: AppLanguage = body.language === "en" ? "en" : "zh";
+  const language: AppLanguage = normalizeLanguage(body.language);
 
   if (messages.length === 0) {
     return Response.json({
-      summary: language === "en" ? "There is not enough conversation yet to summarize." : "还没有足够的对话内容可以总结。"
+      summary: localized(language, {
+        zh: "还没有足够的对话内容可以总结。", en: "There is not enough conversation yet to summarize.",
+        "zh-Hant": "還沒有足夠的對話內容可以總結。", ja: "まとめられるほどの会話がまだありません。", ko: "아직 요약할 만큼 대화가 충분하지 않아요.",
+        es: "Todavía no hay suficiente conversación para resumir.", fr: "Il n’y a pas encore assez de conversation à résumer.", de: "Es gibt noch nicht genug Gespräch für eine Zusammenfassung."
+      })
     });
   }
 
   const risk = assessRisk(messages.filter((message) => message.role === "user").map((message) => message.content).join("\n"));
   const systemPrompt =
-    language === "en"
-      ? "You are a cautious, concise psychological support session note assistant. Write in English."
-      : "你是谨慎、克制的中文心理支持会话记录助手。";
+    language === "zh" ? "你是谨慎、克制的中文心理支持会话记录助手。"
+      : language === "zh-Hant" ? "你是谨慎、克制的心理支持会话记录助手。全部使用繁体中文（正體字）书写。"
+        : `You are a cautious, concise psychological support session note assistant. Write in ${replyLanguageName(language)}.`;
   const userPrompt = buildSummaryPrompt({
     profile: body.profile,
     messages,

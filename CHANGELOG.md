@@ -3,6 +3,16 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.0.0] - 2026-10-06
+
+- Add six interface languages beside 简体中文 and English: 繁體中文, 日本語, 한국어, Español, Français and Deutsch, chosen from a language menu. Each has a full interface dictionary, fixed safety texts (crisis, gentle check, medical, medication and diagnosis boundaries), localized support-region labels, and replies in that language. PHQ-9, GAD-7 and ISI stay in Chinese and English only.
+- Recognize explicit first-person suicide and self-harm wording in the new languages as medium risk, so those turns always wait for the danger judge; 繁體 input is folded onto the simplified lexicon with a fuller character map.
+- Replace the three fixed welcome openers with 100 per language and audience (teen pool for under 18; adult pool for 18+ and not chosen), three drawn at random on each visit; once there are saved past sessions, openers sharing topic words with them come first (matched in the browser with Intl.Segmenter; everyday words ignored). All 1,600 pass the risk lexicon without escalation (starters.test.ts).
+- Turn thinking off by default for both 深度 and 快速. Live timing on 2026-10-06: 深度 with "high" took 16.3s (12.7s thinking) against 4.2s with thinking off, with no better reply. The selector still lets users turn it on.
+- Stop the reply from parroting a fixed closing question ("你最希望我先听见的是哪一段？") that the default turn plan injected as a must-follow instruction; stop encouraging "我在听"; don't fill in details the user did not say; avoid "不只是X，更是Y" phrasing.
+- Add voice input through the browser's own speech recognition (Safari, Edge, Chrome where reachable). The text goes into the input box for review and is never sent automatically; the button is hidden where the browser has no recognition.
+- Center the attach button and the new voice button on the input line.
+
 ## [v0.12.0] - 2026-10-04
 
 - Add a teen mode (12–18) to the counselor prompt: plain, non-lecturing language and concrete guidance for exam stress, family conflict and abuse, bullying and cyberbullying, self-harm, romance, body image and eating, sleep, phones and games, plus clear boundaries (no diagnosis, medication advice, running away or secrecy promises).

@@ -36,7 +36,7 @@ describe("App consent, settings and safety flow", () => {
     render(<App />);
     expect(screen.getByRole("dialog", { name: "在开始之前" })).toBeInTheDocument();
     // A directly dispatched background event must still fail the application guard.
-    fireEvent.click(screen.getByRole("button", { name: "我最近睡不太好", hidden: true }));
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".starter")!);
     expect(network).not.toHaveBeenCalled();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "我了解了，开始对话" }));
@@ -52,7 +52,7 @@ describe("App consent, settings and safety flow", () => {
     const user = userEvent.setup();
     const first = render(<App />);
     await user.click(screen.getByRole("button", { name: "切换明暗主题" }));
-    await user.click(screen.getByRole("button", { name: "切换语言" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "切换语言" }), "en");
     expect(localStorage.getItem("js_theme")).toBe("dark");
     expect(localStorage.getItem("js_lang")).toBe("en");
     first.unmount();
@@ -61,7 +61,7 @@ describe("App consent, settings and safety flow", () => {
     render(<App />);
     expect(document.documentElement).toHaveAttribute("lang", "en");
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
-    expect(screen.getByRole("button", { name: "Change language" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Change language" })).toHaveValue("en");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -144,7 +144,7 @@ describe("App closing and continuation", () => {
     await user.type(screen.getByRole("textbox", { name: "我愿意试的一小步（可不填）" }), "明天午间去走走");
     await user.click(screen.getByRole("button", { name: "保存并开始新对话" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "我最近睡不太好" })).toBeInTheDocument();
+    expect(document.querySelectorAll(".starter")).toHaveLength(3);
     const stored = JSON.parse(localStorage.getItem("js_sessions") || "[]");
     expect(stored).toHaveLength(1);
     expect(stored[0]).toMatchObject({ summary: "合成小结：我想为自己留一点空间。", nextStep: "明天午间去走走" });
