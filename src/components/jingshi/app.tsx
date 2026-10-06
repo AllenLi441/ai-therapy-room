@@ -4,7 +4,7 @@ import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type AgeRange, t
 import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
 import { AboutSheet, ScaleModal, CrisisBanner, CaseDrawer, ConfirmSheet, ConsentGate, SupportSheet } from "./overlays";
-import { ImportRecords, SessionHistory, SessionSummary } from "./session-panels";
+import { DonateSession, ImportRecords, SessionHistory, SessionSummary } from "./session-panels";
 import { CONSENT_VERSION, STORAGE_KEYS, RequestScope, modelMessages, parseRecordBackup, readCaseMap, readMessages, readScales, readSessions, storedMessages, type RecordBackup, type SessionRecord } from "./session-state";
 import { assessRisk } from "@/lib/safety";
 import { normalizeSupportRegion } from "@/lib/support-regions";
@@ -15,7 +15,7 @@ import type { ThinkingLevel } from "@/lib/model-options";
 import styles from "./session-panels.module.css";
 
 const uid = () => crypto.randomUUID();
-type Overlay = "about" | "case" | "support" | "summary" | "history" | null;
+type Overlay = "about" | "case" | "support" | "summary" | "history" | "donate" | null;
 const subscribeHydration = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
@@ -62,6 +62,10 @@ function ClientApp() {
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
+  // Conversation donation (opt-in, off unless NEXT_PUBLIC_DONATIONS=1 and Supabase is set up).
+  const donationsOn = process.env.NEXT_PUBLIC_DONATIONS === "1";
+  const [donatingId, setDonatingId] = useState<string | null>(null);
+  const [donationNotice, setDonationNotice] = useState("");
   const [scaleId, setScaleId] = useState<string | null>(null);
   const [suggestedScale, setSuggestedScale] = useState<string | null>(null);
   const offeredScales = useRef(new Set<string>());
@@ -396,6 +400,18 @@ function ClientApp() {
     setActiveSession(record.id); setSummary(record.summary); setNextStep(record.nextStep);
     setContinuation(`${record.summary}\n${record.nextStep}`.slice(0, 3000));
   }
+  function openDonate(id: string) { setDonatingId(id); setOverlay("donate"); }
+  function markDonated(sessionId: string, donationId: string | undefined) {
+    setSessions((items) => items.map((item) => item.id === sessionId ? { ...item, donationId } : item));
+  }
+  async function withdrawDonation(session: SessionRecord) {
+    if (!session.donationId) return;
+    try {
+      const response = await fetch("/api/donate", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: session.donationId }) });
+      if (!response.ok) throw new Error();
+      markDonated(session.id, undefined); setDonationNotice(STR[lang].donate_withdrawn);
+    } catch { setDonationNotice(STR[lang].donate_withdraw_failed); }
+  }
   function deleteSession(id: string) {
     setSessions((items) => items.filter((item) => item.id !== id));
     writeStorage("js_feedback", null);
@@ -448,8 +464,9 @@ function ClientApp() {
     {overlay === "support" && <SupportSheet lang={lang} region={supportRegion} onRegionChange={setSupportRegion} onClose={() => setOverlay(null)} />}
     {scaleId && <ScaleModal lang={lang} scaleId={scaleId} region={supportRegion} onRegionChange={setSupportRegion} onClose={() => setScaleId(null)} onComplete={(result) => setScaleResults((previous) => [...previous, result].slice(-30))} />}
     {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} error={caseError} notice={caseEdited ? STR[lang].case_edited_notice : null} onRetry={() => void openCase(true)} onChange={editCase} onClose={() => setOverlay(null)} />}
-    {overlay === "summary" && <SessionSummary lang={lang} summary={summary} nextStep={nextStep} loading={summaryLoading} error={summaryError} saved={summarySaved} onSummary={(value) => { setSummary(value); setSummarySaved(false); }} onNextStep={(value) => { setNextStep(value); setSummarySaved(false); }} onRetry={() => void openSummary()} onSave={() => saveSummary()} onNew={() => saveSummary(true)} onClose={() => setOverlay(null)} />}
-    {overlay === "history" && <SessionHistory lang={lang} sessions={sessions} onResume={resumeSession} onDelete={deleteSession} onClose={() => setOverlay(null)} />}
+    {overlay === "summary" && <SessionSummary lang={lang} summary={summary} nextStep={nextStep} loading={summaryLoading} error={summaryError} saved={summarySaved} onSummary={(value) => { setSummary(value); setSummarySaved(false); }} onNextStep={(value) => { setNextStep(value); setSummarySaved(false); }} onRetry={() => void openSummary()} onSave={() => saveSummary()} onNew={() => saveSummary(true)} onDonate={donationsOn && activeSession && !sessions.find((item) => item.id === activeSession)?.donationId ? () => openDonate(activeSession) : undefined} onClose={() => setOverlay(null)} />}
+    {overlay === "history" && <SessionHistory lang={lang} sessions={sessions} onResume={resumeSession} onDelete={deleteSession} onDonate={donationsOn ? (session) => openDonate(session.id) : undefined} onWithdraw={donationsOn ? (session) => void withdrawDonation(session) : undefined} notice={donationNotice} onClose={() => { setOverlay(null); setDonationNotice(""); }} />}
+    {overlay === "donate" && donatingId && sessions.some((item) => item.id === donatingId) && <DonateSession lang={lang} session={sessions.find((item) => item.id === donatingId)!} ageRange={ageRange} region={supportRegion} onDonated={(id) => markDonated(donatingId, id)} onClose={() => { setOverlay(null); setDonatingId(null); }} />}
     {confirmingDelete && <ConfirmSheet lang={lang} onConfirm={doDeleteAll} onClose={() => setConfirmingDelete(false)} />}
     {pendingImport && <ImportRecords lang={lang} backup={pendingImport} onClose={() => setPendingImport(null)} onConfirm={confirmImport} />}
     {hydrated && !consented && <ConsentGate lang={lang} onLang={changeLanguage} region={supportRegion} onRegionChange={setSupportRegion} ageRange={ageRange} onAgeRangeChange={setAgeRange} onAccept={() => { writeStorage("js_consent", CONSENT_VERSION); setConsented(true); }} />}

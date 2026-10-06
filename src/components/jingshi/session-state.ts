@@ -14,6 +14,8 @@ export type SessionRecord = {
   messages: Message[];
   scaleResults: ScaleResult[];
   caseMap: CaseMap | null;
+  /** Set once this session was donated; the random id is the donor's withdrawal handle. */
+  donationId?: string;
 };
 export type RecordBackup = {
   format: "jingshi-records";
@@ -68,6 +70,7 @@ export function readMessages(value: unknown): Message[] {
       errored: row.errored === true, retryable: row.retryable !== false,
       pace: row.pace === "fast" ? "fast" : "deep", streaming: false,
       feedback: row.feedback === "up" || row.feedback === "down" ? row.feedback : undefined,
+      safety: ["safe", "unchecked", "gentle", "suicide_concern", "crisis"].includes(String(row.safety)) ? row.safety as Message["safety"] : undefined,
     }];
   });
 }
@@ -107,6 +110,7 @@ export function readSessions(value: unknown): SessionRecord[] {
   return value.slice(-20).flatMap((row): SessionRecord[] => !object(row) || !row.id || !Number.isFinite(Date.parse(String(row.createdAt))) ? [] : [{
     id: text(row.id, 100), createdAt: text(row.createdAt, 60), summary: text(row.summary, 4000), nextStep: text(row.nextStep, 600),
     messages: readMessages(row.messages), scaleResults: readScales(row.scaleResults), caseMap: readCaseMap(row.caseMap),
+    ...(typeof row.donationId === "string" && /^[0-9a-f-]{36}$/.test(row.donationId) ? { donationId: row.donationId } : {}),
   }]);
 }
 
