@@ -1648,12 +1648,54 @@ export function starterAudience(ageRange: AgeRange): "teen" | "adult" {
   return ageRange === "minor" ? "teen" : "adult";
 }
 
-/** `count` distinct openers for this language and age choice (fresh on every visit). */
-export function pickStarters(lang: Lang, ageRange: AgeRange, count = 3, random: () => number = Math.random): string[] {
+const CJK = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
+const HANGUL = /[\uac00-\ud7af]/;
+const HIRAGANA_ONLY = /^[\u3040-\u309f]+$/;
+// Everyday words that say nothing about the topic; matching on them would look random.
+const STOP = new Set([
+  "有点", "感觉", "最近", "知道", "不知道", "什么", "怎么", "怎么办", "自己", "觉得", "好像", "总是", "一直", "时候", "没有", "不想", "不敢",
+  "一个", "这个", "那个", "还是", "就是", "但是", "因为", "所以", "可以", "现在", "今天", "真的", "已经", "其实", "心里", "我们", "他们",
+  "一些", "很多", "不是", "这样", "为什么", "不会", "不能", "应该", "有點", "感覺", "現在", "這個", "還是", "覺得", "沒有", "時候", "為什麼", "應該",
+  "about", "becau", "there", "their", "would", "could", "shoul", "somet", "every", "reall", "think", "feeli", "being", "still", "again",
+  "alway", "never", "right", "these", "those", "which", "where", "while", "after", "befor", "doesn", "don't", "can't", "thing", "latel",
+  "dont", "cant", "just", "like", "feel", "want", "know", "with", "that", "this", "have", "what", "when", "they", "them", "from", "even",
+  "much", "some", "more", "keep", "make", "been", "into", "than", "very",
+  "없어", "있어", "하고", "해서", "너무", "정말", "그냥", "같아", "싶어", "어떻", "모르", "요즘", "계속", "자꾸", "뭔가", "어떡",
+]);
+
+/** Topic words via the browser's word segmenter: CJK words of 2+ characters (Korean cut to
+ * a 2-syllable stem, grammar-only hiragana dropped), other words of 4+ letters cut to 5.
+ * Without Intl.Segmenter there are no topic words and the draw stays random. */
+function topicTokens(text: string, lang: Lang): string[] {
+  if (typeof Intl === "undefined" || !("Segmenter" in Intl)) return [];
+  const out: string[] = [];
+  for (const { segment, isWordLike } of new Intl.Segmenter(lang, { granularity: "word" }).segment(text.toLowerCase())) {
+    if (!isWordLike || HIRAGANA_ONLY.test(segment)) continue;
+    const cjk = CJK.test(segment);
+    const token = HANGUL.test(segment) ? segment.slice(0, 2) : cjk ? segment : segment.slice(0, 5);
+    if ((cjk ? token.length >= 2 : segment.length >= 4) && !STOP.has(token)) out.push(token);
+  }
+  return out;
+}
+
+/** `count` distinct openers for this language and age choice. With no history they are a
+ * fresh random draw on every visit; with history (the user's past sessions, kept in this
+ * browser) the openers sharing the most topic words with it come first, ties at random. */
+export function pickStarters(lang: Lang, ageRange: AgeRange, count = 3, random: () => number = Math.random, history = ""): string[] {
   const pool = [...(starterAudience(ageRange) === "teen" ? TEEN_STARTERS : ADULT_STARTERS)[lang]];
   for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return pool.slice(0, count);
+  const said = new Map<string, number>();
+  for (const token of topicTokens(history, lang)) said.set(token, (said.get(token) ?? 0) + 1);
+  if (!said.size) return pool.slice(0, count);
+  // A word shared by many openers is generic; only fairly specific ones (in ≤3 openers) count.
+  const tokensOf = new Map(pool.map((text) => [text, new Set(topicTokens(text, lang))]));
+  const spread = new Map<string, number>();
+  for (const tokens of tokensOf.values()) for (const token of tokens) spread.set(token, (spread.get(token) ?? 0) + 1);
+  const score = (text: string) => [...tokensOf.get(text)!].reduce((sum, token) => sum + ((spread.get(token) ?? 0) <= 3 ? said.get(token) ?? 0 : 0), 0);
+  const related = pool.map((text) => ({ text, score: score(text) })).filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score).slice(0, count).map((item) => item.text);
+  return [...related, ...pool.filter((text) => !related.includes(text))].slice(0, count);
 }

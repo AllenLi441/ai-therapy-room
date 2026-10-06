@@ -746,8 +746,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .enso-ring { display: block; }
 .enso-glow {
   position: absolute; inset: -30%; z-index: -1; border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in oklab, var(--sage) 38%, transparent) 0%, transparent 68%);
-  filter: blur(13px); opacity: .5;
+  /* closest-side fades to transparent inside the box, so no blur filter: Safari clipped the
+     blurred layer into a visible square. */
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--sage) 38%, transparent) 0%, transparent 100%);
+  opacity: .5;
 }
 .presence.breathe .enso-ring { animation: enso-breathe 8s var(--ease) infinite; transform-origin: 50% 50%; }
 @keyframes enso-breathe { 0%,100% { transform: scale(1); opacity: .95; } 50% { transform: scale(1.04); opacity: 1; } }
@@ -760,6 +762,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
   text-align: left; padding: 15vh 24px 40px; gap: 0;
   max-width: 640px; margin: 0 auto; width: 100%;
+  /* Short windows scroll this column: fade its edges instead of cutting content off. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
 }
 .welcome > * { flex-shrink: 0; }
 @media (min-width: 900px) {
@@ -775,6 +780,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: var(--tracking-eyebrow); margin: 11px 0 22px; font-weight: 600;
 }
 .welcome .w-line { font-size: var(--fs-md); color: var(--ink-2); line-height: 1.85; max-width: 30ch; margin: 0 0 34px; white-space: pre-line; }
+/* Short desktop windows: tighten the column so the openers fit without scrolling. */
+@media (max-height: 760px) and (min-width: 561px) {
+  .welcome { padding-top: 4vh; padding-bottom: 20px; }
+  .welcome-orb { margin-bottom: 12px; }
+  .welcome-orb .presence { width: 84px !important; height: 84px !important; }
+  .welcome .w-role { margin: 8px 0 14px; }
+  .welcome .w-line { margin-bottom: 18px; }
+}
 .starters { display: flex; flex-direction: column; gap: 0; width: 100%; max-width: 460px; }
 @media (min-width: 720px) {
   .starters { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 0 22px; max-width: 780px; }

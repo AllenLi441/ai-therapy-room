@@ -594,10 +594,11 @@ export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinkin
   );
 }
 
-export function Welcome({ lang, ageRange, companion, onStart }: { lang: Lang; ageRange: AgeRange; companion: Persona; onStart: (s: string) => void }) {
+export function Welcome({ lang, ageRange, history = "", companion, onStart }: { lang: Lang; ageRange: AgeRange; history?: string; companion: Persona; onStart: (s: string) => void }) {
   const t = STR[lang];
-  // A fresh draw of three openers per visit (and per language / age choice — the parent keys this component on both).
-  const [starters] = useState(() => pickStarters(lang, ageRange));
+  // Three openers per visit (and per language / age choice — the parent keys this component on both):
+  // related to past sessions when there are any, otherwise a fresh random draw.
+  const [starters] = useState(() => pickStarters(lang, ageRange, 3, Math.random, history));
   return (
     <div className="welcome scroll">
       <div className="welcome-orb"><Presence size={134} glow breathe /></div>

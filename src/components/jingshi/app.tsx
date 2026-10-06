@@ -427,6 +427,8 @@ function ClientApp() {
   }
 
   const started = messages.some((m) => m.role === "user");
+  // Openers follow topics from the last few saved sessions (stays in this browser).
+  const starterHistory = sessions.slice(-5).flatMap((session) => [session.summary, ...session.messages.filter((m) => m.role === "user").map((m) => m.content)]).join("\n");
   function changeLanguage(next: Lang) { setLang(next); if (!started) replaceMessages([freshGreeting(next)]); }
   return <div className="app" style={{ "--tone": persona.av } as React.CSSProperties}>
     <TopBar lang={lang} theme={theme} persona={persona} onTheme={() => setTheme(theme === "dark" ? "light" : "dark")} onLang={changeLanguage} onPersona={() => setOverlay("about")} onCase={() => void openCase()} onSupport={() => setOverlay("support")} />
@@ -438,7 +440,7 @@ function ClientApp() {
       <button className="btn ghost" disabled={!consented || busy} onClick={() => setOverlay("history")}>{STR[lang].past_sessions}</button>
     </div>
     <main className="chat-wrap">
-      {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onDelete={onDeleteMessage} /> : <Welcome key={`${lang}-${ageRange}`} lang={lang} ageRange={ageRange} companion={persona} onStart={(text) => void send(text, [])} />}
+      {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onDelete={onDeleteMessage} /> : <Welcome key={`${lang}-${ageRange}`} lang={lang} ageRange={ageRange} history={starterHistory} companion={persona} onStart={(text) => void send(text, [])} />}
       {suggestedScale && !scaleId && !crisis && <div className="scale-suggest" role="status"><span className="ss-ico"><Ic.clipboard /></span><span className="ss-text">{STR[lang].scale_suggest}{(lang.startsWith("zh") ? "（{name}）" : " ({name})").replace("{name}", SCALES[suggestedScale].name[contentLanguage(lang)].split(" · ")[1])}</span><button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button><button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button></div>}
       <Composer key={draftRevision} lang={lang} pace={pace} busy={busy || !consented || !hydrated} tone={persona.av} onSend={(text, attachments) => void send(text, attachments)} onPace={setPace} thinking={thinking} onThinking={(level) => setThinkingByPace((current) => ({ ...current, [pace]: level }))} onStop={busy ? stopReply : undefined} />
     </main>

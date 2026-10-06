@@ -37,6 +37,16 @@ describe("welcome starters", () => {
     }
   });
 
+  it("puts openers related to past sessions first, and stays random for generic history", () => {
+    const fixed = () => 0.5;
+    const exams = pickStarters("zh", "minor", 3, fixed, "期末考试快到了，压力很大，晚上睡不着");
+    expect(exams.filter((text) => /考|睡/.test(text)).length).toBeGreaterThanOrEqual(2);
+    expect(pickStarters("zh", "adult", 3, fixed, "和男朋友吵架了，他不在乎我")).toContain("和伴侣总是吵架");
+    expect(pickStarters("en", "adult", 3, fixed, "I had a fight with my boss today")).toContain("My boss always finds fault with me");
+    // Only everyday words: same as no history at all.
+    expect(pickStarters("zh", "adult", 3, fixed, "感觉有点累，最近不知道怎么了")).toEqual(pickStarters("zh", "adult", 3, fixed));
+  });
+
   it("uses the teen pool only for under-18, and draws three distinct openers", () => {
     expect(starterAudience("minor")).toBe("teen");
     expect(starterAudience("adult")).toBe("adult");
