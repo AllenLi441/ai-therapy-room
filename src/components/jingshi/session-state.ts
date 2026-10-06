@@ -1,8 +1,9 @@
+import { normalizeLanguage } from "@/lib/languages";
 import type { AgeRange, Lang, Message, SupportRegion } from "./data";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { normalizeSupportRegion } from "@/lib/support-regions";
 
-export const CONSENT_VERSION = "2";
+export const CONSENT_VERSION = "3"; // 3: DeepSeek-first safety check + topic-only web search disclosed
 export const STORAGE_KEYS = ["js_chat", "js_scales", "js_case", "js_case_edited", "js_consent", "js_feedback", "js_sessions", "js_active_session", "js_continuation", "js_age_range", "js_support_region", "js_draft"] as const;
 
 export type SessionRecord = {
@@ -116,7 +117,7 @@ export function parseRecordBackup(value: unknown): RecordBackup {
     format: "jingshi-records", version: 1, exportedAt: text(value.exportedAt, 60),
     messages: readMessages(value.messages), scaleResults: readScales(value.scaleResults), caseMap: readCaseMap(value.caseMap), sessions: readSessions(value.sessions),
     settings: {
-      lang: settings.lang === "en" ? "en" : "zh", theme: settings.theme === "dark" ? "dark" : "light",
+      lang: normalizeLanguage(settings.lang), theme: settings.theme === "dark" ? "dark" : "light",
       supportRegion: normalizeSupportRegion(settings.supportRegion),
       ageRange: settings.ageRange === "adult" || settings.ageRange === "minor" ? settings.ageRange : "unspecified",
     },

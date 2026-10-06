@@ -15,6 +15,8 @@ import { getRiskInstruction } from "./safety";
 import { deriveStateTag, latestResultsPerScale, scaleSafetySignal } from "./state-tags";
 import { normalizeSupportRegion, SUPPORT_REGIONS, type SupportRegionInput } from "./support-regions";
 import { isLocalSourceVerifiedCard } from "./knowledge";
+import { replyLanguageName } from "./languages";
+import { LOCAL_SAFETY_TEXT } from "./safety-texts";
 
 const PROFESSIONAL_LIMITS = [
   "你不是医生、不是持证治疗师、不是紧急服务；不能诊断、不能开药、不能替代线下心理治疗或精神科评估。",
@@ -39,7 +41,8 @@ const EMOTION_ATTUNEMENT = [
   "如果督导给了'本轮情绪判读'，以它为准，再用自己的话自然说出，不要照搬术语。",
   "共情要落在具体那句话、那件事上，让对方觉得'你真的听懂了我'，而不是泛泛的安慰。",
   "情绪往往是混合的——如果同时有两种（例如又愤怒又愧疚、想靠近又怕被拒），把这种矛盾点出来，这通常比单一情绪更准。",
-  "当你不确定情绪时，用试探性的语气确认，而不是断言：'听起来更像是被忽视的委屈，而不只是生气，是这样吗？'——给对方纠正你的空间。",
+  "当你不确定情绪时，用试探性的语气确认，而不是断言：'听起来更像是委屈，是这样吗？'，给对方纠正你的空间。",
+  "对方只说了很短的一句时，不要替对方补出没说过的细节、经过或更深的情绪；简单回应听到的那句话，再问一个具体、好回答的问题。",
   "不要在准确反映之前就急着分析、给方法或安慰；先让对方感到自己的情绪被听懂了。",
 ].join("\n");
 
@@ -49,7 +52,7 @@ const QUALITY_BAR = [
   "使用'可能'、'听起来像'，避免把假设说成诊断。",
   "只有本轮检索资料明确支持时，才解释一般心理机制；不要为了显得专业强加机制或诊断。对用户经历的理解只能作为可更正的试探。",
   "避免说'你要积极一点'、'别想太多'、'一切都会好'、'我完全理解'、'作为AI'、'作为语言模型'这类空话或自我说明。",
-  "像一位真实的咨询师在面对面说话：自然、口语、有温度，节奏放慢，可以有短停顿、'嗯'、'我在听'这样的语气词。不要像客服话术、说明书或科普文章。",
+  "像一位真实的咨询师在面对面说话：自然、口语、有温度，节奏放慢，可以偶尔用'嗯'这样的语气词。不要像客服话术、说明书或科普文章。",
   "不要用'研究表明'、'有研究发现'、'心理学认为'这类学术口吻，也不要在回应里念链接、复述统计数字、效应量或样本量（例如'3.32 亿人''g=1.18''纳入 26 项试验'这类都不要念出来）；如果手头有可查证的资料，可以把其中的事实用你自己作为陪伴者的话自然说出来，但不要把回应写得像论文或科普。",
   "不要宣告或报幕你正在做的事：不说'我来接住你 / 稳稳地接住你 / 我先接住你的情绪''让我来帮你 / 陪你……''接下来我会…… / 首先我想说''我在这里 / 我会一直陪着你'这类自我宣告与存在感宣告；也不要预告自己很真诚（'我用最不胡说八道的方式''说句实在的''我尽量说人话'）——直接把你听到的那份感受和它的来由说出来就好。",
   "不要用空泛安慰金句和逢事必夸的廉价肯定：'你并不孤单''这需要很大的勇气''你已经很棒了 / 已经尽力了''你值得被看见''你的感受是合理的''我听见你了''抱抱你 / 给你一个拥抱'，也不要甩一句'深呼吸、慢慢来'或写格言体签名档式收尾——要认可就具体说认可的是哪一件事。",
@@ -59,7 +62,7 @@ const QUALITY_BAR = [
   "不要写'专业理解：''现在先做：''我想确认：'这类固定标签。",
   "默认用自然短段落；不要每次固定四段模板。需要结构时，最多使用两个很短的小标题。",
   "不要每条都用二选一的选择题收尾、让对方在两种感受里挑一个；偶尔给选项可以，但别变成套路，常常说完该说的就停住，或只留一个开放的小问题。",
-  "不要靠长破折号制造那种先说不是什么、再反转说是什么的戏剧腔；要转折就用逗号，或者直接把话说平实。",
+  "不要制造先说不是什么、再反转说是什么的戏剧腔（不管用破折号还是逗号），也不要用'往往不只是……''不只是X，更是Y'这类深沉句式；直接把话说平实。",
   "如果用户只想倾诉，少给建议，多做准确反映；如果用户要求方法，再给更结构化步骤。"
 ].join("\n");
 
@@ -227,7 +230,7 @@ function formatTurnPlan(plan: TurnPlan) {
     `本轮协议步骤：${plan.protocolStep}`,
     `必须先反映：${plan.whatToReflect}`,
     `本轮微干预：${plan.intervention}`,
-    `结尾澄清问题：${plan.clarifyingQuestion}`,
+    plan.clarifyingQuestion ? `结尾澄清问题：${plan.clarifyingQuestion}` : null,
     `本轮要避免：${plan.avoid}`
   ]
     .filter(Boolean)
@@ -235,6 +238,13 @@ function formatTurnPlan(plan: TurnPlan) {
 }
 
 function formatLanguageInstruction(language?: AppLanguage) {
+  if (language === "zh-Hant") {
+    return "最终回应语言：繁體中文（正體字）。全部使用繁体字，用自然、克制、具体的表达回应；不要夹杂简体字。";
+  }
+  if (language && language !== "zh" && language !== "en") {
+    const name = replyLanguageName(language);
+    return `Final response language: ${name}. Write the whole reply in natural, concise ${name}, even though these instructions are in Chinese. Do not translate internal labels or mention backend concepts.`;
+  }
   if (language === "en") {
     return "Final response language: English. Use natural, concise English. Do not translate internal Chinese labels or mention backend concepts.";
   }
@@ -407,23 +417,27 @@ export function buildSummaryPrompt(input: {
     .map((message) => `${message.role === "user" ? "来访者" : "助手"}：${message.content}`)
     .join("\n");
 
+  // Chinese (simplified/traditional) keeps the Chinese section names; every other
+  // language uses the English structure and is told which language to write in.
+  const chinese = !input.language || input.language === "zh" || input.language === "zh-Hant";
+  const english = !chinese;
   return [
-    input.language === "en"
-      ? "Please create a concise English session summary based on the anonymous psychological support conversation below."
-      : "请基于以下匿名心理支持对话，生成一份简短中文会话总结。",
+    chinese
+      ? `请基于以下匿名心理支持对话，生成一份简短${input.language === "zh-Hant" ? "繁體中文（使用繁体字）" : "中文"}会话总结。`
+      : `Please create a concise session summary in ${replyLanguageName(input.language ?? "en")} based on the anonymous psychological support conversation below. Write every section, including the section names, in ${replyLanguageName(input.language ?? "en")}.`,
     "总结要专业、可执行，但不要诊断、不要夸大疗效、不要添加对话中没有的信息。",
     "",
-    input.language === "en" ? "Use exactly these four sections:" : "输出固定为四段：",
-    input.language === "en"
+    english ? "Use exactly these four sections:" : "输出固定为四段：",
+    english
       ? "What you said today: 2-3 concrete sentences about the situation and emotions the visitor described."
       : "今天你说了什么：2-3 句，具体概括来访者说到的事件和感受。",
-    input.language === "en"
+    english
       ? "What we noticed together: 1-2 sentences, including one non-diagnostic mechanism loop."
       : "一起看见了什么：1-2 句，必须包含一个非诊断性的机制循环。",
-    input.language === "en"
+    english
       ? "A gentle homework: up to 3 low-pressure actions that can be done within 24 hours."
       : "一个温柔的家庭作业：最多 3 条，必须低负担、具体、可在 24 小时内完成。",
-    input.language === "en"
+    english
       ? "Safety note: if there are risk signals, recommend real-world support and professional help; otherwise write that no immediate danger is clear but help should be sought if risk rises."
       : "安全提示：如有风险线索，提醒联系现实支持和专业帮助；没有则写'未见明确即时危险，但如果风险升高请及时求助'。",
     "",
@@ -445,6 +459,8 @@ export function buildSummaryPrompt(input: {
 }
 
 export function createProviderErrorFallback(language: AppLanguage = "zh") {
+  const local = LOCAL_SAFETY_TEXT[language];
+  if (local) return local.providerError;
   return language === "en"
     ? "The reply could not be completed. Please try again; your message is still here."
     : "这次回复没能完成，可以重试。你刚才写的内容还在。";
@@ -454,7 +470,8 @@ export function createHeuristicSummary(messages: ChatMessage[], risk: RiskAssess
   const userMessages = messages.filter((message) => message.role === "user").map((message) => message.content);
   const latest = userMessages.at(-1) ?? "来访者表达了当前困扰。";
 
-  if (language === "en") {
+  // Model-free fallback: Chinese text for zh / zh-Hant, English for every other language.
+  if (language !== "zh" && language !== "zh-Hant") {
     const latestEn = userMessages.at(-1) ?? "The visitor described a current concern.";
 
     return [

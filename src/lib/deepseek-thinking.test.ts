@@ -15,11 +15,10 @@ afterEach(() => {
 });
 
 describe("thinking level → DeepSeek payload", () => {
-  it("defaults by pace: fast off, deep high; explicit levels pass through", () => {
-    expect(resolveThinkingLevel(undefined, "fast")).toBe("off");
-    expect(resolveThinkingLevel(undefined, "deep")).toBe("high");
-    expect(resolveThinkingLevel("max", "fast")).toBe("max");
-    expect(resolveThinkingLevel("bogus", "deep")).toBe("high");
+  it("defaults to off for both paces; explicit levels pass through", () => {
+    expect(resolveThinkingLevel(undefined)).toBe("off");
+    expect(resolveThinkingLevel("max")).toBe("max");
+    expect(resolveThinkingLevel("bogus")).toBe("off");
     expect(reasoningEffortFor("off")).toBe("none");
   });
 

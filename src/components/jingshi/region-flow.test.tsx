@@ -38,7 +38,7 @@ describe("region selection and migration", () => {
     await user.click(screen.getByRole("button", { name: "真人支持" }));
     await user.selectOptions(screen.getByRole("combobox"), "CA");
     await user.keyboard("{Escape}");
-    await user.click(screen.getByRole("button", { name: "切换语言" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "切换语言" }), "en");
     first.unmount(); render(<App />);
     await user.click(screen.getByRole("button", { name: "Human support" }));
     expect(screen.getByRole("combobox", { name: "Support resource region" })).toHaveValue("CA");

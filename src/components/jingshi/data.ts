@@ -5,8 +5,15 @@
 
 import { assessRisk } from "@/lib/safety";
 import { suggestScale } from "@/lib/scales";
+import type { AppLanguage, ContentLanguage } from "@/lib/languages";
+import { STR_ZH_HANT } from "./i18n/zh-Hant";
+import { STR_JA } from "./i18n/ja";
+import { STR_KO } from "./i18n/ko";
+import { STR_ES } from "./i18n/es";
+import { STR_FR } from "./i18n/fr";
+import { STR_DE } from "./i18n/de";
 
-export type Lang = "zh" | "en";
+export type Lang = AppLanguage;
 export type { SupportRegion } from "@/lib/support-regions";
 export type AgeRange = "adult" | "minor" | "unspecified";
 
@@ -53,41 +60,48 @@ export type Scale = {
   id: ScaleId;
   opts: string;
   maxEach: number;
-  name: Record<Lang, string>;
-  intro: Record<Lang, string>;
-  items: Record<Lang, string[]>;
-  bands: Array<{ max: number; zh: string; en: string; desc: Record<Lang, string> }>;
+  name: Record<ContentLanguage, string>;
+  intro: Record<ContentLanguage, string>;
+  items: Record<ContentLanguage, string[]>;
+  bands: Array<{ max: number; zh: string; en: string; desc: Record<ContentLanguage, string> }>;
 };
 
 // ---- companion (single) ----
 const COMPANION: Persona = {
   id: "linxi",
   av: "#6FB0A0",
-  name: { zh: "安屿", en: "Anyu" },
-  role: { zh: "你的陪伴者", en: "Your companion" },
+  name: { zh: "安屿", "zh-Hant": "安嶼", en: "Anyu", ja: "Anyu", ko: "Anyu", es: "Anyu", fr: "Anyu", de: "Anyu" },
+  role: { zh: "你的陪伴者", "zh-Hant": "你的陪伴者", en: "Your companion", ja: "あなたのそばにいる人", ko: "당신 곁의 동행자", es: "Tu compañía", fr: "Ta présence à tes côtés", de: "Deine Begleitung" },
   blurb: {
     zh: "以倾听为主，融合稳定化与温和的认知视角。我会一直在。",
-    en: "Listening first, with grounding and a gentle cognitive lens. I'll stay."
+    "zh-Hant": "以傾聽為主，融合穩定化與溫和的認知視角。我會一直在。",
+    en: "Listening first, with grounding and a gentle cognitive lens. I'll stay.",
+    ja: "聴くことを第一に、心を落ち着ける工夫とやさしい考え方の視点を添えて。ずっとここにいます。",
+    ko: "먼저 귀 기울이고, 마음을 안정시키는 방법과 부드러운 생각의 관점을 함께 써요. 계속 여기 있을게요.",
+    es: "Primero escuchar, con ejercicios para calmarte y una mirada amable a los pensamientos. Aquí sigo.",
+    fr: "D’abord écouter, avec des repères pour s’apaiser et un regard doux sur les pensées. Je reste là.",
+    de: "Zuerst zuhören, mit Übungen zum Ankommen und einem sanften Blick auf Gedanken. Ich bleibe da."
   }
 };
 const CRISIS: Persona = {
   id: "jingshi",
   av: "#D9734E",
   crisis: true,
-  name: { zh: "安屿", en: "Anyu" },
-  role: { zh: "此刻，只陪你安全", en: "Right now, just keeping you safe" }
+  name: { zh: "安屿", "zh-Hant": "安嶼", en: "Anyu", ja: "Anyu", ko: "Anyu", es: "Anyu", fr: "Anyu", de: "Anyu" },
+  role: { zh: "此刻，只陪你安全", "zh-Hant": "此刻，只陪你安全", en: "Right now, just keeping you safe", ja: "今は、あなたの安全だけを", ko: "지금은 당신의 안전만 생각할게요", es: "Ahora mismo, solo tu seguridad", fr: "Pour l’instant, seulement ta sécurité", de: "Gerade jetzt zählt nur deine Sicherheit" }
 };
 export const PERSONAS: Persona[] = [COMPANION];
 export const personaById = (id?: string): Persona => (id === "jingshi" ? CRISIS : COMPANION);
 
 // ---- i18n ----
-export const STR = {
-  zh: {
+// Complete dictionaries for every interface language; zh is the reference shape.
+const STR_ZH = {
     sub: "JÌNGSHÌ",
     privacy_a: "历史保存在此浏览器", privacy_b: "随时可", privacy_del: "删除本地记录",
     delete_title: "删除此浏览器的对话记录？", delete_body: "将清除此浏览器的当前及往次对话、结束小结、草稿、量表、「对你的理解」、反馈、年龄和地区偏好，并停止当前请求。无法撤回服务方已处理的数据，也不会删除你已下载或分享的文件。此操作无法撤销。", delete_confirm: "删除本地记录", delete_cancel: "取消",
     placeholder: "慢慢写，我在听…",
     import_image: "导入图片", import_video: "导入视频", import_media: "添加图片或视频",
+    voice_start: "语音输入", voice_hint: "用浏览器自带的语音识别转成文字（部分浏览器会把声音交给浏览器厂商的服务器识别）。文字会先放进输入框，确认后再发送。", voice_stop: "停止语音输入", voice_denied: "没有拿到麦克风权限。可以在浏览器设置里允许，或者直接打字。", voice_network: "这个浏览器的语音识别服务暂时连不上，可以换用 Safari 或 Edge，或者直接打字。", voice_failed: "这次没听清，可以再试一次。",
     att_too_many: "最多只能添加 {n} 张图片", att_not_image: "只能添加图片", att_too_big: "图片超过 {mb}MiB，请先缩小或压缩后重试。", att_read_failed: "图片读取失败，请重新选择。", att_remove: "移除图片", att_error_close: "关闭图片提示",
     placeholder_calm: "如果想说点什么，我在这里",
     input_too_long: "太长了，分几次说",
@@ -95,7 +109,7 @@ export const STR = {
     status_connecting: "连接中", status_thinking: "思考中", status_writing: "正在回应",
     err_busy: "消息有点频繁，先歇一会儿再发。", err_connect: "连接出错了，请稍后再试。", err_too_long: "这段话太长了，请分几次发给我。", retry: "重试", vision_loading: "正在看图…",
     pace_deep: "深度", pace_fast: "快速",
-    pace_hint: "深度：带规划和复核的完整流程，更细致；快速：即时回应。",
+    pace_hint: "深度：先完成安全识别再回答，查资料更全面，用更强的模型，回答更细致；快速：更快开始回答，安全识别同时进行。",
     think_label: "思考", think_done: "思考了 {s} 秒",
     think_levels: { off: "不思考", low: "思考：低", high: "思考：高", max: "思考：最强" },
     safety_label: "安全识别", safety_checking: "识别中…", safety_safe: "未见风险", safety_unchecked: "未启用", safety_flagged: "检测到风险，请看下方资源", safety_gentle: "附了一句温和确认",
@@ -134,11 +148,26 @@ export const STR = {
     result_foot: "这只是一个自评参考，不是诊断。真正的评估需要专业人员面对面进行。如果分数让你担心，可以带着它去找现实中的咨询师或医生。",
     today_intro: "你愿意和我说说，最近是什么让你想来这里吗？没有顺序，想到哪说到哪都可以。",
     welcome_line: "这里很安静，只有我们俩。\n你不必准备好，也不必说得清楚。",
-    starters: ["我最近睡不太好", "心里有点乱，想说说", "只是想找个人待着"],
+    hello: "你好，我是安屿。",
+    err_storage_save: "浏览器暂时无法保存记录。请导出需要保留的内容，避免刷新后丢失。", err_storage_clear: "浏览器未允许清除记录，请在浏览器设置中清除此网站的数据。",
+    reply_stopped: "回应已停止，可重试这一轮。", err_image_not_stored: "原图不会保存在浏览器记录中，请重新添加图片后发送。", err_image_unread: "没有读到图片内容，请重试。", image_sent: "（我发了一张图片）",
+    case_wait: "请等当前回应结束后再更新。", case_changed: "对话已有更新，请重新整理。", case_failed: "暂时没能更新理解。原有内容仍保留，可以重试。", case_edited_notice: "已保留你的修改，不会自动覆盖。需要时可手动重新整理。",
+    case_update: "重新整理", case_edit_note: "你可以修正不准确的内容，或留空删除。多条触发因素和力量请各写一行。保存后的理解会用于后续对话。", case_save: "保存修改", case_edit: "修正我的理解", case_clear: "清空理解",
+    summary_failed: "暂时没能生成小结。可以重试，或直接写下你想记住的话。", import_failed: "无法导入这个文件。请选择静室导出的记录文件（不超过12MiB）。",
+    pause_today: "今天先到这里", past_sessions: "往次记录", support_short: "支持", you: "你",
+    refs_summary: "本轮参考资料 · {n} 条（点开核对原文）", refs_note: "这是本轮检索到的参考资料，不表示每条资料都被回答采用，也不代表回答中的每个判断已被验证。可打开原文核对；一般科普信息不替代专业诊疗。", refs_live: "实时", refs_view: "查看来源 ↗",
+    retry_note_image: "请重新添加图片后发送。", retry_note_text: "请重新发送这条消息。", reading_images: "正在读取图片…", stop_reply: "停止回应", reply_mode: "回应方式",
+    backup_title: "备份与更换域名", backup_body: "不同域名不会自动共享浏览器记录。你可以导出后在新域名导入。文件包含敏感的对话内容，请自行妥善保管，仅在可信设备导入。每段最多保留最近120条消息。原图不包含在记录备份中；历史图片描述可能保留。", backup_export: "导出我的记录", backup_import: "导入记录",
+    summary_intro: "留下一点你愿意带走的东西。小结可以修改，也可以只写自己的话。", summary_loading: "正在回顾这段对话…", summary_retry: "重新生成", summary_field: "这次想记下的", next_step_field: "我愿意试的一小步（可不填）",
+    summary_note: "只保存在此浏览器，可在「往次记录」里接着聊或删除。小结可能有误，以你的理解为准。", summary_saved: "已保存。下次可以从往次记录接着聊。", summary_save: "保存小结", summary_save_new: "保存并开始新对话",
+    history_note: "最多保留最近20段已保存的小结与对话。继续某段对话会替换当前打开的对话，请先保存当前小结。", history_empty: "还没有往次记录。在对话后选择「今天先到这里」即可保存。", history_next_step: "自选的一小步：", history_read: "查看这段对话",
+    history_continue: "接着这段聊", history_delete: "删除这段记录", history_confirm_label: "确认删除记录", history_confirm_q: "删除这段已保存的记录？此操作无法撤销。", history_delete_confirm: "确认删除",
+    import_title: "导入记录", import_body: "文件包含当前对话{m}条消息、{s}段往次记录。导入会替换此浏览器现有对话和往次记录，请先导出需要保留的内容。", import_local: "文件仅在本机读取；之后继续聊天时，相关对话内容会发送到服务端处理。", import_confirm: "替换并导入",
+    scale_lang_note: "",
     consent_title: "在开始之前",
     consent_p1_t: "我是谁", consent_p1_d: "我是 AI 陪伴练习伙伴，不是心理治疗，也不是医疗服务，不能替代专业帮助。",
     consent_p2_t: "如果你正处于危机",
-    consent_p3_t: "你的数据如何处理", consent_p3_d: "发送后，文字会经服务器交给 DeepSeek 生成回复，并可能由 Kimi 做安全识别和理解；图片由 Kimi 处理，必要时还会使用检索服务。历史保存在此浏览器。删除本地记录无法撤回服务方已处理的数据。请避免提供姓名、住址等个人身份信息。",
+    consent_p3_t: "你的数据如何处理", consent_p3_d: "发送后，文字会经服务器交给 DeepSeek 生成回复并做安全识别（DeepSeek 不可用时由 Kimi 备用识别）；「对你的理解」和图片由 Kimi 处理；需要查资料时，只把话题关键词（不含你的原话）发给检索和联网搜索服务。历史保存在此浏览器。删除本地记录无法撤回服务方已处理的数据。请避免提供姓名、住址等个人身份信息。",
     consent_p4_t: "这是内测版本", consent_p4_d: "当前为内测版本，回复可能不完善；你可以对每条回复标记有没有帮到你。",
     consent_agree: "点击下方按钮，即代表你已阅读并了解以上内容。", consent_enter: "我了解了，开始对话",
     feedback_up: "有帮到", feedback_down: "没帮到",
@@ -159,13 +188,15 @@ export const STR = {
     scale_safety_title: "先关心一下你的安全", scale_safety_note: "谢谢你告诉我。刚才关于死亡或伤害自己的回答值得单独关心，无论总分多少。你现在有伤害自己的打算，或已经做了可能伤害自己的事吗？如果眼下有危险，请先联系急救或身边可信赖的人。", scale_safety_continue: "我现在安全，继续查看", scale_safety_resources: "查看真人支持", scale_score_reference: "总分参考", feedback_export_failed: "导出失败，请重试。",
     about_safety_t: "危险时，我会带你找真人",
     about_safety: "如果出现伤害自己的念头，我会把现实中的热线和紧急联系放在最显眼的地方。"
-  },
-  en: {
+};
+export type Dict = typeof STR_ZH;
+const STR_EN: Dict = {
     sub: "QUIET ROOM",
     privacy_a: "History is saved in this browser", privacy_b: "You can", privacy_del: "delete local records",
     delete_title: "Delete this browser’s conversation records?", delete_body: "This clears current and past conversations, closing summaries, drafts, self-checks, understanding, feedback, age and region preferences in this browser, and stops active requests. It cannot recall data already processed by providers or delete files you downloaded or shared. This cannot be undone.", delete_confirm: "Delete local records", delete_cancel: "Cancel",
     placeholder: "I’m listening…",
     import_image: "Import image", import_video: "Import video", import_media: "Add image or video",
+    voice_start: "Voice input", voice_hint: "Uses your browser's built-in speech recognition (some browsers send the audio to the browser maker's servers). The text goes into the box first so you can check it before sending.", voice_stop: "Stop voice input", voice_denied: "Microphone access was not allowed. You can allow it in browser settings, or just type.", voice_network: "This browser's speech service can't be reached right now. Try Safari or Edge, or just type.", voice_failed: "Didn't catch that. You can try again.",
     att_too_many: "Up to {n} images", att_not_image: "Images only", att_too_big: "This image exceeds {mb}MiB. Resize or compress it, then try again.",
     placeholder_calm: "If you'd like to say something, I'm here",
     input_too_long: "That's a lot — try splitting it up",
@@ -173,7 +204,7 @@ export const STR = {
     status_connecting: "Connecting", status_thinking: "Thinking", status_writing: "Replying",
     err_busy: "A bit too many messages — please wait a moment.", err_connect: "Connection error — please try again.", err_too_long: "That message was too long — please send it in a few parts.", retry: "Retry", vision_loading: "Looking at the image…",
     pace_deep: "Depth", pace_fast: "Quick",
-    pace_hint: "Depth: full pipeline with planning and review — more considered. Quick: replies instantly.",
+    pace_hint: "Depth: finishes the safety check before replying, looks things up more thoroughly and uses a stronger model — more considered. Quick: starts replying sooner while the safety check runs alongside.",
     think_label: "Thinking", think_done: "Thought for {s}s",
     think_levels: { off: "No thinking", low: "Thinking: low", high: "Thinking: high", max: "Thinking: max" },
     safety_label: "Safety check", safety_checking: "checking…", safety_safe: "no risk flagged", safety_unchecked: "not run", safety_flagged: "risk flagged — see resources below", safety_gentle: "added a gentle check-in",
@@ -212,11 +243,26 @@ export const STR = {
     result_foot: "This is a self-check reference, not a diagnosis. A real assessment needs a professional, in person. If the score worries you, bring it to a real counselor or doctor.",
     today_intro: "Would you tell me what's been bringing you here lately? No order needed — wherever you'd like to begin.",
     welcome_line: "It's quiet here — just the two of us.\nYou don't have to be ready, or say it clearly.",
-    starters: ["I haven't been sleeping well", "My mind feels tangled", "I just want company"],
+    hello: "Hi, I'm Anyu.",
+    err_storage_save: "This browser could not save your records. Export what you want to keep before refreshing.", err_storage_clear: "This browser did not allow deletion. Clear this site's data in browser settings.",
+    reply_stopped: "Reply stopped. You can retry this turn.", err_image_not_stored: "Original images are not stored in history. Please attach the image again.", err_image_unread: "The image could not be read. Please retry.", image_sent: "(I sent an image)",
+    case_wait: "Wait for the current reply before updating.", case_changed: "The conversation changed. Please update again.", case_failed: "Could not update this time. Your existing notes are kept; you can retry.", case_edited_notice: "Your edits are kept and will not be overwritten automatically. You can update manually.",
+    case_update: "Update understanding", case_edit_note: "Correct anything inaccurate, or leave it blank to remove it. Use one line per trigger or strength. Your saved understanding will inform future conversations.", case_save: "Save changes", case_edit: "Edit this understanding", case_clear: "Clear understanding",
+    summary_failed: "Could not create a note this time. Retry, or write what you want to remember yourself.", import_failed: "Cannot import this file. Choose a Jingshi records export under 12MiB.",
+    pause_today: "Pause for today", past_sessions: "Past conversations", support_short: "Support", you: "You",
+    refs_summary: "Retrieved references · {n} (open to check)", refs_note: "These references were retrieved for this turn. Their presence does not mean every source was used or every claim in the reply was verified. Open the originals to check; general information does not replace professional care.", refs_live: "live", refs_view: "View source ↗",
+    retry_note_image: "Please attach the image again and send it.", retry_note_text: "Please send this message again.", reading_images: "Reading images…", stop_reply: "Stop reply", reply_mode: "Reply mode",
+    backup_title: "Backup and moving to a new domain", backup_body: "Browser records do not move automatically between domains. Export them here, then import on the new domain. The file contains sensitive conversations: keep it private and import only on a trusted device. Each conversation keeps up to 120 recent messages. Original images are not included in backups; descriptions of earlier images may be retained.", backup_export: "Export my records", backup_import: "Import records",
+    summary_intro: "Keep what matters to you. Edit this note, or write it in your own words.", summary_loading: "Looking back over this conversation…", summary_retry: "Try again", summary_field: "What I want to remember", next_step_field: "One step I choose (optional)",
+    summary_note: "Saved in this browser. Revisit or delete it in Past conversations. This note can be wrong; your view comes first.", summary_saved: "Saved. You can continue from Past conversations.", summary_save: "Save note", summary_save_new: "Save and start fresh",
+    history_note: "Keeps up to 20 saved conversations. Continuing one replaces the open conversation; save your current note first.", history_empty: "No saved conversations yet. Choose Pause for today after a chat.", history_next_step: "My next step: ", history_read: "Read this conversation",
+    history_continue: "Continue this conversation", history_delete: "Delete this record", history_confirm_label: "Confirm deletion", history_confirm_q: "Delete this saved record? This cannot be undone.", history_delete_confirm: "Delete record",
+    import_title: "Import records", import_body: "This file contains {m} messages and {s} saved conversations. Import replaces this browser's current and saved conversations. Export anything you want to keep first.", import_local: "The file is read locally. Relevant conversation content will be sent to the service when you continue chatting.", import_confirm: "Replace and import",
+    scale_lang_note: "",
     consent_title: "Before we begin",
     consent_p1_t: "Who I am", consent_p1_d: "I'm an AI companion for practice — not therapy, not a medical service, and not a substitute for professional help.",
     consent_p2_t: "If you're in crisis right now",
-    consent_p3_t: "How your data is processed", consent_p3_d: "Sent text passes through our server to DeepSeek for replies, and may be processed by Kimi for safety checks and understanding. Kimi processes images; search services may also be used when needed. History is saved in this browser. Deleting local records cannot recall data already processed by providers. Avoid names, addresses or other identifying information.",
+    consent_p3_t: "How your data is processed", consent_p3_d: "Sent text passes through our server to DeepSeek for replies and safety checks (Kimi checks safety as a backup if DeepSeek is unavailable). Kimi processes images and the \"What I understand\" notes. When something needs looking up, only topic keywords — never your own words — go to retrieval and web-search services. History is saved in this browser. Deleting local records cannot recall data already processed by providers. Avoid names, addresses or other identifying information.",
     consent_p4_t: "This is a beta", consent_p4_d: "This is an early beta — replies may be imperfect. You can mark whether each reply actually helped.",
     consent_agree: "Tapping the button below means you've read and understood the above.", consent_enter: "I understand — let's begin",
     feedback_up: "Helpful", feedback_down: "Not helpful",
@@ -238,11 +284,11 @@ export const STR = {
     att_read_failed: "The image could not be read. Please select it again.", att_remove: "Remove image", att_error_close: "Dismiss image notice",
     about_safety_t: "In danger, I point you to real people",
     about_safety: "If thoughts of self-harm appear, I help you find real-world support and encourage reaching someone you trust nearby."
-  }
 };
+export const STR: Record<Lang, Dict> = { zh: STR_ZH, "zh-Hant": STR_ZH_HANT, en: STR_EN, ja: STR_JA, ko: STR_KO, es: STR_ES, fr: STR_FR, de: STR_DE };
 
 // ---- scales (PHQ-9 / GAD-7 / ISI) ----
-export const SCALE_OPTS: Record<string, Record<Lang, string[]>> = {
+export const SCALE_OPTS: Record<string, Record<ContentLanguage, string[]>> = {
   freq4: {
     zh: ["完全没有", "有几天", "一半以上的天数", "几乎每天"],
     en: ["Not at all", "Several days", "More than half the days", "Nearly every day"]

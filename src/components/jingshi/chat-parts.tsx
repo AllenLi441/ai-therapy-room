@@ -1,12 +1,30 @@
 "use client";
 /* chat-parts.tsx — Presence, TopBar, Privacy, Stream, Bubble, Composer, Welcome
    (ported from the design handoff; window-globals → ES modules + types) */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Ic } from "./icons";
-import { STR, personaById, type Lang, type Media, type Message, type Persona } from "./data";
+import { STR, personaById, type AgeRange, type Lang, type Media, type Message, type Persona } from "./data";
+import { pickStarters } from "./starters";
+import { LANGUAGES, speechLanguage } from "@/lib/languages";
 import { CN_PRIMARY_HOTLINES, CN_SUPPLEMENTAL, INTL_RESOURCES } from "@/lib/crisis-resources";
 import { MAX_IMAGE_BYTES } from "@/lib/media-limits";
 import { THINKING_LEVELS, type ThinkingLevel } from "@/lib/model-options";
+
+// Browser speech recognition (Safari, Edge, Chrome). Text goes into the box for review,
+// never straight to the model. Absent in Firefox and most in-app browsers.
+type SpeechRecognitionLike = {
+  lang: string; continuous: boolean; interimResults: boolean;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void; stop: () => void; abort: () => void;
+};
+function speechRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as Record<string, (new () => SpeechRecognitionLike) | undefined>;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+const noSubscribe = () => () => {};
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -186,9 +204,21 @@ export function Avatar({ size = 34, glow = false, className = "" }: { size?: num
   return <Presence size={size} glow={glow} className={className} />;
 }
 
+export function LanguageSelect({ lang, onLang, className = "icon-btn lang-select" }: { lang: Lang; onLang: (lang: Lang) => void; className?: string }) {
+  const t = STR[lang];
+  return (
+    <label className={className} title={t.language_label}>
+      <Ic.lang aria-hidden="true" />
+      <select value={lang} aria-label={t.language_label} onChange={(event) => onLang(event.target.value as Lang)}>
+        {LANGUAGES.map((item) => <option key={item.code} value={item.code} lang={item.code}>{item.native}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase, onSupport }: {
   lang: Lang; theme: string; persona: Persona;
-  onTheme: () => void; onLang: () => void; onPersona: () => void; onCase: () => void;
+  onTheme: () => void; onLang: (lang: Lang) => void; onPersona: () => void; onCase: () => void;
   onSupport?: () => void;
 }) {
   const t = STR[lang];
@@ -196,13 +226,13 @@ export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCas
     <header className="topbar">
       <div className="brand"><span className="brand-name">静室</span></div>
       <div className="topbar-spacer" />
-      {onSupport && <button className="support-entry" onClick={onSupport} aria-label={t.support_title} title={t.support_title}><span className="support-entry-full">{t.support_title}</span><span className="support-entry-short" aria-hidden="true">{lang === "zh" ? "支持" : "Support"}</span></button>}
+      {onSupport && <button className="support-entry" onClick={onSupport} aria-label={t.support_title} title={t.support_title}><span className="support-entry-full">{t.support_title}</span><span className="support-entry-short" aria-hidden="true">{t.support_short}</span></button>}
       <button className="persona-chip" onClick={onPersona} aria-label={t.about_title}>
         <Avatar size={26} />
         <span className="persona-chip-name hide-sm">{persona.name[lang]}</span>
       </button>
       <button className="icon-btn" onClick={onCase} title={t.case_title} aria-label={t.case_title}><Ic.insight /></button>
-      <button className="icon-btn" onClick={onLang} title="中 / EN" aria-label={t.language_label}><Ic.lang /></button>
+      <LanguageSelect lang={lang} onLang={onLang} />
       <button className="icon-btn" onClick={onTheme} aria-label={t.theme_label}>{theme === "dark" ? <Ic.sun /> : <Ic.moon />}</button>
     </header>
   );
@@ -241,7 +271,7 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
       <div className="msg-body">
         {onDelete && !m.streaming && <MsgDelete lang={lang} onDelete={() => onDelete(m.id)} />}
         <div className="msg-who">
-          {isAI ? p.name[lang] : (lang === "zh" ? "你" : "You")}
+          {isAI ? p.name[lang] : STR[lang].you}
           {isAI && m.pace && (
             <span style={{ marginLeft: 6, fontSize: 10.5, padding: "1px 6px", borderRadius: 999, border: "1px solid var(--tone, #3a8a78)", color: "var(--tone, #3a8a78)", opacity: 0.75, verticalAlign: "middle" }}>
               {m.pace === "deep" ? STR[lang].pace_deep : STR[lang].pace_fast}
@@ -315,29 +345,25 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
           <details className="kb-refs">
             <summary>
               <Ic.clipboard />
-              {lang === "zh"
-                ? `本轮参考资料 · ${m.refs.length} 条（点开核对原文）`
-                : `Retrieved references · ${m.refs.length} (open to check)`}
+              {STR[lang].refs_summary.replace("{n}", String(m.refs.length))}
             </summary>
             <div className="kb-body">
               <div className="kb-note">
-                {lang === "zh"
-                  ? "这是本轮检索到的参考资料，不表示每条资料都被回答采用，也不代表回答中的每个判断已被验证。可打开原文核对；一般科普信息不替代专业诊疗。"
-                  : "These references were retrieved for this turn. Their presence does not mean every source was used or every claim in the reply was verified. Open the originals to check; general information does not replace professional care."}
+                {STR[lang].refs_note}
               </div>
               <ol className="kb-list">
                 {m.refs.map((r, i) => (
                   <li key={i} className="kb-item">
                     <div className="kb-title">
                       {r.title}
-                      {r.kind === "web" && <span className="kb-live">{lang === "zh" ? "实时" : "live"}</span>}
+                      {r.kind === "web" && <span className="kb-live">{STR[lang].refs_live}</span>}
                     </div>
                     {r.quote && <div className="kb-quote">“{r.quote}”</div>}
                     <div className="kb-meta">
                       {r.source && <span className="kb-source">{r.source}</span>}
                       {r.url && (
                         <a className="kb-link" href={r.url} target="_blank" rel="noopener noreferrer">
-                          {lang === "zh" ? "查看来源 ↗" : "View source ↗"}
+                          {STR[lang].refs_view}
                         </a>
                       )}
                     </div>
@@ -352,7 +378,7 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
             <Ic.refresh className="retry-ico" /> {STR[lang].retry}
           </button>
         )}
-        {m.errored && m.retryable === false && <p className="retry-note">{m.hadImages ? (lang === "zh" ? "请重新添加图片后发送。" : "Please attach the image again and send it.") : (lang === "zh" ? "请重新发送这条消息。" : "Please send this message again.")}</p>}
+        {m.errored && m.retryable === false && <p className="retry-note">{m.hadImages ? STR[lang].retry_note_image : STR[lang].retry_note_text}</p>}
       </div>
     </div>
   );
@@ -435,6 +461,10 @@ export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinkin
   const composing = useRef(false);
   const ta = useRef<HTMLTextAreaElement>(null);
   const imgInput = useRef<HTMLInputElement>(null);
+  const canSpeak = useSyncExternalStore(noSubscribe, () => speechRecognitionCtor() !== null, () => false);
+  const [listening, setListening] = useState(false);
+  const recognition = useRef<SpeechRecognitionLike | null>(null);
+  useEffect(() => () => recognition.current?.abort(), []);
 
   const grow = () => {
     const el = ta.current; if (!el) return;
@@ -478,6 +508,29 @@ export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinkin
   };
   const removeAtt = (id: string) => setAtts((a) => a.filter((x) => x.id !== id));
 
+  const toggleVoice = () => {
+    if (recognition.current) { recognition.current.stop(); return; }
+    const Recognition = speechRecognitionCtor();
+    if (!Recognition) return;
+    const rec = new Recognition();
+    rec.lang = speechLanguage(lang); rec.continuous = true; rec.interimResults = true;
+    // Append to what is already typed; results are cumulative, so rebuild from all of them.
+    const base = val;
+    const joiner = base && !/\s$/.test(base) && !["zh", "zh-Hant", "ja"].includes(lang) ? " " : "";
+    rec.onresult = (event) => {
+      const heard = Array.from(event.results, (result) => result[0]?.transcript ?? "").join("");
+      setVal(base + joiner + heard);
+    };
+    rec.onerror = (event) => {
+      if (event.error === "aborted") return;
+      setAttErr(event.error === "not-allowed" || event.error === "service-not-allowed" ? t.voice_denied
+        : event.error === "network" ? t.voice_network : t.voice_failed);
+    };
+    rec.onend = () => { if (recognition.current === rec) recognition.current = null; setListening(false); };
+    recognition.current = rec; setAttErr(""); setListening(true);
+    try { rec.start(); } catch { recognition.current = null; setListening(false); setAttErr(t.voice_failed); }
+  };
+
   // Client-side guardrail mirroring the server's 413 (max 4000 chars/message) — warn
   // well before the limit so the user never actually hits the server rejection.
   const MAX_CHARS = 4000;
@@ -487,6 +540,7 @@ export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinkin
   const canSend = (val.trim() || atts.length > 0) && !busy && !overLimit && !readingImages;
   const submit = () => {
     if (!canSend) return;
+    recognition.current?.abort(); recognition.current = null; setListening(false);
     onSend(val.trim(), atts);
     setVal(""); setAtts([]);
     requestAnimationFrame(() => { if (ta.current) ta.current.style.height = "auto"; });
@@ -498,7 +552,7 @@ export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinkin
   return (
     <div className="composer-zone">
       {attErr && <div className="attach-err" role="alert"><span>{attErr}</span><button onClick={() => setAttErr("")} aria-label={t.att_error_close}><Ic.close /></button></div>}
-      {readingImages && <div role="status">{lang === "zh" ? "正在读取图片…" : "Reading images…"}</div>}
+      {readingImages && <div role="status">{t.reading_images}</div>}
       {val.length > 0 && (
         <div
           className={"len-warn" + (overLimit ? " over" : nearLimit ? " warn" : "")}
@@ -523,11 +577,12 @@ export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinkin
           <input ref={imgInput} type="file" accept="image/*" multiple hidden aria-label={t.import_image} onChange={(e) => { void addImages(e.target.files); e.target.value = ""; }} />
         </div>
         <textarea ref={ta} value={val} rows={1} onChange={(e) => setVal(e.target.value)} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} onKeyDown={onKey} placeholder={t.placeholder} aria-label={t.placeholder} />
-        {busy && onStop ? <button className="send-btn stop-btn" onClick={onStop} aria-label={lang === "zh" ? "停止回应" : "Stop reply"}><Ic.close /></button> : <button className="send-btn" onClick={submit} disabled={!canSend} aria-label={t.send}><Ic.send /></button>}
+        {canSpeak && <button className={"tool-btn" + (listening ? " on listening" : "")} onClick={toggleVoice} aria-pressed={listening} aria-label={listening ? t.voice_stop : t.voice_start} title={listening ? t.voice_stop : t.voice_hint}><Ic.mic /></button>}
+        {busy && onStop ? <button className="send-btn stop-btn" onClick={onStop} aria-label={t.stop_reply}><Ic.close /></button> : <button className="send-btn" onClick={submit} disabled={!canSend} aria-label={t.send}><Ic.send /></button>}
       </div>
       <div className="composer-meta">
         <span className="disclaimer"><Ic.heart style={{ color: "var(--ink-3)" }} />{t.disclaimer}</span>
-        <div className="pace-toggle" role="group" aria-label={lang === "zh" ? "回应方式" : "Reply mode"} title={t.pace_hint}>
+        <div className="pace-toggle" role="group" aria-label={t.reply_mode} title={t.pace_hint}>
           <button className={pace === "deep" ? "on" : ""} aria-pressed={pace === "deep"} onClick={() => onPace("deep")} title={t.pace_hint}>{t.pace_deep}</button>
           <button className={pace === "fast" ? "on" : ""} aria-pressed={pace === "fast"} onClick={() => onPace("fast")} title={t.pace_hint}>{t.pace_fast}</button>
         </div>
@@ -539,8 +594,10 @@ export function Composer({ lang, pace, thinking, busy, onSend, onPace, onThinkin
   );
 }
 
-export function Welcome({ lang, companion, onStart }: { lang: Lang; companion: Persona; onStart: (s: string) => void }) {
+export function Welcome({ lang, ageRange, companion, onStart }: { lang: Lang; ageRange: AgeRange; companion: Persona; onStart: (s: string) => void }) {
   const t = STR[lang];
+  // A fresh draw of three openers per visit (and per language / age choice — the parent keys this component on both).
+  const [starters] = useState(() => pickStarters(lang, ageRange));
   return (
     <div className="welcome scroll">
       <div className="welcome-orb"><Presence size={134} glow breathe /></div>
@@ -548,7 +605,7 @@ export function Welcome({ lang, companion, onStart }: { lang: Lang; companion: P
       <div className="w-role">{companion.role[lang]}</div>
       <p className="w-line">{t.welcome_line}</p>
       <div className="starters">
-        {(t.starters as string[]).map((s, i) => <button key={i} className="starter" onClick={() => onStart(s)}>{s}</button>)}
+        {starters.map((s) => <button key={s} className="starter" onClick={() => onStart(s)}>{s}</button>)}
       </div>
     </div>
   );

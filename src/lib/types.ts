@@ -1,6 +1,6 @@
 export type ChatRole = "user" | "assistant";
 
-export type AppLanguage = "zh" | "en";
+export type { AppLanguage } from "./languages";
 
 export type ChatMessage = {
   id?: string;

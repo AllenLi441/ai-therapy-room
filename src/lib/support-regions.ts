@@ -1,4 +1,5 @@
 import { CN_PRIMARY_HOTLINES, CN_SUPPLEMENTAL, INTL_RESOURCES } from "./crisis-resources";
+import { localized, type AppLanguage } from "./languages";
 
 /** Shared by the browser, record backups, request validation and safety prompts. */
 export const SUPPORT_REGION_CODES = ["CN", "HK", "MO", "TW", "US", "CA", "UK", "IE", "AU", "NZ", "SG", "JP", "KR", "FR", "DE", "OTHER"] as const;
@@ -6,7 +7,7 @@ export type SelectableSupportRegion = typeof SUPPORT_REGION_CODES[number];
 // Keep the old combined selection until the user explicitly chooses a country.
 export type SupportRegion = SelectableSupportRegion | "UK_IE";
 export type SupportRegionInput = SupportRegion | Lowercase<SupportRegion>;
-type LocalizedLabel = { zh: string; en: string };
+export type LocalizedLabel = { zh: string; en: string } & Partial<Record<AppLanguage, string>>;
 export type SupportResource = {
   kind: "crisis" | "emergency" | "directory" | "youth";
   label: LocalizedLabel;
@@ -99,6 +100,68 @@ export const SUPPORT_REGIONS: Record<SupportRegion, SupportRegionDefinition> = {
   ]),
 };
 
+// Region names and generic service labels in every interface language. Country-local
+// services also get their own-language label; anything missing falls back to zh / en.
+const REGION_NAMES: Record<SupportRegion, Partial<Record<AppLanguage, string>>> = {
+  CN: { "zh-Hant": "中國大陸", ja: "中国本土", ko: "중국 본토", es: "China continental", fr: "Chine continentale", de: "Festlandchina" },
+  HK: { "zh-Hant": "中國香港", ja: "香港", ko: "홍콩", es: "Hong Kong", fr: "Hong Kong", de: "Hongkong" },
+  MO: { "zh-Hant": "中國澳門", ja: "マカオ", ko: "마카오", es: "Macao", fr: "Macao", de: "Macau" },
+  TW: { "zh-Hant": "中國台灣", ja: "台湾", ko: "대만", es: "Taiwán", fr: "Taïwan", de: "Taiwan" },
+  US: { "zh-Hant": "美國", ja: "アメリカ", ko: "미국", es: "Estados Unidos", fr: "États-Unis", de: "USA" },
+  CA: { "zh-Hant": "加拿大", ja: "カナダ", ko: "캐나다", es: "Canadá", fr: "Canada", de: "Kanada" },
+  UK: { "zh-Hant": "英國", ja: "イギリス", ko: "영국", es: "Reino Unido", fr: "Royaume-Uni", de: "Vereinigtes Königreich" },
+  IE: { "zh-Hant": "愛爾蘭", ja: "アイルランド", ko: "아일랜드", es: "Irlanda", fr: "Irlande", de: "Irland" },
+  AU: { "zh-Hant": "澳洲", ja: "オーストラリア", ko: "호주", es: "Australia", fr: "Australie", de: "Australien" },
+  NZ: { "zh-Hant": "紐西蘭", ja: "ニュージーランド", ko: "뉴질랜드", es: "Nueva Zelanda", fr: "Nouvelle-Zélande", de: "Neuseeland" },
+  SG: { "zh-Hant": "新加坡", ja: "シンガポール", ko: "싱가포르", es: "Singapur", fr: "Singapour", de: "Singapur" },
+  JP: { "zh-Hant": "日本", ja: "日本", ko: "일본", es: "Japón", fr: "Japon", de: "Japan" },
+  KR: { "zh-Hant": "韓國", ja: "韓国", ko: "대한민국", es: "Corea del Sur", fr: "Corée du Sud", de: "Südkorea" },
+  FR: { "zh-Hant": "法國", ja: "フランス", ko: "프랑스", es: "Francia", fr: "France", de: "Frankreich" },
+  DE: { "zh-Hant": "德國", ja: "ドイツ", ko: "독일", es: "Alemania", fr: "Allemagne", de: "Deutschland" },
+  OTHER: { "zh-Hant": "其他地區 / 尚未選擇", ja: "その他の地域 / 未選択", ko: "기타 지역 / 선택 안 함", es: "Otra región / sin seleccionar", fr: "Autre région / non choisie", de: "Andere Region / nicht gewählt" },
+  UK_IE: { "zh-Hant": "英國 / 愛爾蘭（舊設定）", ja: "イギリス / アイルランド（以前の設定）", ko: "영국 / 아일랜드 (이전 설정)", es: "Reino Unido / Irlanda (ajuste anterior)", fr: "Royaume-Uni / Irlande (ancien réglage)", de: "Vereinigtes Königreich / Irland (frühere Einstellung)" },
+};
+// Keyed by the English label (or note) already used above.
+const LABEL_TRANSLATIONS: Record<string, Partial<Record<AppLanguage, string>>> = {
+  "Find local support": { "zh-Hant": "查找當地支援", ja: "地域の相談窓口を探す", ko: "지역 지원 찾기", es: "Buscar ayuda local", fr: "Trouver une aide locale", de: "Hilfe vor Ort finden" },
+  "Emergency services": { "zh-Hant": "緊急服務", ja: "緊急通報", ko: "긴급 신고", es: "Servicios de emergencia", fr: "Services d’urgence", de: "Notruf" },
+  "Emergency medical services": { "zh-Hant": "緊急醫療服務", ja: "救急", ko: "응급 의료 서비스", es: "Emergencias médicas", fr: "Urgences médicales", de: "Rettungsdienst" },
+  "Emergency medical": { "zh-Hant": "急救", ja: "救急", ko: "응급 의료", es: "Emergencias médicas", fr: "Urgences médicales", de: "Rettungsdienst" },
+  "Police": { "zh-Hant": "公安報警", ja: "警察", ko: "경찰", es: "Policía", fr: "Police", de: "Polizei" },
+  "Psychological support line": { "zh-Hant": "全國心理援助熱線", ja: "心の相談ダイヤル", ko: "심리 지원 상담전화", es: "Línea de apoyo psicológico", fr: "Ligne de soutien psychologique", de: "Psychologische Hilfe-Hotline" },
+  "Youth support": { "zh-Hant": "青少年服務台", ja: "青少年相談窓口", ko: "청소년 상담", es: "Apoyo para jóvenes", fr: "Soutien aux jeunes", de: "Hilfe für Jugendliche" },
+  "Hours vary by locality": { "zh-Hant": "服務時間以所在地為準", ja: "受付時間は地域によって異なります", ko: "운영 시간은 지역마다 달라요", es: "El horario varía según la zona", fr: "Les horaires varient selon les lieux", de: "Die Zeiten sind je nach Ort verschieden" },
+  "Mental Health Support Hotline": { "zh-Hant": "情緒通精神健康支援熱線", ja: "メンタルヘルス支援ホットライン", ko: "정신건강 지원 핫라인", es: "Línea de apoyo en salud mental", fr: "Ligne de soutien en santé mentale", de: "Hotline für psychische Gesundheit" },
+  "Cantonese, Mandarin and English": { "zh-Hant": "粵語、普通話、英語", ja: "広東語・中国語（普通話）・英語", ko: "광둥어, 중국어(보통화), 영어", es: "Cantonés, mandarín e inglés", fr: "Cantonais, mandarin et anglais", de: "Kantonesisch, Mandarin und Englisch" },
+  "Caritas Life Hope Hotline": { "zh-Hant": "明愛生命熱線", ja: "カリタス生命ホットライン", ko: "카리타스 생명 희망 핫라인", es: "Línea Caritas Life Hope", fr: "Ligne Caritas Life Hope", de: "Caritas Life-Hope-Hotline" },
+  "Chinese-language service": { "zh-Hant": "中文服務", ja: "中国語での対応", ko: "중국어 서비스", es: "Servicio en chino", fr: "Service en chinois", de: "Chinesischsprachiges Angebot" },
+  "English-language service; check available hours": { "zh-Hant": "英語服務；請查看接聽時段", ja: "英語での対応。受付時間を確認してください", ko: "영어 서비스; 운영 시간을 확인하세요", es: "Servicio en inglés; consulta el horario", fr: "Service en anglais ; vérifie les horaires", de: "Englischsprachiges Angebot; bitte Zeiten prüfen" },
+  "Mental health support line": { "zh-Hant": "安心專線", ja: "心の相談専用ダイヤル", ko: "마음 안심 상담전화", es: "Línea de apoyo en salud mental", fr: "Ligne de soutien en santé mentale", de: "Hotline für psychische Gesundheit" },
+  "Suicide & Crisis Lifeline": { "zh-Hant": "自殺與危機生命線", ja: "自殺・危機ライフライン", ko: "자살 및 위기 상담전화", es: "Línea de Prevención del Suicidio y Crisis", fr: "Ligne de prévention du suicide et de crise", de: "Suizid- und Krisen-Hotline" },
+  "Suicide Crisis Helpline": { "zh-Hant": "自殺危機支援熱線", ja: "自殺危機ヘルプライン", ko: "자살 위기 상담전화", es: "Línea de ayuda en crisis suicida", fr: "Ligne d’aide en cas de crise suicidaire", de: "Hotline bei Suizidkrisen" },
+  "English and French; call or text": { "zh-Hant": "英語、法語；可電話或簡訊", ja: "英語・フランス語。電話またはSMS", ko: "영어, 프랑스어; 전화 또는 문자", es: "Inglés y francés; llamada o mensaje de texto", fr: "Anglais et français ; appel ou texto", de: "Englisch und Französisch; Anruf oder SMS" },
+  "Samaritans support": { "zh-Hant": "Samaritans 傾聽支援", ja: "サマリタンズ（傾聴）", ko: "사마리탄즈 상담", es: "Samaritans (escucha)", fr: "Samaritans (écoute)", de: "Samaritans (Zuhören)" },
+  "Lifeline crisis support": { "zh-Hant": "Lifeline 危機支援", ja: "ライフライン危機支援", ko: "라이프라인 위기 지원", es: "Lifeline: apoyo en crisis", fr: "Lifeline : soutien de crise", de: "Lifeline-Krisenhilfe" },
+  "Brief emotional support": { "zh-Hant": "簡短情緒支援", ja: "気持ちの相談（短時間）", ko: "짧은 정서 지원", es: "Apoyo emocional breve", fr: "Soutien émotionnel bref", de: "Kurze emotionale Unterstützung" },
+  "Call or text; does not replace a crisis team": { "zh-Hant": "電話或簡訊；不能取代危機團隊", ja: "電話またはSMS。危機対応チームの代わりにはなりません", ko: "전화 또는 문자; 위기 대응팀을 대신하지 않아요", es: "Llamada o mensaje; no sustituye a un equipo de crisis", fr: "Appel ou texto ; ne remplace pas une équipe de crise", de: "Anruf oder SMS; ersetzt kein Kriseninterventionsteam" },
+  "national mindline support": { "zh-Hant": "national mindline 心理支援", ja: "national mindline（心の相談）", ko: "national mindline 심리 지원", es: "Apoyo de national mindline", fr: "Soutien national mindline", de: "national mindline – Unterstützung" },
+  "SOS crisis support": { "zh-Hant": "SOS 危機支援", ja: "SOS危機支援", ko: "SOS 위기 지원", es: "SOS: apoyo en crisis", fr: "SOS : soutien de crise", de: "SOS-Krisenhilfe" },
+  "Ministry of Health support directory": { "zh-Hant": "厚生勞動省心理支援目錄", ja: "厚生労働省「まもろうよ こころ」相談窓口一覧", ko: "일본 후생노동성 상담 창구 안내", es: "Directorio de apoyo del Ministerio de Salud", fr: "Répertoire d’aide du ministère de la Santé", de: "Hilfeverzeichnis des Gesundheitsministeriums" },
+  "Japanese-language page; hours and languages vary by service": { "zh-Hant": "日語頁面；各熱線的語言和時段不同", ja: "日本語のページ。窓口ごとに対応言語と時間が異なります", ko: "일본어 페이지; 기관마다 언어와 시간이 달라요", es: "Página en japonés; horarios e idiomas varían según el servicio", fr: "Page en japonais ; horaires et langues selon le service", de: "Japanischsprachige Seite; Zeiten und Sprachen je nach Angebot" },
+  "Suicide prevention helpline": { "zh-Hant": "自殺防治諮詢專線", ja: "自殺予防相談ダイヤル", ko: "자살예방 상담전화", es: "Línea de prevención del suicidio", fr: "Ligne de prévention du suicide", de: "Hotline zur Suizidprävention" },
+  "Official information is in Korean; check other language availability": { "zh-Hant": "官方說明為韓語；其他語言請先確認", ja: "公式案内は韓国語です。他の言語は事前に確認してください", ko: "공식 안내는 한국어로 되어 있어요", es: "La información oficial está en coreano; consulta otros idiomas", fr: "Informations officielles en coréen ; vérifie les autres langues", de: "Offizielle Informationen auf Koreanisch; andere Sprachen vorab prüfen" },
+  "TelefonSeelsorge support": { "zh-Hant": "TelefonSeelsorge 傾聽支援", ja: "TelefonSeelsorge（電話相談）", ko: "TelefonSeelsorge 전화 상담", es: "TelefonSeelsorge (escucha)", fr: "TelefonSeelsorge (écoute)", de: "TelefonSeelsorge" },
+  "German-language service": { "zh-Hant": "德語服務", ja: "ドイツ語での対応", ko: "독일어 서비스", es: "Servicio en alemán", fr: "Service en allemand", de: "Deutschsprachiges Angebot" },
+  "Samaritans": { "zh-Hant": "撒瑪利亞會", ja: "サマリタンズ", ko: "사마리탄즈", es: "Samaritans", fr: "Samaritans", de: "Samaritans" },
+};
+for (const [code, definition] of Object.entries(SUPPORT_REGIONS) as Array<[SupportRegion, SupportRegionDefinition]>) {
+  Object.assign(definition.label, REGION_NAMES[code]);
+  for (const resource of [...definition.resources, ...(definition.minorResources ?? [])]) {
+    Object.assign(resource.label, LABEL_TRANSLATIONS[resource.label.en]);
+    if (resource.note) Object.assign(resource.note, LABEL_TRANSLATIONS[resource.note.en]);
+  }
+}
+
 /** Lowercase `uk` was the old API's combined UK/Ireland value. */
 export function parseSupportRegion(value: unknown): SupportRegion | null {
   if (typeof value !== "string") return null;
@@ -117,6 +180,6 @@ export function minorSupportResources(value: unknown): SupportResource[] {
   return selected.minorResources ?? selected.resources.filter((resource) => resource.kind !== "emergency");
 }
 
-export function formatSupportResourceList(resources: SupportResource[], language: "zh" | "en"): string {
-  return resources.map((item) => `${item.label[language]}: ${item.number ?? item.href}${item.note ? ` (${item.note[language]})` : ""}`).join(" / ");
+export function formatSupportResourceList(resources: SupportResource[], language: AppLanguage): string {
+  return resources.map((item) => `${localized(language, item.label)}: ${item.number ?? item.href}${item.note ? ` (${localized(language, item.note)})` : ""}`).join(" / ");
 }

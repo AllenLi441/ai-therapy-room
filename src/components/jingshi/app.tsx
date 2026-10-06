@@ -8,6 +8,7 @@ import { ImportRecords, SessionHistory, SessionSummary } from "./session-panels"
 import { CONSENT_VERSION, STORAGE_KEYS, RequestScope, modelMessages, parseRecordBackup, readCaseMap, readMessages, readScales, readSessions, storedMessages, type RecordBackup, type SessionRecord } from "./session-state";
 import { assessRisk } from "@/lib/safety";
 import { normalizeSupportRegion } from "@/lib/support-regions";
+import { contentLanguage, normalizeLanguage } from "@/lib/languages";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { REASONING_OPEN, REASONING_CLOSE, EVENT_DELIM } from "@/lib/stream-markers";
 import type { ThinkingLevel } from "@/lib/model-options";
@@ -21,14 +22,14 @@ const getServerSnapshot = () => false;
 function readInitialState() {
   const read = (key: string) => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } };
   const string = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
-  const lang: Lang = string("js_lang") === "en" ? "en" : "zh";
+  const lang: Lang = normalizeLanguage(string("js_lang"));
   const messages = readMessages(read("js_chat"));
   return {
     lang, theme: string("js_theme") === "dark" ? "dark" : "light",
     supportRegion: normalizeSupportRegion(string("js_support_region")),
     ageRange: (["adult", "minor"].includes(string("js_age_range") || "") ? string("js_age_range") : "unspecified") as AgeRange,
     consented: string("js_consent") === CONSENT_VERSION,
-    messages: messages.length ? messages : [{ id: uid(), role: "assistant", personaId: "linxi", content: `${lang === "zh" ? "你好，我是安屿。" : "Hi, I'm Anyu."}\n\n${STR[lang].today_intro}` } as Message],
+    messages: messages.length ? messages : [{ id: uid(), role: "assistant", personaId: "linxi", content: `${STR[lang].hello}\n\n${STR[lang].today_intro}` } as Message],
     scaleResults: readScales(read("js_scales")), caseMap: readCaseMap(read("js_case")), caseEdited: string("js_case_edited") === "1",
     sessions: readSessions(read("js_sessions")), activeSession: string("js_active_session"), continuation: (string("js_continuation") || "").slice(0, 3000),
   };
@@ -50,8 +51,8 @@ function ClientApp() {
   const [lang, setLang] = useState<Lang>(initial.lang);
   const [theme, setTheme] = useState(initial.theme);
   const [pace, setPace] = useState<"deep" | "fast">("deep");
-  // Thinking depth per pace (defaults: fast off, deep high); the composer edits the current pace's level.
-  const [thinkingByPace, setThinkingByPace] = useState<Record<"deep" | "fast", ThinkingLevel>>({ deep: "high", fast: "off" });
+  // Thinking depth per pace (default off for both); the composer edits the current pace's level.
+  const [thinkingByPace, setThinkingByPace] = useState<Record<"deep" | "fast", ThinkingLevel>>({ deep: "off", fast: "off" });
   const thinking = thinkingByPace[pace];
   const [supportRegion, setSupportRegion] = useState<SupportRegion>(initial.supportRegion);
   const [ageRange, setAgeRange] = useState<AgeRange>(initial.ageRange);
@@ -100,14 +101,14 @@ function ClientApp() {
   }
   function updateCrisis(value: boolean) { crisisRef.current = value; setCrisis(value); }
   function freshGreeting(language: Lang): Message {
-    return { id: uid(), role: "assistant", personaId: "linxi", content: `${language === "zh" ? "你好，我是安屿。" : "Hi, I'm Anyu."}\n\n${STR[language].today_intro}` };
+    return { id: uid(), role: "assistant", personaId: "linxi", content: `${STR[language].hello}\n\n${STR[language].today_intro}` };
   }
   function writeStorage(key: string, value: unknown) {
     try {
       if (value === null) localStorage.removeItem(key);
       else localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
     } catch {
-      setStorageError(lang === "zh" ? "浏览器暂时无法保存记录。请导出需要保留的内容，避免刷新后丢失。" : "This browser could not save your records. Export what you want to keep before refreshing.");
+      setStorageError(STR[lang].err_storage_save);
     }
   }
 
@@ -142,7 +143,7 @@ function ClientApp() {
     busyRef.current = false; setBusy(false); setCaseLoading(false); setSummaryLoading(false);
     replaceMessages((items) => items.map((message) => message.streaming ? {
       ...message, streaming: false, visionPending: false, errored: true, thinking: undefined,
-      content: `${message.content}${message.content ? "\n\n" : ""}${lang === "zh" ? "回应已停止，可重试这一轮。" : "Reply stopped. You can retry this turn."}`,
+      content: `${message.content}${message.content ? "\n\n" : ""}${STR[lang].reply_stopped}`,
     } : { ...message, visionPending: false }));
   }
   function markError(aiId: string, message: string, retryable = true) {
@@ -171,7 +172,7 @@ function ClientApp() {
       if (!content) {
         const images = user.media?.filter((m) => m.type === "image") || [];
         if (user.hadImages && !images.length) {
-          fail(lang === "zh" ? "原图不会保存在浏览器记录中，请重新添加图片后发送。" : "Original images are not stored in history. Please attach the image again.", false);
+          fail(STR[lang].err_image_not_stored, false);
           return;
         }
         let description = "";
@@ -180,13 +181,13 @@ function ClientApp() {
             const response = await fetch("/api/vision", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: im.url, language: lang }), signal: request.signal });
             if (!response.ok) throw new Error(await responseError(response));
             const data = await response.json();
-            if (typeof data.description !== "string" || !data.description.trim()) throw new Error(lang === "zh" ? "没有读到图片内容，请重试。" : "The image could not be read. Please retry.");
+            if (typeof data.description !== "string" || !data.description.trim()) throw new Error(STR[lang].err_image_unread);
             return data.description;
           }));
-          description = lang === "zh" ? `\n\n[图片描述：${descriptions.join("；")}]` : `\n\n[Image description: ${descriptions.join("; ")}]`;
+          description = contentLanguage(lang) === "zh" ? `\n\n[图片描述：${descriptions.join("；")}]` : `\n\n[Image description: ${descriptions.join("; ")}]`;
         }
         if (!request.current()) return;
-        content = (user.content || (lang === "zh" ? "（我发了一张图片）" : "(I sent an image)")) + description;
+        content = (user.content || STR[lang].image_sent) + description;
         replaceMessages((ms) => ms.map((m) => m.id === userId ? { ...m, modelContent: content, visionPending: false } : m));
       }
       if (!request.current()) return;
@@ -335,13 +336,13 @@ function ClientApp() {
   function doDeleteAll() {
     resetConversation(); setSessions([]); setConsented(false); setAgeRange("unspecified"); setSupportRegion("OTHER");
     setConfirmingDelete(false); setPendingImport(null); setDataError(undefined);
-    try { for (const key of STORAGE_KEYS) localStorage.removeItem(key); } catch { setStorageError(lang === "zh" ? "浏览器未允许清除记录，请在浏览器设置中清除此网站的数据。" : "This browser did not allow deletion. Clear this site's data in browser settings."); }
+    try { for (const key of STORAGE_KEYS) localStorage.removeItem(key); } catch { setStorageError(STR[lang].err_storage_clear); }
   }
 
   async function openCase(force = false) {
     if (!consented) return;
     setOverlay("case");
-    if (busyRef.current) { setCaseError(lang === "zh" ? "请等当前回应结束后再更新。" : "Wait for the current reply before updating."); return; }
+    if (busyRef.current) { setCaseError(STR[lang].case_wait); return; }
     if (caseLoading || (!force && (caseEdited || caseForRevision.current === revision.current))) return;
     const convo = modelMessages(messagesRef.current);
     if (convo.filter((m) => m.role === "user").length < 2) return;
@@ -353,11 +354,11 @@ function ClientApp() {
       if (!response.ok) throw new Error();
       const data = await response.json();
       if (!request.current()) return;
-      if (snapshot !== revision.current) { setCaseError(lang === "zh" ? "对话已有更新，请重新整理。" : "The conversation changed. Please update again."); return; }
+      if (snapshot !== revision.current) { setCaseError(STR[lang].case_changed); return; }
       const result = readCaseMap(data?.plan?.caseMap);
       if (!result) throw new Error();
       setCaseMap(result); setCaseEdited(false); caseForRevision.current = snapshot;
-    } catch { if (request.current()) setCaseError(lang === "zh" ? "暂时没能更新理解。原有内容仍保留，可以重试。" : "Could not update this time. Your existing notes are kept; you can retry."); }
+    } catch { if (request.current()) setCaseError(STR[lang].case_failed); }
     finally { clearTimeout(timeout); request.release(); if (request.current()) setCaseLoading(false); }
   }
   function editCase(next: CaseMap) {
@@ -379,7 +380,7 @@ function ClientApp() {
       if (!request.current()) return;
       if (snapshot !== revision.current || typeof data.summary !== "string" || !data.summary.trim()) throw new Error();
       setSummary(data.summary.slice(0, 4000));
-    } catch { if (request.current()) setSummaryError(lang === "zh" ? "暂时没能生成小结。可以重试，或直接写下你想记住的话。" : "Could not create a note this time. Retry, or write what you want to remember yourself."); }
+    } catch { if (request.current()) setSummaryError(STR[lang].summary_failed); }
     finally { clearTimeout(timeout); request.release(); if (request.current()) setSummaryLoading(false); }
   }
   function saveSummary(startNew = false) {
@@ -413,7 +414,7 @@ function ClientApp() {
       if (file.size > 12 * 1024 * 1024) throw new Error();
       const backup = parseRecordBackup(JSON.parse(await file.text()));
       if (request.current()) setPendingImport(backup);
-    } catch { if (request.current()) setDataError(lang === "zh" ? "无法导入这个文件。请选择静室导出的记录文件（不超过12MiB）。" : "Cannot import this file. Choose a Jingshi records export under 12MiB."); }
+    } catch { if (request.current()) setDataError(STR[lang].import_failed); }
     finally { request.release(); }
   }
   function confirmImport() {
@@ -426,28 +427,29 @@ function ClientApp() {
   }
 
   const started = messages.some((m) => m.role === "user");
+  function changeLanguage(next: Lang) { setLang(next); if (!started) replaceMessages([freshGreeting(next)]); }
   return <div className="app" style={{ "--tone": persona.av } as React.CSSProperties}>
-    <TopBar lang={lang} theme={theme} persona={persona} onTheme={() => setTheme(theme === "dark" ? "light" : "dark")} onLang={() => { const next = lang === "zh" ? "en" : "zh"; setLang(next); if (!started) replaceMessages([freshGreeting(next)]); }} onPersona={() => setOverlay("about")} onCase={() => void openCase()} onSupport={() => setOverlay("support")} />
+    <TopBar lang={lang} theme={theme} persona={persona} onTheme={() => setTheme(theme === "dark" ? "light" : "dark")} onLang={changeLanguage} onPersona={() => setOverlay("about")} onCase={() => void openCase()} onSupport={() => setOverlay("support")} />
     <PrivacyRibbon lang={lang} onDelete={() => setConfirmingDelete(true)} />
     {storageError && <p className={styles.notice} role="alert">{storageError}</p>}
     {crisis && <CrisisBanner lang={lang} region={supportRegion} onRegionChange={setSupportRegion} onDismiss={() => { updateCrisis(false); exitedCrisisRef.current = true; }} />}
     <div className={styles.toolbar}>
-      {started && <button className="btn ghost" disabled={busy || summaryLoading || !consented} onClick={() => void openSummary()}>{lang === "zh" ? "今天先到这里" : "Pause for today"}</button>}
-      <button className="btn ghost" disabled={!consented || busy} onClick={() => setOverlay("history")}>{lang === "zh" ? "往次记录" : "Past conversations"}</button>
+      {started && <button className="btn ghost" disabled={busy || summaryLoading || !consented} onClick={() => void openSummary()}>{STR[lang].pause_today}</button>}
+      <button className="btn ghost" disabled={!consented || busy} onClick={() => setOverlay("history")}>{STR[lang].past_sessions}</button>
     </div>
     <main className="chat-wrap">
-      {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onDelete={onDeleteMessage} /> : <Welcome lang={lang} companion={persona} onStart={(text) => void send(text, [])} />}
-      {suggestedScale && !scaleId && !crisis && <div className="scale-suggest" role="status"><span className="ss-ico"><Ic.clipboard /></span><span className="ss-text">{STR[lang].scale_suggest}（{SCALES[suggestedScale].name[lang].split(" · ")[1]}）</span><button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button><button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button></div>}
+      {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onDelete={onDeleteMessage} /> : <Welcome key={`${lang}-${ageRange}`} lang={lang} ageRange={ageRange} companion={persona} onStart={(text) => void send(text, [])} />}
+      {suggestedScale && !scaleId && !crisis && <div className="scale-suggest" role="status"><span className="ss-ico"><Ic.clipboard /></span><span className="ss-text">{STR[lang].scale_suggest}{(lang.startsWith("zh") ? "（{name}）" : " ({name})").replace("{name}", SCALES[suggestedScale].name[contentLanguage(lang)].split(" · ")[1])}</span><button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button><button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button></div>}
       <Composer key={draftRevision} lang={lang} pace={pace} busy={busy || !consented || !hydrated} tone={persona.av} onSend={(text, attachments) => void send(text, attachments)} onPace={setPace} thinking={thinking} onThinking={(level) => setThinkingByPace((current) => ({ ...current, [pace]: level }))} onStop={busy ? stopReply : undefined} />
     </main>
     {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} onExportData={exportData} onImportData={(file) => void importData(file)} dataError={dataError} />}
     {overlay === "support" && <SupportSheet lang={lang} region={supportRegion} onRegionChange={setSupportRegion} onClose={() => setOverlay(null)} />}
     {scaleId && <ScaleModal lang={lang} scaleId={scaleId} region={supportRegion} onRegionChange={setSupportRegion} onClose={() => setScaleId(null)} onComplete={(result) => setScaleResults((previous) => [...previous, result].slice(-30))} />}
-    {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} error={caseError} notice={caseEdited ? (lang === "zh" ? "已保留你的修改，不会自动覆盖。需要时可手动重新整理。" : "Your edits are kept and will not be overwritten automatically. You can update manually.") : null} onRetry={() => void openCase(true)} onChange={editCase} onClose={() => setOverlay(null)} />}
+    {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} error={caseError} notice={caseEdited ? STR[lang].case_edited_notice : null} onRetry={() => void openCase(true)} onChange={editCase} onClose={() => setOverlay(null)} />}
     {overlay === "summary" && <SessionSummary lang={lang} summary={summary} nextStep={nextStep} loading={summaryLoading} error={summaryError} saved={summarySaved} onSummary={(value) => { setSummary(value); setSummarySaved(false); }} onNextStep={(value) => { setNextStep(value); setSummarySaved(false); }} onRetry={() => void openSummary()} onSave={() => saveSummary()} onNew={() => saveSummary(true)} onClose={() => setOverlay(null)} />}
     {overlay === "history" && <SessionHistory lang={lang} sessions={sessions} onResume={resumeSession} onDelete={deleteSession} onClose={() => setOverlay(null)} />}
     {confirmingDelete && <ConfirmSheet lang={lang} onConfirm={doDeleteAll} onClose={() => setConfirmingDelete(false)} />}
     {pendingImport && <ImportRecords lang={lang} backup={pendingImport} onClose={() => setPendingImport(null)} onConfirm={confirmImport} />}
-    {hydrated && !consented && <ConsentGate lang={lang} region={supportRegion} onRegionChange={setSupportRegion} ageRange={ageRange} onAgeRangeChange={setAgeRange} onAccept={() => { writeStorage("js_consent", CONSENT_VERSION); setConsented(true); }} />}
+    {hydrated && !consented && <ConsentGate lang={lang} onLang={changeLanguage} region={supportRegion} onRegionChange={setSupportRegion} ageRange={ageRange} onAgeRangeChange={setAgeRange} onAccept={() => { writeStorage("js_consent", CONSENT_VERSION); setConsented(true); }} />}
   </div>;
 }

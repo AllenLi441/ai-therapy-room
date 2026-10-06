@@ -33,7 +33,7 @@ const SUMMARY_SYSTEM_EN = [
 export async function summarizeOlderConversation(older: Msg[], language: AppLanguage): Promise<string> {
   if (!older.length) return "";
   const payload = buildDeepSeekPayload({
-    systemPrompt: language === "en" ? SUMMARY_SYSTEM_EN : SUMMARY_SYSTEM_ZH,
+    systemPrompt: language === "zh" || language === "zh-Hant" ? SUMMARY_SYSTEM_ZH : SUMMARY_SYSTEM_EN,
     messages: older,
     model: "deepseek-v4-flash", // fast + cheap; summarization doesn't need the pro tier
     stream: false,

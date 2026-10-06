@@ -409,7 +409,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .composer textarea {
   flex: 1; min-width: 0; resize: none; border: none; background: none; outline: none;
   font-family: inherit; font-size: var(--fs-md); line-height: 1.5; color: var(--ink);
-  padding: 10px 6px 10px 4px; max-height: 168px; min-height: 24px;
+  /* Vertical padding makes one line exactly 42px tall, so the buttons (42px, bottom-aligned)
+     sit centered on the last line at any font size. */
+  padding: calc(21px - .75em) 6px calc(21px - .75em) 4px; max-height: 168px; min-height: 24px;
 }
 .composer textarea::placeholder { color: var(--ink-2); }
 .tool-btn {
@@ -419,6 +421,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .tool-btn:hover { background: var(--surface-2); color: var(--ink); }
 .tool-btn svg { width: 21px; height: 21px; }
+.composer .tool-btn { width: 42px; height: 42px; }
+.tool-btn.listening { color: var(--sage-deep); box-shadow: 0 0 0 2px var(--sage); }
 /* 发送键:青瓷圆钮,呼应 ensō 的环 */
 .send-btn {
   width: 42px; height: 42px; border-radius: var(--r-pill); flex: 0 0 auto;
@@ -1091,7 +1095,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .welcome .w-role { margin-block: 8px 14px; }
   .welcome .w-line { margin-bottom: 20px; }
   .composer-zone { padding: 10px 12px max(12px, env(safe-area-inset-bottom)); }
-  .composer textarea { font-size: 16px; min-height: 46px; padding-inline: 2px; }
+  .composer textarea { font-size: 16px; padding-inline: 2px; }
   .composer-meta { align-items: flex-start; flex-wrap: wrap; gap: 8px 12px; }
   .composer-meta .disclaimer { flex: 1; min-width: 140px; }
   .pace-toggle { flex-shrink: 0; }

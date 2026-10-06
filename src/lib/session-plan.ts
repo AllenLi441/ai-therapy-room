@@ -5,8 +5,9 @@ export function defaultTurnPlan(): TurnPlan {
     modality: "person-centered",
     protocolStep: "准确倾听并反映用户最核心的痛点",
     whatToReflect: "用户最在意、最痛的那一点",
-    intervention: "用一句话承接情绪，不急着给方法",
-    clarifyingQuestion: "你最希望我先听见的是哪一段？",
+    intervention: "先回应对方说的具体内容；对方只是倾诉就不急着给方法，明确问怎么办时给一两个具体可行的小建议",
+    // No fixed question: a literal default was parroted verbatim at the end of replies.
+    clarifyingQuestion: "",
     avoid: "不要一次塞多个建议，不要给保证"
   };
 }

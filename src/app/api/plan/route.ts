@@ -2,6 +2,7 @@ import { generateSessionPlan } from "@/lib/case-formulation";
 import { sanitizeConversation } from "@/lib/conversation-window";
 import { resolvePersona, type PersonaId } from "@/lib/personas";
 import { activateCrisisSessionRisk, assessRisk } from "@/lib/safety";
+import { normalizeLanguage, type AppLanguage } from "@/lib/languages";
 import type {
   CaseMap,
   ChatMessage,
@@ -21,7 +22,7 @@ type PlanRequest = {
   consultGoal?: ConsultGoal | null;
   personaId?: PersonaId;
   crisisModeActive?: boolean;
-  language?: "zh" | "en";
+  language?: AppLanguage;
 };
 
 export async function POST(request: Request) {
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     risk,
     consultGoal: body.consultGoal ?? null,
     persona,
-    language: body.language === "en" ? "en" : "zh",
+    language: normalizeLanguage(body.language),
     requireFresh: true,
   });
 

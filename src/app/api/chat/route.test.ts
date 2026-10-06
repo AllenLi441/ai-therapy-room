@@ -426,7 +426,7 @@ describe("thinking level wiring", () => {
   });
 
   it.each([
-    ["deep", undefined, "enabled", "high"],
+    ["deep", undefined, "disabled", undefined],
     ["deep", "low", "enabled", "low"],
     ["deep", "off", "disabled", undefined],
     ["fast", undefined, "disabled", undefined],

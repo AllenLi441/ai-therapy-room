@@ -1,3 +1,4 @@
+import { toSimplified } from "./traditional-chars";
 import { buildKimiPayload, generateKimiText, isKimiConfigured } from "./kimi";
 import { buildDeepSeekPayload, generateDeepSeekText, getDeepSeekConfig } from "./deepseek";
 import type {
@@ -220,6 +221,7 @@ const CLASSIFIER_SYSTEM = [
   "═══════════════════════════════════════════════════════════════",
   "**ENGLISH COVERAGE — apply the SAME schema / severity / pragmatic logic to English input.**",
   "═══════════════════════════════════════════════════════════════",
+  "OTHER LANGUAGES: input may also be 繁體中文, Japanese, Korean, Spanish, French or German. Apply the SAME schema, severity, pragmatic and benign-anchor logic in that language (e.g. 「死にたい」「죽고 싶어」「quiero morir」「je veux mourir」「ich will sterben」 are self death-wish statements unless clearly quoted, fictional or hyperbolic). evidence spans must quote the user's ORIGINAL words, untranslated.",
   "",
   "   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
   "   **SELF-DISGUISE HARD RULE — ENGLISH (mirrors the 假如有个人 rule above; OVERRIDES any other heuristic):**",
@@ -715,7 +717,13 @@ const DEATH_CUE_MARKERS = [
   "dont want to be here", "end it all", "no reason to live", "no future", "better off without me",
   "wish i was gone", "want to die", "don't want to wake up",
   "a burden", "if i wasn't here", "if i weren't here", "if i wasn't around", "never existed",
-  "never been born", "not wake up"
+  "never been born", "not wake up",
+  // Other interface languages (the judge quotes the user's own words as evidence).
+  "死にたい", "消えたい", "いなくなりたい", "生きていたくない", "生きたくない", "生きる意味", "目が覚めなければ", "終わりにしたい",
+  "죽고 싶", "죽고싶", "사라지고 싶", "살고 싶지 않", "살 이유", "깨어나지 않",
+  "quiero morir", "desaparecer", "no quiero vivir", "sentido vivir", "no despertar", "mejor sin mí",
+  "envie de mourir", "disparaître", "plus vivre", "plus envie de vivre", "ne pas me réveiller", "mieux sans moi",
+  "sterben", "verschwinden", "nicht mehr leben", "nicht mehr aufwachen", "besser ohne mich"
 ];
 
 const NON_SELF_PRAGMATIC: ReadonlySet<PragmaticForm> = new Set<PragmaticForm>([
@@ -726,7 +734,7 @@ const NON_SELF_PRAGMATIC: ReadonlySet<PragmaticForm> = new Set<PragmaticForm>([
 ]);
 
 function hasRealDeathCue(evidence: string[]): boolean {
-  const hay = evidence.join(" ").toLowerCase();
+  const hay = toSimplified(evidence.join(" ").toLowerCase());
   return DEATH_CUE_MARKERS.some((m) => hay.includes(m));
 }
 
