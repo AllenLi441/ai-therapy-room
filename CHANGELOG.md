@@ -3,6 +3,13 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.1.0] - 2026-10-06
+
+- Add opt-in conversation donation for building our own dataset. From a saved session (after "今天先到这里" or in past conversations), a donor sees a preview with phone numbers, ID numbers, emails, QQ/WeChat IDs, names and long numbers masked, can untick any message, picks an age range (18+ or 14–17; under 14 cannot donate) and ticks an explicit consent. Sessions that went through a crisis or suicide-concern intervention are not offered. The server masks again and stores the rows in a private Supabase table (RLS on, no policies, no anon/authenticated grants; `docs/supabase-donations.sql`). No IP, device or account is stored. Each donation gets a random id kept in the donor's browser to withdraw it, which deletes the row.
+- Off unless `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `NEXT_PUBLIC_DONATIONS=1` are set.
+- Saved sessions now keep each reply's safety label (it was dropped when history was read back).
+- Reword the no-quotes rule in the counselor prompt with positive examples only. A live 1.0.0 reply left a broken phrase (那种的感觉) where the old rule showed a placeholder pattern; local samples showed it in 0/20 replies with either wording, so the effect is not proven.
+
 ## [v1.0.0] - 2026-10-06
 
 - Add six interface languages beside 简体中文 and English: 繁體中文, 日本語, 한국어, Español, Français and Deutsch, chosen from a language menu. Each has a full interface dictionary, fixed safety texts (crisis, gentle check, medical, medication and diagnosis boundaries), localized support-region labels, and replies in that language. PHQ-9, GAD-7 and ISI stay in Chinese and English only.
