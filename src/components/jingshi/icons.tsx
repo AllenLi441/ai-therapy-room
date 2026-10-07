@@ -37,6 +37,9 @@ export const Ic: Record<string, IconFn> = {
   shield: (p) => (
     <svg viewBox="0 0 24 24" fill="none" {...p}><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>
   ),
+  gear: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" {...p}><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" /><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+  ),
   insight: (p) => (
     <svg viewBox="0 0 24 24" fill="none" {...p}><path d="M12 3a6 6 0 00-3 11.2V17h6v-2.8A6 6 0 0012 3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><path d="M9.5 20h5M10 17v3M14 17v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
   ),

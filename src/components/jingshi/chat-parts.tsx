@@ -216,10 +216,10 @@ export function LanguageSelect({ lang, onLang, className = "icon-btn lang-select
   );
 }
 
-export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase, onSupport }: {
+export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCase, onSupport, onSettings }: {
   lang: Lang; theme: string; persona: Persona;
   onTheme: () => void; onLang: (lang: Lang) => void; onPersona: () => void; onCase: () => void;
-  onSupport?: () => void;
+  onSupport?: () => void; onSettings?: () => void;
 }) {
   const t = STR[lang];
   return (
@@ -234,6 +234,7 @@ export function TopBar({ lang, theme, persona, onTheme, onLang, onPersona, onCas
       <button className="icon-btn" onClick={onCase} title={t.case_title} aria-label={t.case_title}><Ic.insight /></button>
       <LanguageSelect lang={lang} onLang={onLang} />
       <button className="icon-btn" onClick={onTheme} aria-label={t.theme_label}>{theme === "dark" ? <Ic.sun /> : <Ic.moon />}</button>
+      {onSettings && <button className="icon-btn" onClick={onSettings} aria-label={t.settings_title} title={t.settings_title}><Ic.gear /></button>}
     </header>
   );
 }

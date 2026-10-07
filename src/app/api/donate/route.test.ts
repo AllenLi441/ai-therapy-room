@@ -29,8 +29,8 @@ describe("donation endpoint", () => {
     const { id } = await response.json();
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     const [url, init] = supabase.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://example.supabase.co/rest/v1/donations");
-    expect(init.headers).toMatchObject({ apikey: "sb_secret_synthetic", Prefer: "return=minimal" });
+    expect(url).toBe("https://example.supabase.co/rest/v1/donations?on_conflict=id");
+    expect(init.headers).toMatchObject({ apikey: "sb_secret_synthetic", Prefer: "resolution=merge-duplicates,return=minimal" });
     expect(init.headers).not.toHaveProperty("Authorization");
     const row = JSON.parse(String(init.body));
     expect(row).toMatchObject({ id, age_bracket: "14-17", language: "zh", support_region: "CN", consent_version: DONATION_CONSENT_VERSION });
@@ -44,11 +44,23 @@ describe("donation endpoint", () => {
     expect((supabase.mock.calls[0] as [string, RequestInit])[1].headers).toMatchObject({ apikey: "eyJsynthetic.jwt", Authorization: "Bearer eyJsynthetic.jwt" });
   });
 
+  it("updates the same row as a conversation grows, crisis turns included", async () => {
+    const id = "6f1c2b8e-1d2a-4c3b-9a8d-7e6f5a4b3c2d";
+    const grown = { ...valid, id, messages: [...valid.messages, { role: "user", content: "后来又想到一些事" }, { role: "assistant", content: "安全提示", safety: "crisis" }] };
+    const response = await post(grown);
+    expect(await response.json()).toEqual({ id });
+    const row = JSON.parse(String((supabase.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(row.id).toBe(id);
+    expect(row.messages).toHaveLength(4);
+    expect(row.messages[3]).toMatchObject({ safety: "crisis" });
+  });
+
   it.each([
     ["under 14", { ...valid, ageBracket: "under-14" }],
     ["no consent", { ...valid, consentVersion: undefined }],
+    ["an old consent version", { ...valid, consentVersion: "1" }],
     ["no user message", { ...valid, messages: [valid.messages[1]] }],
-    ["a crisis turn", { ...valid, messages: [...valid.messages, { role: "assistant", content: "安全模板", safety: "crisis" }] }],
+    ["a malformed conversation id", { ...valid, id: "not-a-uuid" }],
     ["an unknown language", { ...valid, language: "xx" }],
   ])("rejects %s without contacting storage", async (_label, body) => {
     expect((await post(body)).status).toBe(400);
