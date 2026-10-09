@@ -3,6 +3,13 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.2.0] - 2026-10-07
+
+- Replace per-conversation donation with one choice in the opening consent: "用我的对话帮助改进静室", 同意 or 不同意 (neither preselected; one is required to enter). Agreeing needs an age of 18+, or under 18 with "I'm 14 or older" ticked; under-14s cannot agree.
+- After agreeing, every conversation, crisis turns included, is uploaded after each reply: one row per conversation, replaced as it grows (upsert on a random id kept in the browser), masked on the server. Needs UPDATE on the table: `grant update on table public.donations to service_role;`.
+- Add Settings (gear in the top bar): the sharing choice, "删除我已上传的对话", age range, support region, language and theme.
+- Remove the donate buttons and the review panel. Consent version 4, so everyone sees the opening screen once more and makes the choice.
+
 ## [v1.1.0] - 2026-10-06
 
 - Add opt-in conversation donation for building our own dataset. From a saved session (after "今天先到这里" or in past conversations), a donor sees a preview with phone numbers, ID numbers, emails, QQ/WeChat IDs, names and long numbers masked, can untick any message, picks an age range (18+ or 14–17; under 14 cannot donate) and ticks an explicit consent. Sessions that went through a crisis or suicide-concern intervention are not offered. The server masks again and stores the rows in a private Supabase table (RLS on, no policies, no anon/authenticated grants; `docs/supabase-donations.sql`). No IP, device or account is stored. Each donation gets a random id kept in the donor's browser to withdraw it, which deletes the row.

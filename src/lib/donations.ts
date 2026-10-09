@@ -1,7 +1,8 @@
-/** Conversation donations: opt-in, per session, 14+ only, stored in a private Supabase table
- * (RLS on, no policies, reachable only with the server's secret key). The table SQL is in
- * docs/supabase-donations.sql. */
-export const DONATION_CONSENT_VERSION = "1";
+/** Shared conversations: a user aged 14+ who agrees in the opening consent has every
+ * conversation uploaded (masked) after each reply, one row per conversation, updated in place.
+ * Stored in a private Supabase table (RLS on, no policies, reachable only with the server's
+ * secret key). The table SQL is in docs/supabase-donations.sql. */
+export const DONATION_CONSENT_VERSION = "2";
 export const DONATION_AGE_BRACKETS = ["18+", "14-17"] as const;
 export type DonationAgeBracket = (typeof DONATION_AGE_BRACKETS)[number];
 
@@ -44,11 +45,13 @@ function headers(key: string): Record<string, string> {
   };
 }
 
-export async function insertDonation(row: DonationRow): Promise<void> {
+/** Insert, or replace the row with the same id as the conversation grows. */
+export async function upsertDonation(row: DonationRow): Promise<void> {
   const config = supabaseConfig();
   if (!config) throw new Error("donations_not_configured");
-  const response = await fetch(`${config.url}/rest/v1/donations`, {
-    method: "POST", headers: headers(config.key), body: JSON.stringify(row), cache: "no-store",
+  const response = await fetch(`${config.url}/rest/v1/donations?on_conflict=id`, {
+    method: "POST", headers: { ...headers(config.key), Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify(row), cache: "no-store",
   });
   if (!response.ok) throw new Error(`supabase_insert_${response.status}`);
 }

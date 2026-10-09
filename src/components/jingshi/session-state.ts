@@ -3,8 +3,10 @@ import type { AgeRange, Lang, Message, SupportRegion } from "./data";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { normalizeSupportRegion } from "@/lib/support-regions";
 
-export const CONSENT_VERSION = "3"; // 3: DeepSeek-first safety check + topic-only web search disclosed
-export const STORAGE_KEYS = ["js_chat", "js_scales", "js_case", "js_case_edited", "js_consent", "js_feedback", "js_sessions", "js_active_session", "js_continuation", "js_age_range", "js_support_region", "js_draft"] as const;
+export const CONSENT_VERSION = "4"; // 4: asks whether conversations may be uploaded to improve Jingshi
+export const STORAGE_KEYS = ["js_chat", "js_scales", "js_case", "js_case_edited", "js_consent", "js_feedback", "js_sessions", "js_active_session", "js_continuation", "js_age_range", "js_support_region", "js_draft", "js_share", "js_share_current"] as const;
+// js_share_ids (random ids of uploaded conversations, no content) survives "delete local records"
+// so the uploaded copies can still be deleted from Settings afterwards.
 
 export type SessionRecord = {
   id: string;

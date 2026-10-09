@@ -128,13 +128,52 @@ export function ConfirmSheet({ lang, onConfirm, onClose }: { lang: Lang; onConfi
 // who/what this is, crisis-first guidance (hotline wording pulled from the existing
 // safety_tip string, never a hardcoded new number), on-device privacy, and beta status
 // + per-turn feedback.
-export function ConsentGate({ lang, onLang, onAccept, region, onRegionChange, ageRange, onAgeRangeChange }: {
-  lang: Lang; onLang?: (lang: Lang) => void; onAccept: () => void; region?: SupportRegion; onRegionChange?: (region: SupportRegion) => void;
+/** Whether conversations are uploaded to improve Jingshi, and for which age range (14+ only). */
+export type ShareSetting = "off" | "18+" | "14-17";
+type ShareAnswer = "yes" | "no" | null;
+
+/** null = not a usable answer yet (none picked, or "yes" without a 14+ age). */
+export function shareFor(answer: ShareAnswer, age: AgeRange, over14: boolean): ShareSetting | null {
+  if (answer === "no") return "off";
+  if (answer !== "yes") return null;
+  return age === "adult" ? "18+" : age === "minor" && over14 ? "14-17" : null;
+}
+
+function ShareChoice({ lang, age, answer, over14, onAnswer, onOver14 }: {
+  lang: Lang; age: AgeRange; answer: ShareAnswer; over14: boolean; onAnswer: (answer: "yes" | "no") => void; onOver14: (value: boolean) => void;
+}) {
+  const t = STR[lang];
+  const name = useId();
+  return <fieldset className="share-choice">
+    <legend>{t.share_title}</legend>
+    <p className="support-note">{t.share_desc}</p>
+    <label><input type="radio" name={name} checked={answer === "yes"} onChange={() => onAnswer("yes")} /> {t.share_yes}</label>
+    <label><input type="radio" name={name} checked={answer === "no"} onChange={() => onAnswer("no")} /> {t.share_no}</label>
+    {answer === "yes" && age === "minor" && <label><input type="checkbox" checked={over14} onChange={(event) => onOver14(event.target.checked)} /> {t.share_14}</label>}
+    {answer === "yes" && age === "unspecified" && <p className="support-note" role="status">{t.share_need_age}</p>}
+    {answer === "yes" && age === "minor" && !over14 && <p className="support-note" role="status">{t.share_need_14}</p>}
+  </fieldset>;
+}
+
+function AgeSelect({ lang, value, onChange }: { lang: Lang; value: AgeRange; onChange: (age: AgeRange) => void }) {
+  const t = STR[lang];
+  return <label className="support-select"><span>{t.age_label}</span><select value={value} onChange={(event) => onChange(event.target.value as AgeRange)}>
+    <option value="unspecified">{t.age_unspecified}</option><option value="adult">{t.age_adult}</option><option value="minor">{t.age_minor}</option>
+  </select></label>;
+}
+
+export function ConsentGate({ lang, onLang, onAccept, region, onRegionChange, ageRange, onAgeRangeChange, sharing = false }: {
+  lang: Lang; onLang?: (lang: Lang) => void; onAccept: (share: ShareSetting) => void; region?: SupportRegion; onRegionChange?: (region: SupportRegion) => void;
   ageRange?: AgeRange; onAgeRangeChange?: (age: AgeRange) => void;
+  /** Ask about uploading conversations (only when storage is set up). */
+  sharing?: boolean;
 }) {
   const t = STR[lang];
   const [localAge, setLocalAge] = useState<AgeRange>("unspecified");
   const selectedAge = ageRange ?? localAge;
+  const [answer, setAnswer] = useState<ShareAnswer>(null);
+  const [over14, setOver14] = useState(false);
+  const share = sharing ? shareFor(answer, selectedAge, over14) : "off";
   const points = [
     { ico: <Ic.heart />, t: t.consent_p1_t, d: t.consent_p1_d },
     { ico: <Ic.shield />, t: t.consent_p2_t, d: t.support_other_note, warn: true },
@@ -156,13 +195,12 @@ export function ConsentGate({ lang, onLang, onAccept, region, onRegionChange, ag
             </div>
           ))}
         </div>
-        <label className="support-select"><span>{t.age_label}</span><select value={selectedAge} onChange={(event) => {
-          const value = event.target.value as AgeRange; setLocalAge(value); onAgeRangeChange?.(value);
-        }}><option value="unspecified">{t.age_unspecified}</option><option value="adult">{t.age_adult}</option><option value="minor">{t.age_minor}</option></select></label>
+        <AgeSelect lang={lang} value={selectedAge} onChange={(value) => { setLocalAge(value); onAgeRangeChange?.(value); }} />
         {selectedAge === "minor" && <p className="support-note">{t.minor_note}</p>}
+        {sharing && <ShareChoice lang={lang} age={selectedAge} answer={answer} over14={over14} onAnswer={setAnswer} onOver14={setOver14} />}
         <details className="consent-support"><summary>{t.support_title}</summary><SupportResources lang={lang} region={region} onRegionChange={onRegionChange} /></details>
         <p className="consent-agree">{t.consent_agree}</p>
-        <button className="btn solid consent-enter" onClick={onAccept}>{t.consent_enter}</button>
+        <button className="btn solid consent-enter" disabled={share === null} onClick={() => { if (share) onAccept(share); }}>{t.consent_enter}</button>
     </ModalFrame>
   );
 }
@@ -256,6 +294,15 @@ export function AboutSheet({ lang, companion, onClose, onExportData, onImportDat
 
 type ResourceProps = { lang: Lang; region?: SupportRegion; onRegionChange?: (region: SupportRegion) => void };
 
+function RegionSelect({ lang, value, onChange }: { lang: Lang; value: SupportRegion; onChange: (region: SupportRegion) => void }) {
+  const t = STR[lang];
+  return <label className="support-select"><span>{t.support_region}</span><select value={value} onChange={(event) => onChange(normalizeSupportRegion(event.target.value))}>
+    <option value="OTHER">{localized(lang, SUPPORT_REGIONS.OTHER.label)}</option>
+    {SUPPORT_REGION_CODES.filter((code) => code !== "OTHER").map((code) => <option key={code} value={code}>{localized(lang, SUPPORT_REGIONS[code].label)}</option>)}
+    {value === "UK_IE" && <option value="UK_IE">{localized(lang, SUPPORT_REGIONS.UK_IE.label)}</option>}
+  </select></label>;
+}
+
 export function SupportResources({ lang, region, onRegionChange }: ResourceProps) {
   const t = STR[lang];
   const [localRegion, setLocalRegion] = useState<SupportRegion>("OTHER");
@@ -263,13 +310,7 @@ export function SupportResources({ lang, region, onRegionChange }: ResourceProps
   const resources = supportResources(selected);
   const sources = resources.filter((resource, index) => resource.kind !== "directory" && resource.sourceUrl && resources.findIndex((item) => item.sourceUrl === resource.sourceUrl) === index);
   return <section className="support-resources" aria-label={t.support_title}>
-    <label className="support-select"><span>{t.support_region}</span><select value={selected} onChange={(event) => {
-      const next = normalizeSupportRegion(event.target.value); setLocalRegion(next); onRegionChange?.(next);
-    }}>
-      <option value="OTHER">{localized(lang, SUPPORT_REGIONS.OTHER.label)}</option>
-      {SUPPORT_REGION_CODES.filter((code) => code !== "OTHER").map((code) => <option key={code} value={code}>{localized(lang, SUPPORT_REGIONS[code].label)}</option>)}
-      {selected === "UK_IE" && <option value="UK_IE">{localized(lang, SUPPORT_REGIONS.UK_IE.label)}</option>}
-    </select></label>
+    <RegionSelect lang={lang} value={selected} onChange={(next) => { setLocalRegion(next); onRegionChange?.(next); }} />
     <p className="support-note">{t.support_region_note}</p>
     {selected !== "OTHER" && <p className="support-note">{t.support_call_note}</p>}
     {selected === "OTHER" && <p className="support-note">{t.support_other_note}</p>}
@@ -281,6 +322,35 @@ export function SupportResources({ lang, region, onRegionChange }: ResourceProps
     </div>
     {sources.length > 0 && <p className="support-note">{t.support_sources}{sources.map((resource, index) => <span key={resource.sourceUrl}>{index > 0 ? " · " : ""}<a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer">{localized(lang, resource.label)}</a></span>)}</p>}
   </section>;
+}
+
+/** Settings: conversation sharing (and deleting what was uploaded), age, region, language, theme. */
+export function SettingsSheet({ lang, onLang, theme, onTheme, ageRange, onAgeRange, region, onRegion, sharing, share, onShare, onDeleteShared, notice, onClose }: {
+  lang: Lang; onLang: (lang: Lang) => void; theme: string; onTheme: () => void;
+  ageRange: AgeRange; onAgeRange: (age: AgeRange) => void; region: SupportRegion; onRegion: (region: SupportRegion) => void;
+  sharing: boolean; share: ShareSetting; onShare: (share: ShareSetting) => void; onDeleteShared: () => void; notice?: string; onClose: () => void;
+}) {
+  const t = STR[lang];
+  const [answer, setAnswer] = useState<ShareAnswer>(share === "off" ? "no" : "yes");
+  const [over14, setOver14] = useState(share === "14-17");
+  // Sharing only runs with a usable answer; "yes" without a 14+ age stays off until it is completed.
+  const apply = (nextAnswer: ShareAnswer, nextAge: AgeRange, nextOver14: boolean) => onShare(shareFor(nextAnswer, nextAge, nextOver14) ?? "off");
+  return <Sheet onClose={onClose} label={t.settings_title}>
+    <div className="sheet-head"><h2>{t.settings_title}</h2><button className="icon-btn sheet-x" onClick={onClose} aria-label={t.close}><Ic.close /></button></div>
+    <div className="sheet-body settings-body">
+      <AgeSelect lang={lang} value={ageRange} onChange={(age) => { onAgeRange(age); if (sharing) apply(answer, age, over14); }} />
+      {sharing && <>
+        <ShareChoice lang={lang} age={ageRange} answer={answer} over14={over14}
+          onAnswer={(next) => { setAnswer(next); apply(next, ageRange, over14); }}
+          onOver14={(next) => { setOver14(next); apply(answer, ageRange, next); }} />
+        <button className="btn ghost" onClick={onDeleteShared}>{t.share_delete}</button>
+        {notice && <p className="support-note" role="status">{notice}</p>}
+      </>}
+      <RegionSelect lang={lang} value={region} onChange={onRegion} />
+      <LanguageSelect lang={lang} onLang={onLang} className="support-select consent-lang" />
+      <button className="btn ghost" onClick={onTheme}>{theme === "dark" ? <Ic.sun /> : <Ic.moon />} {t.theme_label}</button>
+    </div>
+  </Sheet>;
 }
 
 export function SupportSheet({ lang, onClose, region, onRegionChange }: ResourceProps & { onClose: () => void }) {

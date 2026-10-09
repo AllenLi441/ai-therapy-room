@@ -3,8 +3,9 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { personaById, detectRisk, detectScaleNeed, STR, SCALES, type AgeRange, type Lang, type Message, type Media, type SupportRegion } from "./data";
 import { Ic } from "./icons";
 import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
-import { AboutSheet, ScaleModal, CrisisBanner, CaseDrawer, ConfirmSheet, ConsentGate, SupportSheet } from "./overlays";
-import { DonateSession, ImportRecords, SessionHistory, SessionSummary } from "./session-panels";
+import { AboutSheet, ScaleModal, CrisisBanner, CaseDrawer, ConfirmSheet, ConsentGate, SettingsSheet, SupportSheet, type ShareSetting } from "./overlays";
+import { ImportRecords, SessionHistory, SessionSummary } from "./session-panels";
+import { DONATION_CONSENT_VERSION } from "@/lib/donations";
 import { CONSENT_VERSION, STORAGE_KEYS, RequestScope, modelMessages, parseRecordBackup, readCaseMap, readMessages, readScales, readSessions, storedMessages, type RecordBackup, type SessionRecord } from "./session-state";
 import { assessRisk } from "@/lib/safety";
 import { normalizeSupportRegion } from "@/lib/support-regions";
@@ -15,7 +16,7 @@ import type { ThinkingLevel } from "@/lib/model-options";
 import styles from "./session-panels.module.css";
 
 const uid = () => crypto.randomUUID();
-type Overlay = "about" | "case" | "support" | "summary" | "history" | "donate" | null;
+type Overlay = "about" | "case" | "support" | "summary" | "history" | "settings" | null;
 const subscribeHydration = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
@@ -32,6 +33,9 @@ function readInitialState() {
     messages: messages.length ? messages : [{ id: uid(), role: "assistant", personaId: "linxi", content: `${STR[lang].hello}\n\n${STR[lang].today_intro}` } as Message],
     scaleResults: readScales(read("js_scales")), caseMap: readCaseMap(read("js_case")), caseEdited: string("js_case_edited") === "1",
     sessions: readSessions(read("js_sessions")), activeSession: string("js_active_session"), continuation: (string("js_continuation") || "").slice(0, 3000),
+    share: (["18+", "14-17"].includes(string("js_share") || "") ? string("js_share") : "off") as ShareSetting,
+    sharedIds: (Array.isArray(read("js_share_ids")) ? read("js_share_ids") : []).filter((id: unknown): id is string => typeof id === "string" && /^[0-9a-f-]{36}$/.test(id)).slice(-500),
+    shareCurrent: /^[0-9a-f-]{36}$/.test(string("js_share_current") || "") ? string("js_share_current") : null,
   };
 }
 class StorageStatus {
@@ -62,10 +66,14 @@ function ClientApp() {
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
-  // Conversation donation (opt-in, off unless NEXT_PUBLIC_DONATIONS=1 and Supabase is set up).
-  const donationsOn = process.env.NEXT_PUBLIC_DONATIONS === "1";
-  const [donatingId, setDonatingId] = useState<string | null>(null);
-  const [donationNotice, setDonationNotice] = useState("");
+  // Uploading conversations to improve Jingshi: asked in the opening consent, changed in
+  // Settings. Only offered when storage is set up (NEXT_PUBLIC_DONATIONS=1 + Supabase keys).
+  const sharing = process.env.NEXT_PUBLIC_DONATIONS === "1";
+  const [share, setShare] = useState<ShareSetting>(initial.share);
+  const shareRef = useRef(initial.share);
+  const [sharedIds, setSharedIds] = useState<string[]>(initial.sharedIds);
+  const shareConv = useRef<string | null>(initial.shareCurrent);
+  const [settingsNotice, setSettingsNotice] = useState("");
   const [scaleId, setScaleId] = useState<string | null>(null);
   const [suggestedScale, setSuggestedScale] = useState<string | null>(null);
   const offeredScales = useRef(new Set<string>());
@@ -139,8 +147,9 @@ function ClientApp() {
     if (!hydrated) return;
     writeStorage("js_scales", scaleResults); writeStorage("js_case", caseMap); writeStorage("js_case_edited", caseEdited ? "1" : null);
     writeStorage("js_sessions", sessions); writeStorage("js_active_session", activeSession); writeStorage("js_continuation", continuation || null);
+    writeStorage("js_share", share); writeStorage("js_share_ids", sharedIds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scaleResults, caseMap, caseEdited, sessions, activeSession, continuation, hydrated]);
+  }, [scaleResults, caseMap, caseEdited, sessions, activeSession, continuation, share, sharedIds, hydrated]);
 
   function invalidateRequests() {
     scope.current.invalidate(); revision.current += 1;
@@ -268,6 +277,7 @@ function ClientApp() {
         updateAi({ streaming: false });
         replaceMessages((ms) => ms.map((m) => m.id === userId ? { ...m, visionPending: false } : m));
         busyRef.current = false; setBusy(false);
+        void shareConversation();
       }
     }
   }
@@ -336,9 +346,10 @@ function ClientApp() {
     caseForRevision.current = -1; offeredScales.current.clear(); exitedCrisisRef.current = false; updateCrisis(false);
     setSuggestedScale(null); setScaleId(null); setOverlay(null); setSummary(""); setNextStep(""); setSummaryError(null); setSummarySaved(false);
     setActiveSession(null); setContinuation(""); setDraftRevision((n) => n + 1);
+    setShareConv(null);
   }
   function doDeleteAll() {
-    resetConversation(); setSessions([]); setConsented(false); setAgeRange("unspecified"); setSupportRegion("OTHER");
+    resetConversation(); setSessions([]); setConsented(false); setAgeRange("unspecified"); setSupportRegion("OTHER"); changeShare("off");
     setConfirmingDelete(false); setPendingImport(null); setDataError(undefined);
     try { for (const key of STORAGE_KEYS) localStorage.removeItem(key); } catch { setStorageError(STR[lang].err_storage_clear); }
   }
@@ -390,7 +401,7 @@ function ClientApp() {
   function saveSummary(startNew = false) {
     if (!summary.trim() || busyRef.current || summaryLoading) return;
     const id = activeSession || uid();
-    const record: SessionRecord = { id, createdAt: new Date().toISOString(), summary: summary.trim(), nextStep: nextStep.trim(), messages: storedMessages(messagesRef.current), scaleResults, caseMap };
+    const record: SessionRecord = { id, createdAt: new Date().toISOString(), summary: summary.trim(), nextStep: nextStep.trim(), messages: storedMessages(messagesRef.current), scaleResults, caseMap, ...(shareConv.current ? { donationId: shareConv.current } : {}) };
     setSessions((items) => [...items.filter((item) => item.id !== id), record].slice(-20));
     setActiveSession(id); setSummarySaved(true);
     if (startNew) resetConversation();
@@ -398,19 +409,36 @@ function ClientApp() {
   function resumeSession(record: SessionRecord) {
     resetConversation(); replaceMessages(readMessages(record.messages)); setScaleResults(record.scaleResults); setCaseMap(record.caseMap); setCaseEdited(true);
     setActiveSession(record.id); setSummary(record.summary); setNextStep(record.nextStep);
+    setShareConv(record.donationId ?? null);
     setContinuation(`${record.summary}\n${record.nextStep}`.slice(0, 3000));
   }
-  function openDonate(id: string) { setDonatingId(id); setOverlay("donate"); }
-  function markDonated(sessionId: string, donationId: string | undefined) {
-    setSessions((items) => items.map((item) => item.id === sessionId ? { ...item, donationId } : item));
-  }
-  async function withdrawDonation(session: SessionRecord) {
-    if (!session.donationId) return;
+  function setShareConv(id: string | null) { shareConv.current = id; writeStorage("js_share_current", id); }
+  function changeShare(next: ShareSetting) { shareRef.current = next; setShare(next); }
+  /** After each reply: upload the whole current conversation (masked server-side), one row per
+   * conversation that is replaced as it grows. Best effort; never blocks the chat. */
+  async function shareConversation() {
+    const ageBracket = shareRef.current;
+    if (!sharing || ageBracket === "off") return;
+    const turns = messagesRef.current.filter((m) => !m.streaming && !m.errored && m.content.trim()).slice(-240)
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 12000), safety: m.safety, pace: m.pace, feedback: m.feedback }));
+    if (!turns.some((m) => m.role === "user")) return;
+    const id = shareConv.current ?? crypto.randomUUID();
     try {
-      const response = await fetch("/api/donate", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: session.donationId }) });
-      if (!response.ok) throw new Error();
-      markDonated(session.id, undefined); setDonationNotice(STR[lang].donate_withdrawn);
-    } catch { setDonationNotice(STR[lang].donate_withdraw_failed); }
+      const response = await fetch("/api/donate", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, messages: turns, ageBracket, language: lang, supportRegion, consentVersion: DONATION_CONSENT_VERSION }) });
+      if (!response.ok || shareConv.current === id) return;
+      setShareConv(id); setSharedIds((ids) => ids.includes(id) ? ids : [...ids, id].slice(-500));
+    } catch { /* best effort */ }
+  }
+  async function deleteShared() {
+    const ids = sharedIds;
+    if (!ids.length) { setSettingsNotice(STR[lang].share_none); return; }
+    const results = await Promise.all(ids.map((id) => fetch("/api/donate", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+      .then((response) => response.ok ? id : null).catch(() => null)));
+    const gone = new Set(results.filter((id): id is string => id !== null));
+    setSharedIds(ids.filter((id) => !gone.has(id)));
+    if (shareConv.current && gone.has(shareConv.current)) setShareConv(null);
+    setSettingsNotice(STR[lang][gone.size === ids.length ? "share_deleted" : "share_delete_failed"]);
   }
   function deleteSession(id: string) {
     setSessions((items) => items.filter((item) => item.id !== id));
@@ -447,7 +475,7 @@ function ClientApp() {
   const starterHistory = sessions.slice(-5).flatMap((session) => [session.summary, ...session.messages.filter((m) => m.role === "user").map((m) => m.content)]).join("\n");
   function changeLanguage(next: Lang) { setLang(next); if (!started) replaceMessages([freshGreeting(next)]); }
   return <div className="app" style={{ "--tone": persona.av } as React.CSSProperties}>
-    <TopBar lang={lang} theme={theme} persona={persona} onTheme={() => setTheme(theme === "dark" ? "light" : "dark")} onLang={changeLanguage} onPersona={() => setOverlay("about")} onCase={() => void openCase()} onSupport={() => setOverlay("support")} />
+    <TopBar lang={lang} theme={theme} persona={persona} onSettings={() => setOverlay("settings")} onTheme={() => setTheme(theme === "dark" ? "light" : "dark")} onLang={changeLanguage} onPersona={() => setOverlay("about")} onCase={() => void openCase()} onSupport={() => setOverlay("support")} />
     <PrivacyRibbon lang={lang} onDelete={() => setConfirmingDelete(true)} />
     {storageError && <p className={styles.notice} role="alert">{storageError}</p>}
     {crisis && <CrisisBanner lang={lang} region={supportRegion} onRegionChange={setSupportRegion} onDismiss={() => { updateCrisis(false); exitedCrisisRef.current = true; }} />}
@@ -464,11 +492,11 @@ function ClientApp() {
     {overlay === "support" && <SupportSheet lang={lang} region={supportRegion} onRegionChange={setSupportRegion} onClose={() => setOverlay(null)} />}
     {scaleId && <ScaleModal lang={lang} scaleId={scaleId} region={supportRegion} onRegionChange={setSupportRegion} onClose={() => setScaleId(null)} onComplete={(result) => setScaleResults((previous) => [...previous, result].slice(-30))} />}
     {overlay === "case" && <CaseDrawer lang={lang} caseMap={caseMap} loading={caseLoading} error={caseError} notice={caseEdited ? STR[lang].case_edited_notice : null} onRetry={() => void openCase(true)} onChange={editCase} onClose={() => setOverlay(null)} />}
-    {overlay === "summary" && <SessionSummary lang={lang} summary={summary} nextStep={nextStep} loading={summaryLoading} error={summaryError} saved={summarySaved} onSummary={(value) => { setSummary(value); setSummarySaved(false); }} onNextStep={(value) => { setNextStep(value); setSummarySaved(false); }} onRetry={() => void openSummary()} onSave={() => saveSummary()} onNew={() => saveSummary(true)} onDonate={donationsOn && activeSession && !sessions.find((item) => item.id === activeSession)?.donationId ? () => openDonate(activeSession) : undefined} onClose={() => setOverlay(null)} />}
-    {overlay === "history" && <SessionHistory lang={lang} sessions={sessions} onResume={resumeSession} onDelete={deleteSession} onDonate={donationsOn ? (session) => openDonate(session.id) : undefined} onWithdraw={donationsOn ? (session) => void withdrawDonation(session) : undefined} notice={donationNotice} onClose={() => { setOverlay(null); setDonationNotice(""); }} />}
-    {overlay === "donate" && donatingId && sessions.some((item) => item.id === donatingId) && <DonateSession lang={lang} session={sessions.find((item) => item.id === donatingId)!} ageRange={ageRange} region={supportRegion} onDonated={(id) => markDonated(donatingId, id)} onClose={() => { setOverlay(null); setDonatingId(null); }} />}
+    {overlay === "summary" && <SessionSummary lang={lang} summary={summary} nextStep={nextStep} loading={summaryLoading} error={summaryError} saved={summarySaved} onSummary={(value) => { setSummary(value); setSummarySaved(false); }} onNextStep={(value) => { setNextStep(value); setSummarySaved(false); }} onRetry={() => void openSummary()} onSave={() => saveSummary()} onNew={() => saveSummary(true)} onClose={() => setOverlay(null)} />}
+    {overlay === "history" && <SessionHistory lang={lang} sessions={sessions} onResume={resumeSession} onDelete={deleteSession} onClose={() => setOverlay(null)} />}
+    {overlay === "settings" && <SettingsSheet lang={lang} onLang={changeLanguage} theme={theme} onTheme={() => setTheme(theme === "dark" ? "light" : "dark")} ageRange={ageRange} onAgeRange={setAgeRange} region={supportRegion} onRegion={setSupportRegion} sharing={sharing} share={share} onShare={changeShare} onDeleteShared={() => void deleteShared()} notice={settingsNotice} onClose={() => { setOverlay(null); setSettingsNotice(""); }} />}
     {confirmingDelete && <ConfirmSheet lang={lang} onConfirm={doDeleteAll} onClose={() => setConfirmingDelete(false)} />}
     {pendingImport && <ImportRecords lang={lang} backup={pendingImport} onClose={() => setPendingImport(null)} onConfirm={confirmImport} />}
-    {hydrated && !consented && <ConsentGate lang={lang} onLang={changeLanguage} region={supportRegion} onRegionChange={setSupportRegion} ageRange={ageRange} onAgeRangeChange={setAgeRange} onAccept={() => { writeStorage("js_consent", CONSENT_VERSION); setConsented(true); }} />}
+    {hydrated && !consented && <ConsentGate lang={lang} onLang={changeLanguage} region={supportRegion} onRegionChange={setSupportRegion} ageRange={ageRange} onAgeRangeChange={setAgeRange} sharing={sharing} onAccept={(choice) => { changeShare(choice); writeStorage("js_consent", CONSENT_VERSION); setConsented(true); }} />}
   </div>;
 }

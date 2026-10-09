@@ -1082,6 +1082,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .crisis-banner > .support-resources { max-width: var(--maxw); margin: 0 auto; padding: 4px 16px 12px; }
 .crisis-banner { max-height: 36dvh; overflow-y: auto; flex-shrink: 0; }
 .consent-support { margin-top: 16px; }
+/* Upload-to-improve choice (consent gate and Settings) */
+.share-choice { margin: 16px 0 0; padding: 12px 14px 14px; border: 1px solid var(--hairline-strong); border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 10px; font-size: var(--fs-sm); color: var(--ink); }
+.share-choice legend { padding: 0 6px; font-weight: 600; }
+.share-choice .support-note { margin: 0; }
+.share-choice label { display: flex; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; }
+.consent-enter:disabled { opacity: .45; cursor: not-allowed; }
+.settings-body { display: flex; flex-direction: column; gap: 16px; }
+.settings-body .share-choice { margin: 0; }
+.settings-body > .btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; }
+.settings-body > .btn svg { width: 18px; height: 18px; }
+.settings-body .consent-lang { flex-direction: row; align-items: center; gap: 10px; margin: 0; }
 .consent-support summary { min-height: 44px; padding-block: 10px; cursor: pointer; color: var(--sage-deep); }
 .sheet { overflow-y: auto; max-height: 90dvh; }
 .sheet > .sheet-head, .sheet > .scale-q, .sheet > .scale-nav, .sheet > .scale-safety-check { flex-shrink: 0; }
