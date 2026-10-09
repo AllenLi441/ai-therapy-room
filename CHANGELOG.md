@@ -6,6 +6,7 @@ original commit history. Versions that were never released are not backfilled.
 ## [v1.2.1] - 2026-10-09
 
 - Shorten the sharing question to one line ("愿意让我们用你的对话来改进静室吗？") plus "可以随时在设置里关闭。", in all eight languages.
+- Add "换一批" under the three welcome openers: three new random ones, never repeating those on screen.
 
 ## [v1.2.0] - 2026-10-07
 

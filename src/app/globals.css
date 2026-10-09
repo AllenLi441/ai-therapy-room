@@ -810,6 +810,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .starter:hover, .starter:focus-visible, .starter:active { color: var(--sage-deep); padding-left: 20px; }
 .starter:hover::before, .starter:focus-visible::before, .starter:active::before { background: var(--sage); }
+.starters-refresh { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 2px; font-size: var(--fs-sm); color: var(--ink-3); transition: color .2s var(--ease); }
+.starters-refresh:hover, .starters-refresh:focus-visible { color: var(--sage-deep); }
+.starters-refresh svg { width: 15px; height: 15px; }
 
 /* ============================================================ about sheet */
 .about-hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 24px 4px; }

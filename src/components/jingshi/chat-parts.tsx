@@ -599,7 +599,9 @@ export function Welcome({ lang, ageRange, history = "", companion, onStart }: { 
   const t = STR[lang];
   // Three openers per visit (and per language / age choice — the parent keys this component on both):
   // related to past sessions when there are any, otherwise a fresh random draw.
-  const [starters] = useState(() => pickStarters(lang, ageRange, 3, Math.random, history));
+  const [starters, setStarters] = useState(() => pickStarters(lang, ageRange, 3, Math.random, history));
+  // "换一批": a fresh random three, never repeating the ones on screen.
+  const refresh = () => setStarters((current) => pickStarters(lang, ageRange, 6).filter((text) => !current.includes(text)).slice(0, 3));
   return (
     <div className="welcome scroll">
       <div className="welcome-orb"><Presence size={134} glow breathe /></div>
@@ -609,6 +611,7 @@ export function Welcome({ lang, ageRange, history = "", companion, onStart }: { 
       <div className="starters">
         {starters.map((s) => <button key={s} className="starter" onClick={() => onStart(s)}>{s}</button>)}
       </div>
+      <button className="starters-refresh" onClick={refresh}><Ic.refresh aria-hidden="true" />{t.starters_refresh}</button>
     </div>
   );
 }

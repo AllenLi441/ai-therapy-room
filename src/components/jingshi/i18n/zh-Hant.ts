@@ -10,7 +10,7 @@ export const STR_ZH_HANT: Dict = {
     voice_start: "語音輸入", voice_hint: "用瀏覽器內建的語音辨識轉成文字（部分瀏覽器會把聲音交給瀏覽器廠商的伺服器辨識）。文字會先放進輸入框，確認後再傳送。", voice_stop: "停止語音輸入", voice_denied: "沒有取得麥克風權限。可以在瀏覽器設定裡允許，或者直接打字。", voice_network: "這個瀏覽器的語音辨識服務暫時連不上，可以改用 Safari 或 Edge，或者直接打字。", voice_failed: "這次沒聽清楚，可以再試一次。",
     share_title: "願意讓我們用你的對話來改進靜室嗎？",
     share_desc: "可以隨時在設定裡關閉。",
-    share_yes: "同意", share_no: "不同意", share_14: "我已年滿 14 歲", share_need_age: "選「同意」需要先在上面選年齡範圍。", share_need_14: "未滿 18 歲需要確認已年滿 14 歲，才能選同意。", settings_title: "設定", share_delete: "刪除我已上傳的對話", share_deleted: "已刪除，上傳過的對話已從資料庫移除。", share_delete_failed: "刪除沒有成功，可以稍後再試。", share_none: "還沒有上傳過對話。",
+    share_yes: "同意", share_no: "不同意", share_14: "我已年滿 14 歲", share_need_age: "選「同意」需要先在上面選年齡範圍。", share_need_14: "未滿 18 歲需要確認已年滿 14 歲，才能選同意。", settings_title: "設定", share_delete: "刪除我已上傳的對話", share_deleted: "已刪除，上傳過的對話已從資料庫移除。", share_delete_failed: "刪除沒有成功，可以稍後再試。", share_none: "還沒有上傳過對話。", starters_refresh: "換一批",
     att_too_many: "最多只能添加 {n} 張圖片", att_not_image: "只能添加圖片", att_too_big: "圖片超過 {mb}MiB，請先縮小或壓縮後重試。", att_read_failed: "圖片讀取失敗，請重新選擇。", att_remove: "移除圖片", att_error_close: "關閉圖片提示",
     placeholder_calm: "如果想說點什麼，我在這裡",
     input_too_long: "太長了，分幾次說",

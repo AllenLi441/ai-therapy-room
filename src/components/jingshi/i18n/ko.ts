@@ -10,7 +10,7 @@ export const STR_KO: Dict = {
     voice_start: "음성 입력", voice_hint: "브라우저에 내장된 음성 인식으로 글자로 바꿔요(일부 브라우저는 음성을 브라우저 회사 서버로 보내요). 글자는 먼저 입력창에 들어가니 확인한 뒤 보내면 돼요.", voice_stop: "음성 입력 중지", voice_denied: "마이크 권한이 허용되지 않았어요. 브라우저 설정에서 허용하거나 직접 입력해 주세요.", voice_network: "이 브라우저의 음성 인식 서비스에 연결할 수 없어요. Safari나 Edge를 쓰거나 직접 입력해 주세요.", voice_failed: "잘 듣지 못했어요. 다시 시도해 주세요.",
     share_title: "대화를 Jingshi 개선에 써도 될까요?",
     share_desc: "설정에서 언제든 끌 수 있어요.",
-    share_yes: "동의", share_no: "동의하지 않음", share_14: "14세 이상이에요", share_need_age: "동의하려면 먼저 위에서 연령대를 선택해 주세요.", share_need_14: "18세 미만이라면 14세 이상임을 확인해야 동의할 수 있어요.", settings_title: "설정", share_delete: "업로드한 대화 삭제", share_deleted: "삭제했어요. 업로드한 대화가 데이터베이스에서 지워졌어요.", share_delete_failed: "삭제하지 못했어요. 잠시 후 다시 시도해 주세요.", share_none: "아직 업로드한 대화가 없어요.",
+    share_yes: "동의", share_no: "동의하지 않음", share_14: "14세 이상이에요", share_need_age: "동의하려면 먼저 위에서 연령대를 선택해 주세요.", share_need_14: "18세 미만이라면 14세 이상임을 확인해야 동의할 수 있어요.", settings_title: "설정", share_delete: "업로드한 대화 삭제", share_deleted: "삭제했어요. 업로드한 대화가 데이터베이스에서 지워졌어요.", share_delete_failed: "삭제하지 못했어요. 잠시 후 다시 시도해 주세요.", share_none: "아직 업로드한 대화가 없어요.", starters_refresh: "다른 주제 보기",
     att_too_many: "이미지는 최대 {n}장까지예요", att_not_image: "이미지만 추가할 수 있어요", att_too_big: "이미지가 {mb}MiB를 넘어요. 크기를 줄이거나 압축한 뒤 다시 시도해 주세요.", att_read_failed: "이미지를 읽지 못했어요. 다시 선택해 주세요.", att_remove: "이미지 삭제", att_error_close: "이미지 안내 닫기",
     placeholder_calm: "하고 싶은 말이 생기면, 여기 있을게요",
     input_too_long: "조금 길어요. 몇 번에 나눠 주세요",
