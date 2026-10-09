@@ -3,6 +3,10 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.2.2] - 2026-10-09
+
+- Draw the Settings button as a toothed cog; the ring-with-rays icon looked like a second sun next to the theme toggle.
+
 ## [v1.2.1] - 2026-10-09
 
 - Shorten the sharing question to one line ("愿意让我们用你的对话来改进静室吗？") plus "可以随时在设置里关闭。", in all eight languages.
