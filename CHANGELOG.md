@@ -3,6 +3,11 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.2.1] - 2026-10-09
+
+- Shorten the sharing question to one line ("愿意让我们用你的对话来改进静室吗？") plus "可以随时在设置里关闭。", in all eight languages.
+- Add "换一批" under the three welcome openers: three new random ones, never repeating those on screen.
+
 ## [v1.2.0] - 2026-10-07
 
 - Replace per-conversation donation with one choice in the opening consent: "用我的对话帮助改进静室", 同意 or 不同意 (neither preselected; one is required to enter). Agreeing needs an age of 18+, or under 18 with "I'm 14 or older" ticked; under-14s cannot agree.

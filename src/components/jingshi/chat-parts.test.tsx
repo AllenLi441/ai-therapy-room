@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Bubble, Composer, PrivacyRibbon, TopBar } from "./chat-parts";
+import { Bubble, Composer, PrivacyRibbon, TopBar, Welcome } from "./chat-parts";
 import { personaById, STR } from "./data";
 import { MAX_IMAGE_BYTES } from "@/lib/media-limits";
 
@@ -53,6 +53,19 @@ describe("composer input and attachment recovery", () => {
     render(<Bubble lang="zh" persona={personaById("linxi")} m={{ id: "m2", role: "assistant", content: "图片未能处理", errored: true, retryable: false, hadImages: true }} onRetry={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "重试" })).not.toBeInTheDocument();
     expect(screen.getByText("请重新添加图片后发送。")).toBeInTheDocument();
+  });
+});
+
+describe("welcome openers", () => {
+  it("shows three new openers on 换一批", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Welcome lang="zh" ageRange="minor" companion={personaById("linxi")} onStart={vi.fn()} />);
+    const shown = () => Array.from(container.querySelectorAll(".starter"), (node) => node.textContent);
+    const before = shown();
+    await user.click(screen.getByRole("button", { name: STR.zh.starters_refresh }));
+    const after = shown();
+    expect(after).toHaveLength(3);
+    expect(after.some((text) => before.includes(text))).toBe(false);
   });
 });
 
