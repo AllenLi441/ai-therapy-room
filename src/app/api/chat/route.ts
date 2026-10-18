@@ -289,7 +289,7 @@ export async function POST(request: Request) {
       const payload = buildDeepSeekPayload({
         systemPrompt: crisisPrompt,
         messages: recent,
-        apiModel: "deepseek-v4-flash", // crisis: fast tier keeps the wait short
+        apiModel: "deepseek-flash", // crisis: fast tier keeps the wait short
         stream: false,
         maxTokens: 500
       });
@@ -415,7 +415,7 @@ export async function POST(request: Request) {
     const fastPayload = buildDeepSeekPayload({
       systemPrompt: fastSystemPrompt,
       messages: fastRecent,
-      apiModel: "deepseek-v4-flash",
+      apiModel: "deepseek-flash",
       stream: true,
       reasoningEffort: fastEffort
     });

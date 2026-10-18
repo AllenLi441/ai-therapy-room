@@ -3,6 +3,10 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.2.3] - 2026-10-18
+
+- Call DeepSeek-V4.1-Flash by its listed name `deepseek-flash` (replies in 快速, the danger judge, crisis replies, summaries, query rewriting). The old `deepseek-v4-flash` name already routed to the same model but has been dropped from `GET /models`, so it could stop working; replies are unchanged.
+
 ## [v1.2.2] - 2026-10-09
 
 - Draw the Settings button as a toothed cog; the ring-with-rays icon looked like a second sun next to the theme toggle.

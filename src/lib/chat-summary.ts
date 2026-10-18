@@ -35,7 +35,7 @@ export async function summarizeOlderConversation(older: Msg[], language: AppLang
   const payload = buildDeepSeekPayload({
     systemPrompt: language === "zh" || language === "zh-Hant" ? SUMMARY_SYSTEM_ZH : SUMMARY_SYSTEM_EN,
     messages: older,
-    model: "deepseek-v4-flash", // fast + cheap; summarization doesn't need the pro tier
+    model: "deepseek-flash", // fast + cheap; summarization doesn't need the pro tier
     stream: false,
     maxTokens: 700
   });

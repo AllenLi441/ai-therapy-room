@@ -17,9 +17,9 @@ const input = { systemPrompt: "system", messages: [{ role: "user" as const, cont
 describe("production model selection in provider payload", () => {
   it.each([
     { pace: "deep", expected: "deepseek-v4-pro", thinking: "enabled" },
-    { pace: "fast", expected: "deepseek-v4-flash", thinking: "disabled" }
+    { pace: "fast", expected: "deepseek-flash", thinking: "disabled" }
   ])("$pace uses its configured API model despite the legacy picker value", ({ pace, expected, thinking }) => {
-    vi.stubEnv("DEEPSEEK_MODEL", expected === "deepseek-v4-pro" ? "deepseek-v4-flash" : "deepseek-v4-pro");
+    vi.stubEnv("DEEPSEEK_MODEL", expected === "deepseek-v4-pro" ? "deepseek-flash" : "deepseek-v4-pro");
     for (const option of DEEPSEEK_MODEL_OPTIONS) {
       const payload = buildDeepSeekPayload({ ...input, model: option.id, apiModel: resolveApiModelForPace(pace) });
       expect(payload.model, option.id).toBe(expected);
@@ -28,7 +28,7 @@ describe("production model selection in provider payload", () => {
   });
 
   it("the default or unknown pace uses the configured deep model in the actual payload", () => {
-    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-v4-flash");
+    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-flash");
     for (const pace of [undefined, "not-a-pace"]) {
       expect(buildDeepSeekPayload({ ...input, model: DEFAULT_DEEPSEEK_MODEL, apiModel: resolveApiModelForPace(pace) }).model)
         .toBe("deepseek-v4-pro");
@@ -47,7 +47,7 @@ describe("production model selection in provider payload", () => {
       vi.stubEnv("DEEPSEEK_MODEL", envModel);
       for (const apiModel of [undefined, "not-a-real-model", "deepseek-v5.5-flash"]) {
         expect(buildDeepSeekPayload({ ...input, model: DEFAULT_DEEPSEEK_MODEL, apiModel }).model)
-          .toBe("deepseek-v4-flash");
+          .toBe("deepseek-flash");
       }
     }
   });

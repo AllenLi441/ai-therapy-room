@@ -518,7 +518,7 @@ async function judgeDeepSeekFirst(
     const payload = buildDeepSeekPayload({
       systemPrompt: CLASSIFIER_SYSTEM,
       messages: [{ role: "user", content: userContent }],
-      apiModel: "deepseek-v4-flash",
+      apiModel: "deepseek-flash",
       stream: false,
       maxTokens: 320
     });
@@ -647,7 +647,7 @@ export async function assessImplicitRiskWithLLM(
       const backupPayload = buildDeepSeekPayload({
         systemPrompt: CLASSIFIER_SYSTEM,
         messages: [{ role: "user", content: userContent }],
-        apiModel: "deepseek-v4-flash",
+        apiModel: "deepseek-flash",
         stream: false,
         maxTokens: 320
       });

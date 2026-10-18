@@ -23,7 +23,7 @@ describe("thinking level → DeepSeek payload", () => {
   });
 
   it("flash with an effort thinks, sends reasoning_effort and gets a thinking-sized budget", () => {
-    const p = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-v4-flash", reasoningEffort: "high" });
+    const p = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-flash", reasoningEffort: "high" });
     expect(p.thinking).toEqual({ type: "enabled" });
     expect(p.reasoning_effort).toBe("high");
     expect(p.max_tokens).toBe(8192);
@@ -37,7 +37,7 @@ describe("thinking level → DeepSeek payload", () => {
   });
 
   it("no effort keeps the legacy behaviour for internal callers (flash never thinks)", () => {
-    const p = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-v4-flash" });
+    const p = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-flash" });
     expect(p.thinking).toEqual({ type: "disabled" });
     expect(p).not.toHaveProperty("reasoning_effort");
   });
@@ -53,7 +53,7 @@ describe("reasoning text never leaves the server", () => {
     ].map((delta) => `data: ${JSON.stringify({ choices: [{ delta }] })}\n`).join("") + "data: [DONE]\n";
     vi.mocked(resilientFetch).mockResolvedValueOnce(new Response(sse, { status: 200 }));
 
-    const payload = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-v4-flash", reasoningEffort: "low" });
+    const payload = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-flash", reasoningEffort: "low" });
     const stream = await createDeepSeekTextStream(payload, { includeReasoning: true });
     const out = await new Response(stream).text();
 

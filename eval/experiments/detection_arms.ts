@@ -429,7 +429,7 @@ async function main() {
     freezeManifest(paths, {
       runId, scope: "local-POST-synthetic-seed", inputs: snapshot, concurrency: 1,
       judge: { primary: resolveJudgePrimary(), provider: kimi.provider, origin: new URL(kimi.baseUrl).origin, model: kimi.model, configured: Boolean(kimi.apiKey), timeoutMs: 30000, fastTimeoutMs: 5000, blockingTimeoutMs: 12000 },
-      generator: { origin: new URL(deepseek.baseUrl).origin, configured: Boolean(deepseek.apiKey), fast: model("deepseek-v4-flash"), deep: model("deepseek-v4-pro") },
+      generator: { origin: new URL(deepseek.baseUrl).origin, configured: Boolean(deepseek.apiKey), fast: model("deepseek-flash"), deep: model("deepseek-v4-pro") },
       credentials: process.env.EVAL_ALLOW_PRODUCTION_KEYS === "1" ? "explicit-production-override" : "dedicated-eval-only",
     });
     if (arm !== "lexicon") requireJudge();
