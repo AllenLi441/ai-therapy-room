@@ -26,7 +26,7 @@ describe("summary endpoint", () => {
     const response = await POST(request({ messages: [{ role: "user", content: "合成的工作压力" }] }));
     expect(response.status).toBe(200);
     expect(generateDeepSeekText).toHaveBeenCalledWith(expect.objectContaining({
-      model: "deepseek-v4-flash",
+      model: "deepseek-flash",
       thinking: { type: "disabled" },
       max_tokens: 750,
       stream: false

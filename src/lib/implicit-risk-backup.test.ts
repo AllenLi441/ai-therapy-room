@@ -28,7 +28,7 @@ vi.mock("@/lib/deepseek", async (importOriginal) => {
     getDeepSeekConfig: vi.fn(() => ({
       apiKey: "test-deepseek-key",
       baseUrl: "https://api.deepseek.com",
-      model: "deepseek-v4-flash"
+      model: "deepseek-flash"
     })),
     generateDeepSeekText: vi.fn(async () =>
       JSON.stringify({

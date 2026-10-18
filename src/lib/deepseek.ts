@@ -90,7 +90,7 @@ export function buildDeepSeekPayload(input: {
   systemPrompt: string;
   messages: ChatMessage[];
   model?: DeepSeekModelId;        // legacy UI-label, ignored (kept for callers)
-  apiModel?: string;              // real API model: deepseek-v4-pro | deepseek-v4-flash
+  apiModel?: string;              // real API model: deepseek-v4-pro | deepseek-flash
   stream?: boolean;
   maxTokens?: number;
   /** User-chosen thinking depth. Omitted → legacy default (pro thinks, flash doesn't). */

@@ -30,7 +30,7 @@ export async function rewriteRetrievalQuery(raw: string, timeoutMs = 2_500): Pro
     const payload = buildDeepSeekPayload({
       systemPrompt: SYSTEM_PROMPT,
       messages: [{ role: "user", content: raw }],
-      apiModel: "deepseek-v4-flash", // fast/cheap tier — this is a small pre-processing step, not the reply
+      apiModel: "deepseek-flash", // fast/cheap tier — this is a small pre-processing step, not the reply
       stream: false,
       maxTokens: 60
     });

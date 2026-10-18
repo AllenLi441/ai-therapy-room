@@ -1,6 +1,6 @@
 // The chat talks to a real DeepSeek model chosen by SESSION PACE:
 //   deep → deepseek-v4-pro   + full plan/review pipeline (more considered, slower)
-//   fast → deepseek-v4-flash + skip the review pass (quicker)
+//   fast → deepseek-flash + skip the review pass (quicker)
 // The env var DEEPSEEK_MODEL still sets the model for non-pace callers (e.g. the
 // summary route) and as a fallback; it defaults to the fast tier.
 export const SESSION_PACE_OPTIONS = [
@@ -55,14 +55,13 @@ export function reasoningEffortFor(level: ThinkingLevel): "none" | "low" | "high
 
 // The real DeepSeek API model name (env-driven; used by the summary route and as
 // the chat fallback). Defaults to the cheap fast tier.
-export const DEFAULT_DEEPSEEK_API_MODEL = "deepseek-v4-flash";
+export const DEFAULT_DEEPSEEK_API_MODEL = "deepseek-flash";
 
-// Current DeepSeek API models: "deepseek-v4-flash" (fast) and "deepseek-v4-pro"
-// (the 1.6T reasoning tier). Legacy aliases "deepseek-chat"/"deepseek-reasoner"
-// are deprecated 2026-07-24 (both map to v4-flash's non-thinking/thinking modes),
-// so we standardize on the v4 names and coerce anything unknown to the fast
-// default rather than 400 the provider.
-const VALID_API_MODELS = new Set(["deepseek-v4-pro", "deepseek-v4-flash"]);
+// Current DeepSeek API models (GET /models, 2026-10-18): "deepseek-flash" (DeepSeek-V4.1-Flash,
+// fast) and "deepseek-v4-pro" (the reasoning tier). The old "deepseek-v4-flash" name still
+// routes to V4.1-Flash but is no longer listed, and "deepseek-chat"/"deepseek-reasoner" were
+// deprecated 2026-07-24, so anything unknown is coerced to the fast default rather than 400.
+const VALID_API_MODELS = new Set(["deepseek-v4-pro", "deepseek-flash"]);
 
 export function resolveApiModel(): string {
   const fromEnv = process.env.DEEPSEEK_MODEL?.trim();
@@ -74,10 +73,10 @@ export function isValidApiModel(value: unknown): value is string {
 }
 
 // The deep/fast toggle selects a REAL model: deep = deepseek-v4-pro (the 1.6T
-// reasoning model, deeper + slower + pricier), fast = deepseek-v4-flash (quicker,
+// reasoning model, deeper + slower + pricier), fast = deepseek-flash (quicker,
 // cheaper). Both are current DeepSeek API model names.
 export function resolveApiModelForPace(pace: unknown): string {
-  return resolveSessionPace(pace) === "fast" ? "deepseek-v4-flash" : "deepseek-v4-pro";
+  return resolveSessionPace(pace) === "fast" ? "deepseek-flash" : "deepseek-v4-pro";
 }
 
 // ── RECOVERY RECONCILIATION (2026-06-13) ──────────────────────────────────────
@@ -105,7 +104,7 @@ export const DEEPSEEK_MODEL_OPTIONS = [
     description: "兼容回退：质量优先，适合复杂倾诉、关系议题和长对话。"
   },
   {
-    id: "deepseek-v4-flash",
+    id: "deepseek-flash",
     label: "快速 4.0",
     description: "兼容回退：速度优先，适合轻量陪伴和日常梳理。"
   }

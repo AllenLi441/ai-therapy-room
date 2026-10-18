@@ -35,7 +35,7 @@ describe("deepseek config and payload", () => {
 describe("deep/fast → real model switch (A)", () => {
   it("maps pace to a VALID API model: deep→v4-pro, fast→v4-flash, default→deep", () => {
     expect(resolveApiModelForPace("deep")).toBe("deepseek-v4-pro");
-    expect(resolveApiModelForPace("fast")).toBe("deepseek-v4-flash");
+    expect(resolveApiModelForPace("fast")).toBe("deepseek-flash");
     expect(resolveApiModelForPace(undefined)).toBe("deepseek-v4-pro");
   });
 
@@ -46,15 +46,15 @@ describe("deep/fast → real model switch (A)", () => {
     expect(deep.thinking).toEqual({ type: "enabled" });
     expect(deep.max_tokens).toBeGreaterThan(900);
 
-    const fast = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-v4-flash" });
-    expect(fast.model).toBe("deepseek-v4-flash");
+    const fast = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-flash" });
+    expect(fast.model).toBe("deepseek-flash");
     expect(fast.thinking).toEqual({ type: "disabled" });
   });
 
   it("a bogus apiModel falls back to the safe default — never sent to the API", () => {
     vi.stubEnv("DEEPSEEK_MODEL", "");
     const payload = buildDeepSeekPayload({ systemPrompt: "s", messages: [u("hi")], apiModel: "deepseek-reasoner" });
-    expect(payload.model).toBe("deepseek-v4-flash");
+    expect(payload.model).toBe("deepseek-flash");
   });
 });
 
@@ -107,7 +107,7 @@ describe("normalizeConversationForProvider", () => {
   });
 
   it("is applied inside buildDeepSeekPayload so the provider never sees a leading assistant", () => {
-    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-v4-flash");
+    vi.stubEnv("DEEPSEEK_MODEL", "deepseek-flash");
     const payload = buildDeepSeekPayload({
       systemPrompt: "system",
       messages: [a("欢迎语"), u("我想聊聊"), a("好的"), a("已切换人设"), u("现在呢")]
