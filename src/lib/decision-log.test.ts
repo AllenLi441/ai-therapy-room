@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { buildDecisionLogEntry } from "./decision-log";
+import { promises as fs } from "node:fs";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { appendDecisionLog, buildDecisionLogEntry } from "./decision-log";
 import type { ImplicitOutcome, ImplicitDecision } from "./implicit-risk";
 import type { RiskAssessment } from "./types";
 
@@ -109,5 +110,16 @@ describe("decision-log privacy redaction", () => {
     });
     expect(entry.userMessage.length).toBe(600);
     expect(entry.conversationDigest.length).toBeLessThanOrEqual(1600);
+  });
+});
+
+describe("decision log on Vercel", () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+  it("skips the file log on the read-only, per-instance filesystem", async () => {
+    vi.stubEnv("VERCEL", "1");
+    const mkdir = vi.spyOn(fs, "mkdir"), write = vi.spyOn(fs, "appendFile");
+    await appendDecisionLog(build());
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
   });
 });

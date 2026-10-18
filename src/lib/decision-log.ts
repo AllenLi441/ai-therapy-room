@@ -94,7 +94,9 @@ function logPath() {
 let warned = false;
 
 export async function appendDecisionLog(entry: Omit<DecisionLogEntry, "ts">) {
-  if (process.env.QUIET_ROOM_DECISION_LOG_DISABLED === "1") return;
+  // Vercel's filesystem is read-only and per instance: a file log can neither be written nor
+  // kept there (it failed with ENOENT on /var/task/logs). Local and self-hosted runs still log.
+  if (process.env.QUIET_ROOM_DECISION_LOG_DISABLED === "1" || process.env.VERCEL === "1") return;
 
   const full: DecisionLogEntry = { ts: isoDate(), ...entry };
   try {
