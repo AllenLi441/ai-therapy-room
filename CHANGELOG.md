@@ -3,6 +3,10 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.2.4] - 2026-10-18
+
+- Skip the file decision log on Vercel: the filesystem there is read-only and per instance, so creating `/var/task/logs` failed and the log switched itself off with a warning. Local and self-hosted runs still log.
+
 ## [v1.2.3] - 2026-10-18
 
 - Call DeepSeek-V4.1-Flash by its listed name `deepseek-flash` (replies in 快速, the danger judge, crisis replies, summaries, query rewriting). The old `deepseek-v4-flash` name already routed to the same model but has been dropped from `GET /models`, so it could stop working; replies are unchanged.
