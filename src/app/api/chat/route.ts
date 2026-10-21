@@ -41,6 +41,7 @@ import type {
   ChatMessage,
   AppLanguage,
   IntakeProfile,
+  KnowledgeCard,
   RiskAssessment,
   ScaleResult,
   TurnPlan
@@ -476,6 +477,7 @@ export async function POST(request: Request) {
       .filter((k) => k.sourceUrl)
       .map((k) => ({ title: k.title, source: k.sourceTitle, url: k.sourceUrl, quote: k.sourceQuote }));
     const fastHeaders: Record<string, string> = { "X-Pace": "fast", "X-Safety": "parallel", ...turnHeader("deepseek_normal", fastTrace) };
+    if (evidenceMs !== undefined) fastHeaders["Server-Timing"] = `evidence;dur=${evidenceMs}`;
     if (fastRefs.length) fastHeaders["X-Knowledge"] = encodeURIComponent(JSON.stringify(fastRefs));
     try {
       const fastThinking = fastEffort !== "none";
@@ -520,6 +522,34 @@ export async function POST(request: Request) {
   // intercepts the first post-exit message with a safety template (the off-by-one
   // "still in safety mode for one more turn"). A genuinely risky current message is
   // still caught because it's the one being classified.
+  // Retrieve only when info-seeking AND not in an active crisis window. Suppressing
+  // grounding mid-crisis (symmetric with the web-search guard below) keeps the reply
+  // focused on stabilization instead of pivoting to sourced psychoeducation; the
+  // deterministic crisis resources stay attached regardless. Same topic-only query in both
+  // modes: no private case-map text or full user history goes to an extra
+  // rewrite/embedding/search provider; topic changes win over history.
+  const evidenceWanted = infoSeeking && !crisisModeActive;
+  type Evidence = { knowledge: KnowledgeCard[]; webResults: Awaited<ReturnType<typeof searchAuthoritative>>; ms?: number };
+  async function gatherEvidence(): Promise<Evidence> {
+    const started = Date.now();
+    // Deep mode reranks + relaxes the Tier-1 timeout; fast turns skip rerank.
+    // retrieveKnowledge enforces the hard wall-clock budget either way.
+    const knowledge = await retrieveKnowledge(retrievalQuery.query, 4, { fastMode: pace === "fast" });
+    // KB miss + DEEP mode → live web fallback, restricted to authoritative medical/research
+    // domains (see web-search.ts). Fast mode skips it (would blow the ≤6s budget); no
+    // SEARCH_API_KEY → [] (KB-only, unchanged).
+    const webResults = pace === "deep" && knowledge.length === 0 ? await searchAuthoritative(retrievalQuery.query, 3) : [];
+    return { knowledge, webResults, ms: Date.now() - started };
+  }
+  // The lookup is topic-only, so on a turn with no danger signal at all it runs while the
+  // judge decides instead of after it (the wait becomes the longer of the two, not the
+  // sum). A turn with any lexicon flag or soft cue keeps the old order, so a vulnerable
+  // user's crisis is never retrieved or web-searched; if the judge still intercepts here,
+  // the early result is simply never used.
+  const earlyEvidence = evidenceWanted && lexiconClean && !hasImplicitSuspicion(recentUserConcat) && !body.exitedCrisis
+    ? gatherEvidence().catch((): Evidence => ({ knowledge: [], webResults: [] }))
+    : null;
+
   const judgeStarted = Date.now();
   const implicitOutcome = await assessImplicitRiskWithLLM(body.exitedCrisis ? [latestUserMessage] : messages);
   const judgeMs = Date.now() - judgeStarted;
@@ -603,35 +633,9 @@ export async function POST(request: Request) {
   const plan = body.turnPlan ?? defaultTurnPlan();
   const caseMap = body.caseMap ?? null;
 
-  // Same topic-only query in both modes. No private case-map text or full user history
-  // goes to an extra rewrite/embedding/search provider; topic changes win over history.
-  const knowledgeQuery = retrievalQuery.query;
-
-  // Retrieve only when info-seeking AND not in an active crisis window. Suppressing
-  // grounding mid-crisis (symmetric with the web-search guard below) keeps the reply
-  // focused on stabilization instead of pivoting to sourced psychoeducation; the
-  // deterministic crisis resources stay attached regardless.
-  const evidenceStarted = Date.now();
-  const knowledge =
-    infoSeeking && !crisisModeActive
-      ? await retrieveKnowledge(
-          knowledgeQuery,
-          4,
-          // Deep mode reranks + relaxes the Tier-1 timeout; fast turns skip rerank.
-          // retrieveKnowledge enforces the hard wall-clock budget either way.
-          { fastMode: resolveSessionPace(body.pace) === "fast" }
-        )
-      : [];
-
-  // KB miss + DEEP mode + non-crisis → live web fallback, restricted to authoritative
-  // medical/research domains (see web-search.ts). Fast mode skips it (would blow the ≤6s
-  // budget); no SEARCH_API_KEY → [] (KB-only, unchanged). Crisis is handled far above and
-  // never reaches here, so a vulnerable user's crisis is never web-searched.
-  const webResults =
-    infoSeeking && resolveSessionPace(body.pace) === "deep" && !crisisModeActive && knowledge.length === 0
-      ? await searchAuthoritative(knowledgeQuery, 3)
-      : [];
-  const evidenceMs = infoSeeking && !crisisModeActive ? Date.now() - evidenceStarted : undefined;
+  const { knowledge, webResults, ms: evidenceMs } = earlyEvidence
+    ? await earlyEvidence
+    : evidenceWanted ? await gatherEvidence() : { knowledge: [], webResults: [] } as Evidence;
 
   // Long-conversation memory: keep recent turns verbatim within the char budget,
   // and inject a compact digest of the EARLIER user statements (names, facts,
@@ -708,6 +712,7 @@ export async function POST(request: Request) {
     ...crisisHeader,
     ...knowledgeHeader,
     "X-Pace": pace,
+    "Server-Timing": `judge;dur=${judgeMs}${evidenceMs !== undefined ? `, evidence;dur=${evidenceMs}` : ""}`,
     ...turnHeader("deepseek_normal", {
       model: apiModel,
       thinking: thinkingLevel,

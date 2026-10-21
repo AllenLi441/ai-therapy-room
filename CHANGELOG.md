@@ -3,6 +3,12 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.3.1] - 2026-10-21
+
+- In 深度, look up knowledge cards and web sources while the danger judge decides, instead of after it, on turns with no danger signal (no word-list flag, no soft cue, not in or just out of a crisis). The wait before the reply is now the longer of the two, not their sum. Turns with any signal keep the old order and are never searched; if the judge intercepts a turn that had no signal, the early result is discarded.
+- Put the fixed parts of the counselor and information prompts first (rules, persona, empathy and quality bar, evidence rules), then what stays the same within a conversation, then what changes each turn; the output format stays last. DeepSeek caches the longest unchanged prefix, so more of each prompt is billed and read at the cached rate. Wording is unchanged.
+- Add a `Server-Timing` header with the judge and evidence times.
+
 ## [v1.3.0] - 2026-10-20
 
 - Ask everyone again before sharing continues (consent version 5, sharing consent version 3): the sharing choice now says uploads include each reply's safety-check labels, message times and replies replaced with "换个说法", in all eight languages. Uploads made under the old sharing consent are refused, and nothing is uploaded until the person chooses again.
