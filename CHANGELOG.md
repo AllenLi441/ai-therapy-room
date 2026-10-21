@@ -3,6 +3,11 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.5.0] - 2026-10-21
+
+- Add 8 source-verified knowledge cards with concrete self-help methods for method requests that used to end in "资料没有提供具体的应对方案": what to do during a panic attack (NHS), nerves before a presentation, meeting or interview (NHS inform social anxiety guide), getting up after about 20 minutes awake and going back to bed when sleepy (NHS Every Mind Matters), a fixed wake time with no sleeping in after a bad night (NHS), asking someone to change and saying no or holding a boundary with "I" statements and calm repetition (NHS inform), and naming a feeling (NHS inform, NHS mindfulness). Each is an AI-written Chinese paraphrase checked against the live page on 2026-10-21 and remains pending professional review.
+- Re-check the worry-time card against the live NHS page and add its "say 10 or 15 minutes" example and the "save it for worry time" step. Add method phrasings (老是担心, 控制担忧, 平静下来, 焦虑上来 and others) to the worry-time, breathing and grounding cards so requests worded that way find them. Tests retrieve every card through the route's own topic-query builder.
+
 ## [v1.4.0] - 2026-10-21
 
 - Check the model's own reply before it is shown. The reply streams with its last 24 characters held back; if it gives method or lethal-dose detail, a drug dose or a dose change, a definite diagnosis (hedged, negated, conditional or questioning mentions are fine), or, for someone under 18, romantic role-play, the rest is dropped and the reply is replaced by the matching fixed text (suicide-concern support, the medication or diagnosis boundary, or a short "I can't play a partner" line in all eight languages). Method detail also raises the crisis banner. If the model disconnects, the held text is still shown when it is clean. Withdrawn replies are labelled, get no "换个说法", and never enter the training files.

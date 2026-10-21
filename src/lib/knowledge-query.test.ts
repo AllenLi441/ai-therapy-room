@@ -32,6 +32,17 @@ describe("topic-only retrieval queries", () => {
   });
 
   it.each([
+    ["怎么应对汇报前的焦虑", "汇报前"], ["惊恐的时候怎么让自己平静？", "惊恐的时候"],
+    ["躺了半个小时还睡不着怎么办", "还睡不着"], ["失眠的第二天要不要补觉？", "补觉"],
+    ["老是担心，有什么方法控制担忧？", "控制担忧"], ["室友太吵了，该怎么跟他说？", "怎么跟他说"],
+    ["怎么拒绝同事又不伤关系？", "怎么拒绝"], ["我说不清自己是什么情绪，怎么办？", "什么情绪"],
+  ])("keeps the method phrase of %s without the people in it", (question, topic) => {
+    const query = buildKnowledgeQuery([user(question)]).query;
+    expect(query).toContain(topic);
+    expect(query).not.toMatch(/室友|同事|对象|父母/);
+  });
+
+  it.each([
     "今天睡不着，好烦啊", "我只想说说，不要给建议", "焦虑怎么办？算了，只想倾诉",
     "失眠，我不想要建议", "I'm stressed, just listen", "比特币怎么买？", "披萨怎么做？",
     "压力压得我想哭，今天能不能别教方法，只听我说？",
