@@ -6,12 +6,13 @@ import { TopBar, PrivacyRibbon, Stream, Composer, Welcome } from "./chat-parts";
 import { AboutSheet, ScaleModal, CrisisBanner, CaseDrawer, ConfirmSheet, ConsentGate, SettingsSheet, SupportSheet, type ShareSetting } from "./overlays";
 import { ImportRecords, SessionHistory, SessionSummary } from "./session-panels";
 import { DONATION_CONSENT_VERSION } from "@/lib/donations";
-import { CONSENT_VERSION, STORAGE_KEYS, RequestScope, modelMessages, parseRecordBackup, readCaseMap, readMessages, readScales, readSessions, storedMessages, type RecordBackup, type SessionRecord } from "./session-state";
+import { CONSENT_VERSION, STORAGE_KEYS, RequestScope, modelMessages, restoreFailedRegenerate, parseRecordBackup, readCaseMap, readMessages, readScales, readSessions, storedMessages, type RecordBackup, type SessionRecord } from "./session-state";
 import { assessRisk } from "@/lib/safety";
 import { normalizeSupportRegion } from "@/lib/support-regions";
 import { contentLanguage, normalizeLanguage } from "@/lib/languages";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { REASONING_OPEN, REASONING_CLOSE, EVENT_DELIM } from "@/lib/stream-markers";
+import { MAX_ALTERNATIVES, parseTurnTrace, readTurnTraceHeader } from "@/lib/turn-trace";
 import type { ThinkingLevel } from "@/lib/model-options";
 import styles from "./session-panels.module.css";
 
@@ -154,13 +155,13 @@ function ClientApp() {
   function invalidateRequests() {
     scope.current.invalidate(); revision.current += 1;
     busyRef.current = false; setBusy(false); setCaseLoading(false); setSummaryLoading(false);
-    replaceMessages((items) => items.map((message) => message.streaming ? {
+    replaceMessages((items) => items.map((message) => message.streaming ? restoreFailedRegenerate({
       ...message, streaming: false, visionPending: false, errored: true, thinking: undefined,
       content: `${message.content}${message.content ? "\n\n" : ""}${STR[lang].reply_stopped}`,
-    } : { ...message, visionPending: false }));
+    }) : { ...message, visionPending: false }));
   }
   function markError(aiId: string, message: string, retryable = true) {
-    replaceMessages((ms) => ms.map((m) => m.id === aiId ? { ...m, content: m.content.trim() ? `${m.content}\n\n${message}` : message, errored: true, retryable, streaming: false, thinking: undefined } : m));
+    replaceMessages((ms) => ms.map((m) => m.id === aiId ? restoreFailedRegenerate({ ...m, content: m.content.trim() ? `${m.content}\n\n${message}` : message, errored: true, retryable, streaming: false, thinking: undefined }) : m));
   }
   async function responseError(response: Response) {
     if (response.status === 429) return STR[lang].err_busy as string;
@@ -216,6 +217,8 @@ function ClientApp() {
       if (!request.current()) return;
       if (response.headers.get("X-Crisis-Triggered") === "1") updateCrisis(true);
       if (!response.ok) { fail(await responseError(response)); return; }
+      const meta = readTurnTraceHeader(response.headers.get("X-Turn"));
+      if (meta) updateAi({ meta });
       const references = response.headers.get("X-Knowledge");
       if (references) { try { const refs = JSON.parse(decodeURIComponent(references)); if (Array.isArray(refs)) updateAi({ refs }); } catch { /* optional header */ } }
       if (!response.body) { fail(STR[lang].err_connect); return; }
@@ -240,7 +243,8 @@ function ClientApp() {
               const data = JSON.parse(event);
               if (data.type === "safety" && ["safe", "unchecked", "gentle", "suicide_concern", "crisis"].includes(data.status)) {
                 const status = currentHardRisk ? "crisis" : data.status;
-                updateAi({ safety: status });
+                const trace = parseTurnTrace(data.trace);
+                updateAi(trace ? { safety: status, meta: trace } : { safety: status });
                 if (request.current() && status !== "unchecked") updateCrisis(status === "crisis" || status === "suicide_concern");
               } else if (data.type === "error") {
                 interrupted = true;
@@ -274,7 +278,7 @@ function ClientApp() {
     } finally {
       clearTimeout(timeout); request.release();
       if (request.current()) {
-        updateAi({ streaming: false });
+        updateAi({ streaming: false, regenerating: undefined });
         replaceMessages((ms) => ms.map((m) => m.id === userId ? { ...m, visionPending: false } : m));
         busyRef.current = false; setBusy(false);
         void shareConversation();
@@ -285,11 +289,11 @@ function ClientApp() {
   async function send(text: string, media: Media[]) {
     if (!hydrated || !consented || busyRef.current || (!text.trim() && !media.length) || text.length > 4000) return;
     invalidateRequests(); setSummarySaved(false); setSummary(""); setNextStep("");
-    const userId = uid(), aiId = uid();
+    const userId = uid(), aiId = uid(), now = Date.now();
     const hadImages = media.some((m) => m.type === "image");
     replaceMessages((ms) => [...ms,
-      { id: userId, role: "user", content: text.trim(), media, hadImages, visionPending: hadImages },
-      { id: aiId, role: "assistant", replyToId: userId, personaId: "linxi", content: "", streaming: true, startedAt: Date.now(), pace },
+      { id: userId, role: "user", content: text.trim(), media, hadImages, visionPending: hadImages, ts: now },
+      { id: aiId, role: "assistant", replyToId: userId, personaId: "linxi", content: "", streaming: true, startedAt: now, ts: now, pace },
     ]);
     const previouslyInCrisis = crisisRef.current;
     const risky = detectRisk(text);
@@ -308,7 +312,25 @@ function ClientApp() {
     const userId = ai.replyToId || (messagesRef.current[index - 1]?.role === "user" ? messagesRef.current[index - 1].id : null);
     if (!userId || !messagesRef.current.some((m) => m.id === userId && m.role === "user")) return;
     invalidateRequests(); setSummary(""); setNextStep(""); setSummarySaved(false);
-    replaceMessages((ms) => ms.map((m) => m.id === aiId ? { ...m, content: "", thinking: "", errored: false, safety: undefined, streaming: true, startedAt: Date.now() } : m));
+    replaceMessages((ms) => ms.map((m) => m.id === aiId ? { ...m, content: "", thinking: "", errored: false, safety: undefined, meta: undefined, streaming: true, startedAt: Date.now(), ts: Date.now() } : m));
+    void runTurn(aiId, userId);
+  }
+  // "换个说法" on the latest model reply: the replaced reply is kept as a rejected sample
+  // (with its trace and feedback) for the shared dataset, then the turn runs again.
+  function onRegenerate(aiId: string) {
+    if (busyRef.current || !consented || crisisRef.current) return;
+    const ms = messagesRef.current, index = ms.findIndex((m) => m.id === aiId), ai = ms[index];
+    const lastAi = [...ms].reverse().find((m) => m.role === "assistant");
+    if (!ai || ai !== lastAi || ai.streaming || ai.errored || !ai.content.trim()) return;
+    const userId = ai.replyToId || (ms[index - 1]?.role === "user" ? ms[index - 1].id : null);
+    if (!userId || !ms.some((m) => m.id === userId && m.role === "user")) return;
+    invalidateRequests(); setSummary(""); setNextStep(""); setSummarySaved(false);
+    const rejected = { content: ai.content, ...(ai.meta ? { meta: ai.meta } : {}), ...(ai.feedback ? { feedback: ai.feedback } : {}) };
+    replaceMessages((items) => items.map((m) => m.id === aiId ? {
+      ...m, alternatives: [...(m.alternatives ?? []), rejected].slice(-MAX_ALTERNATIVES),
+      content: "", thinking: "", thinkingMs: undefined, refs: undefined, errored: false, safety: undefined, meta: undefined, feedback: undefined,
+      streaming: true, regenerating: true, startedAt: Date.now(), ts: Date.now(), pace,
+    } : m));
     void runTurn(aiId, userId);
   }
   function stopReply() { invalidateRequests(); }
@@ -322,6 +344,7 @@ function ClientApp() {
       const items = Array.isArray(value) ? value : [];
       writeStorage("js_feedback", [...items.filter((item) => item.aiId !== aiId), { aiId, userId: user?.id, ts: Date.now(), verdict, userText: user?.content.slice(0, 200) || "", aiText: ai.content.slice(0, 400), pace: ai.pace, safety: ai.safety }].slice(-200));
     } catch { writeStorage("js_feedback", []); }
+    void shareConversation();
   }
   function onDeleteMessage(id: string) {
     invalidateRequests();
@@ -329,7 +352,7 @@ function ClientApp() {
     const removedIndex = before.findIndex((m) => m.id === id);
     const next = before.filter((m) => m.id !== id).map((m) => {
       const wasReply = m.replyToId === id || (!m.replyToId && before[removedIndex + 1]?.id === m.id && before[removedIndex]?.role === "user");
-      return { ...m, streaming: false, visionPending: false, feedback: undefined, retryable: wasReply ? false : m.retryable, errored: m.errored || m.streaming, thinking: m.streaming ? undefined : m.thinking };
+      return { ...m, streaming: false, visionPending: false, feedback: wasReply ? undefined : m.feedback, alternatives: wasReply ? undefined : m.alternatives, retryable: wasReply ? false : m.retryable, errored: m.errored || m.streaming, thinking: m.streaming ? undefined : m.thinking };
     });
     replaceMessages(next);
     setCaseMap(null); setCaseEdited(false); caseForRevision.current = -1;
@@ -420,7 +443,7 @@ function ClientApp() {
     const ageBracket = shareRef.current;
     if (!sharing || ageBracket === "off") return;
     const turns = messagesRef.current.filter((m) => !m.streaming && !m.errored && m.content.trim()).slice(-240)
-      .map((m) => ({ role: m.role, content: m.content.slice(0, 12000), safety: m.safety, pace: m.pace, feedback: m.feedback }));
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 12000), safety: m.safety, pace: m.pace, feedback: m.feedback, ts: m.ts, meta: m.meta, alternatives: m.alternatives, hadImages: m.hadImages || undefined }));
     if (!turns.some((m) => m.role === "user")) return;
     const id = shareConv.current ?? crypto.randomUUID();
     try {
@@ -484,7 +507,7 @@ function ClientApp() {
       <button className="btn ghost" disabled={!consented || busy} onClick={() => setOverlay("history")}>{STR[lang].past_sessions}</button>
     </div>
     <main className="chat-wrap">
-      {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onDelete={onDeleteMessage} /> : <Welcome key={`${lang}-${ageRange}`} lang={lang} ageRange={ageRange} history={starterHistory} companion={persona} onStart={(text) => void send(text, [])} />}
+      {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onRegenerate={crisis || busy ? undefined : onRegenerate} onDelete={onDeleteMessage} /> : <Welcome key={`${lang}-${ageRange}`} lang={lang} ageRange={ageRange} history={starterHistory} companion={persona} onStart={(text) => void send(text, [])} />}
       {suggestedScale && !scaleId && !crisis && <div className="scale-suggest" role="status"><span className="ss-ico"><Ic.clipboard /></span><span className="ss-text">{STR[lang].scale_suggest}{(lang.startsWith("zh") ? "（{name}）" : " ({name})").replace("{name}", SCALES[suggestedScale].name[contentLanguage(lang)].split(" · ")[1])}</span><button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button><button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button></div>}
       <Composer key={draftRevision} lang={lang} pace={pace} busy={busy || !consented || !hydrated} tone={persona.av} onSend={(text, attachments) => void send(text, attachments)} onPace={setPace} thinking={thinking} onThinking={(level) => setThinkingByPace((current) => ({ ...current, [pace]: level }))} onStop={busy ? stopReply : undefined} />
     </main>

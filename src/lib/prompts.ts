@@ -312,9 +312,14 @@ function buildInformationSystemPrompt(input: CounselorPromptInput) {
   ].join("\n\n");
 }
 
+/** The prompt that will actually be used: a caller cannot use information mode to bypass
+ * an active safety context. */
+export function effectiveResponseMode(responseMode: CounselorPromptInput["responseMode"], risk: RiskAssessment): "information" | "support" {
+  return responseMode === "information" && !risk.shouldEscalate && ["none", "low"].includes(risk.level) ? "information" : "support";
+}
+
 export function buildCounselorSystemPrompt(input: CounselorPromptInput) {
-  // A caller cannot use information mode to bypass an active safety context.
-  if (input.responseMode === "information" && !input.risk.shouldEscalate && ["none", "low"].includes(input.risk.level)) {
+  if (effectiveResponseMode(input.responseMode, input.risk) === "information") {
     return buildInformationSystemPrompt(input);
   }
   const scaleSafetyDirective = formatScaleSafetyDirective(input.scaleResults);

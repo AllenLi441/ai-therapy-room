@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { RiskAssessment } from "./types";
 import type { ImplicitOutcome, ImplicitDecision } from "./implicit-risk";
+import type { DecisionRoute } from "./turn-trace";
 
 /**
  * Decision log — append-only JSONL of every risk decision the chat route makes.
@@ -27,18 +28,7 @@ import type { ImplicitOutcome, ImplicitDecision } from "./implicit-risk";
  *   - Logs auto-rotate by date so retention can be a simple `find ... -mtime +N -delete`.
  */
 
-export type DecisionRoute =
-  | "lexicon_crisis"
-  | "lexicon_suicide_concern"
-  | "lexicon_medication"
-  | "lexicon_diagnosis"
-  | "lexicon_medical_red_flag"
-  | "implicit_crisis"
-  | "implicit_suicide_concern"
-  | "implicit_gentle_check"
-  | "implicit_fail_safe"
-  | "deepseek_normal"
-  | "crisis_check_reply";
+export type { DecisionRoute };
 
 export type DecisionLogEntry = {
   ts: string;

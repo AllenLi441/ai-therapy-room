@@ -59,6 +59,7 @@ describe("donation endpoint", () => {
     ["under 14", { ...valid, ageBracket: "under-14" }],
     ["no consent", { ...valid, consentVersion: undefined }],
     ["an old consent version", { ...valid, consentVersion: "1" }],
+    ["the consent before reply labels were shared", { ...valid, consentVersion: "2" }],
     ["no user message", { ...valid, messages: [valid.messages[1]] }],
     ["a malformed conversation id", { ...valid, id: "not-a-uuid" }],
     ["an unknown language", { ...valid, language: "xx" }],
@@ -80,5 +81,42 @@ describe("donation endpoint", () => {
     expect((await del({ id })).status).toBe(200);
     expect(supabase).toHaveBeenCalledWith(`https://example.supabase.co/rest/v1/donations?id=eq.${id}`, expect.objectContaining({ method: "DELETE" }));
     expect((await del({ id: "not-a-uuid" })).status).toBe(400);
+  });
+
+  it("keeps the reply trace, timestamps and replaced replies, masked and whitelisted", async () => {
+    const meta = { v: 1, app: "1.3.0", route: "deepseek_normal", pace: "deep", model: "deepseek-v4-pro", judge: { kind: "ok", severity: "none", rationale: "原话" } };
+    await post({ ...valid, messages: [
+      { ...valid.messages[0], ts: 1760000000000 },
+      { ...valid.messages[1], ts: 1760000005000, meta, alternatives: [{ content: "换之前的回复，电话13812345678", meta, feedback: "down", extra: true }] },
+      { role: "user", content: "嗯", meta },
+    ] });
+    const row = JSON.parse(String((supabase.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(row).toMatchObject({ schema_version: 2, turn_count: 2, had_crisis: false, updated_at: expect.any(String) });
+    expect(row.messages[0].ts).toBe(1760000000000);
+    const parsedMeta = { v: 1, app: "1.3.0", route: "deepseek_normal", pace: "deep", model: "deepseek-v4-pro", judge: { kind: "ok", severity: "none" } };
+    expect(row.messages[1].meta).toEqual(parsedMeta);
+    expect(row.messages[1].alternatives).toEqual([{ content: "换之前的回复，电话[PHONE]", meta: parsedMeta, feedback: "down" }]);
+    expect(row.messages[2]).toEqual({ role: "user", content: "嗯" });
+  });
+
+  it("counts a crisis reply that carries no safety event, and keeps the image flag on user turns only", async () => {
+    const crisisMeta = { v: 1, app: "1.3.0", route: "lexicon_crisis", pace: "deep" };
+    await post({ ...valid, messages: [
+      { role: "user", content: "我想跳楼", hadImages: true }, { role: "assistant", content: "危机回复", meta: crisisMeta, hadImages: true },
+    ] });
+    const row = JSON.parse(String((supabase.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(row.had_crisis).toBe(true);
+    expect(row.messages[0].hadImages).toBe(true);
+    expect(row.messages[1]).not.toHaveProperty("hadImages");
+  });
+
+  it("falls back to the old row shape until the v2 migration has run", async () => {
+    supabase.mockResolvedValueOnce(new Response('{"code":"PGRST204","message":"Could not find the \'had_crisis\' column"}', { status: 400 }));
+    expect((await post(valid)).status).toBe(200);
+    expect(supabase).toHaveBeenCalledTimes(2);
+    const retried = JSON.parse(String((supabase.mock.calls[1] as [string, RequestInit])[1].body));
+    expect(retried).not.toHaveProperty("schema_version");
+    expect(retried).not.toHaveProperty("had_crisis");
+    expect(retried.messages).toHaveLength(2);
   });
 });

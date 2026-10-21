@@ -28,6 +28,67 @@ async function send(text: string) {
   await user.click(screen.getByRole("button", { name: "发送" }));
 }
 
+describe("App reply regeneration", () => {
+  const traced = (text: string, trace: Record<string, unknown>) => new Response(
+    `${EVENT_DELIM}${JSON.stringify({ type: "safety", status: "safe" })}${EVENT_DELIM}${text}`,
+    { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Turn": encodeURIComponent(JSON.stringify(trace)) } }
+  );
+  const modelTrace = { v: 1, app: "1.3.0", route: "deepseek_normal", pace: "deep", model: "deepseek-v4-pro" };
+
+  it("keeps the replaced reply as an alternative and resends the same turn", async () => {
+    localStorage.setItem("js_consent", CONSENT_VERSION);
+    const network = vi.fn(async () => traced("第一版合成回复。", modelTrace));
+    vi.stubGlobal("fetch", network);
+    render(<App />);
+    await send("最近总是睡不好");
+    expect(await screen.findByText("第一版合成回复。")).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole("button", { name: STR.zh.feedback_down }).at(-1)!);
+    network.mockImplementationOnce(async () => traced("第二版合成回复。", modelTrace));
+    await user.click(screen.getByRole("button", { name: STR.zh.regenerate }));
+    expect(await screen.findByText("第二版合成回复。")).toBeInTheDocument();
+    expect(screen.queryByText("第一版合成回复。")).not.toBeInTheDocument();
+    const resent = JSON.parse(String((network.mock.calls[1] as unknown as [string, RequestInit])[1].body));
+    expect(resent.messages.map((m: { content: string }) => m.content)).not.toContain("第一版合成回复。");
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem("js_chat") || "[]");
+      const ai = stored.find((m: { content: string }) => m.content === "第二版合成回复。");
+      expect(ai.alternatives).toEqual([{ content: "第一版合成回复。", meta: modelTrace, feedback: "down" }]);
+      expect(ai.meta).toEqual(modelTrace);
+      expect(ai.feedback).toBeUndefined();
+    });
+  });
+
+  it("puts the original reply back when the rewrite fails", async () => {
+    localStorage.setItem("js_consent", CONSENT_VERSION);
+    const network = vi.fn(async () => traced("原来的合成回复。", modelTrace));
+    vi.stubGlobal("fetch", network);
+    render(<App />);
+    await send("最近总是睡不好");
+    expect(await screen.findByText("原来的合成回复。")).toBeInTheDocument();
+    network.mockImplementationOnce(async () => Response.json({ error: "provider_unavailable", message: "暂时不可用", retryable: true }, { status: 503 }));
+    await userEvent.setup().click(screen.getByRole("button", { name: STR.zh.regenerate }));
+    await waitFor(() => expect(network).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("原来的合成回复。")).toBeInTheDocument();
+    expect(screen.queryByText("暂时不可用")).not.toBeInTheDocument();
+    await waitFor(() => {
+      const ai = JSON.parse(localStorage.getItem("js_chat") || "[]").find((m: { content: string }) => m.content === "原来的合成回复。");
+      expect(ai.errored).toBe(false);
+      expect(ai.alternatives).toBeUndefined();
+      expect(ai.meta).toEqual(modelTrace);
+    });
+  });
+
+  it("offers no rewrite for a fixed safety text", async () => {
+    localStorage.setItem("js_consent", CONSENT_VERSION);
+    vi.stubGlobal("fetch", vi.fn(async () => traced("这是一段固定的边界说明。", { ...modelTrace, route: "lexicon_medication", model: undefined })));
+    render(<App />);
+    await send("最近总是睡不好");
+    expect(await screen.findByText("这是一段固定的边界说明。")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: STR.zh.regenerate })).not.toBeInTheDocument();
+  });
+});
+
 describe("App consent, settings and safety flow", () => {
   it("requires the revised disclosure before sending, including when old consent exists", async () => {
     localStorage.setItem("js_consent", "1");
@@ -44,6 +105,20 @@ describe("App consent, settings and safety flow", () => {
     await send("我想了解这里");
     expect(await screen.findByText("这是合成的陪伴回复。")).toBeInTheDocument();
     expect(network).toHaveBeenCalledOnce();
+  });
+
+  it("asks people who agreed before reply labels were shared to choose again", async () => {
+    vi.stubEnv("NEXT_PUBLIC_DONATIONS", "1");
+    localStorage.setItem("js_consent", "4");
+    localStorage.setItem("js_share", "18+");
+    const network = vi.fn(async () => reply());
+    vi.stubGlobal("fetch", network);
+    render(<App />);
+    const gate = screen.getByRole("dialog", { name: "在开始之前" });
+    expect(within(gate).getByText(STR.zh.share_includes)).toBeInTheDocument();
+    expect(within(gate).getByRole("radio", { name: STR.zh.share_yes })).not.toBeChecked();
+    expect(network).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 
   it("preserves selected language and theme across an App remount", async () => {

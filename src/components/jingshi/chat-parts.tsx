@@ -249,9 +249,10 @@ export function PrivacyRibbon({ lang, onDelete }: { lang: Lang; onDelete: () => 
   );
 }
 
-export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
+export function Bubble({ m, persona, lang, onRetry, onFeedback, onRegenerate, onDelete }: {
   m: Message; persona: Persona; lang: Lang; onRetry?: (id: string) => void;
   onFeedback?: (id: string, verdict: "up" | "down") => void;
+  onRegenerate?: (id: string) => void;
   onDelete?: (id: string) => void;
 }) {
   const isAI = m.role === "assistant";
@@ -266,6 +267,10 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
   const mainText = delimIdx >= 0 ? m.content.slice(0, delimIdx).replace(/\s+$/, "") : m.content;
   const interventionText = delimIdx >= 0 ? m.content.slice(delimIdx + SAFETY_DIVIDER.length).replace(/^\s+/, "") : "";
   const canGiveFeedback = isAI && !m.streaming && !m.errored && !!onFeedback;
+  // Only a model-written reply outside any safety intervention can be rewritten;
+  // fixed safety texts would come back word for word.
+  const canRegenerate = isAI && !m.streaming && !m.errored && m.retryable !== false && !!onRegenerate &&
+    m.meta?.route === "deepseek_normal" && !!m.meta.model && !m.meta.decision?.intercept && !isCrisisSafety && m.safety !== "gentle";
   return (
     <div className={"msg " + (isAI ? "ai" : "user")}>
       {isAI ? <Avatar size={34} /> : <div className="avatar user-av" aria-hidden="true"><Ic.user style={{ width: 18, height: 18 }} /></div>}
@@ -342,6 +347,13 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
             </button>
           </div>
         )}
+        {canRegenerate && (
+          <div className="msg-feedback">
+            <button className="fb-btn" onClick={() => onRegenerate!(m.id)}>
+              <Ic.refresh /> {STR[lang].regenerate}
+            </button>
+          </div>
+        )}
         {isAI && m.refs && m.refs.length > 0 && (
           <details className="kb-refs">
             <summary>
@@ -385,11 +397,13 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onDelete }: {
   );
 }
 
-export function Stream({ messages, persona, lang, onRetry, onFeedback, onDelete }: {
+export function Stream({ messages, persona, lang, onRetry, onFeedback, onRegenerate, onDelete }: {
   messages: Message[]; persona: Persona; lang: Lang; onRetry?: (id: string) => void;
   onFeedback?: (id: string, verdict: "up" | "down") => void;
+  onRegenerate?: (id: string) => void;
   onDelete?: (id: string) => void;
 }) {
+  const lastAiId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
   const ref = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);            // are we pinned to the bottom?
@@ -434,7 +448,7 @@ export function Stream({ messages, persona, lang, onRetry, onFeedback, onDelete 
       <div className="sr-only" role="status" aria-live="polite">{replying ? STR[lang].status_thinking : ""}</div>
       <div className="stream scroll" ref={ref} onScroll={onScroll}>
         <div className="stream-inner">
-          {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onDelete={onDelete} />)}
+          {messages.map((m) => <Bubble key={m.id} m={m} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onRegenerate={m.id === lastAiId ? onRegenerate : undefined} onDelete={onDelete} />)}
           <div ref={endRef} className="stream-end" aria-hidden="true" />
         </div>
       </div>
