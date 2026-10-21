@@ -12,7 +12,7 @@ import { normalizeSupportRegion } from "@/lib/support-regions";
 import { contentLanguage, normalizeLanguage } from "@/lib/languages";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { REASONING_OPEN, REASONING_CLOSE, EVENT_DELIM } from "@/lib/stream-markers";
-import { MAX_ALTERNATIVES, parseTurnTrace, readTurnTraceHeader } from "@/lib/turn-trace";
+import { MAX_ALTERNATIVES, parseTurnTrace, readTurnTraceHeader, type TurnTrace } from "@/lib/turn-trace";
 import type { ThinkingLevel } from "@/lib/model-options";
 import styles from "./session-panels.module.css";
 
@@ -80,6 +80,7 @@ function ClientApp() {
   const offeredScales = useRef(new Set<string>());
   const exitedCrisisRef = useRef(false);
   const [crisis, setCrisis] = useState(false);
+  const [usageReminder, setUsageReminder] = useState(false);
   const crisisRef = useRef(false);
   const [scaleResults, setScaleResults] = useState<ScaleResult[]>(initial.scaleResults);
   const [caseMap, setCaseMap] = useState<CaseMap | null>(initial.caseMap);
@@ -229,6 +230,7 @@ function ClientApp() {
       let event = "";
       let interrupted = false;
       let answerLength = 0;
+      let retracted: TurnTrace["guard"]; // the output guard withdrew this reply (output-guard.ts)
       const consume = (chunk: string) => {
         let answer = "", thinking = "";
         const flush = () => {
@@ -244,8 +246,12 @@ function ClientApp() {
               if (data.type === "safety" && ["safe", "unchecked", "gentle", "suicide_concern", "crisis"].includes(data.status)) {
                 const status = currentHardRisk ? "crisis" : data.status;
                 const trace = parseTurnTrace(data.trace);
-                updateAi(trace ? { safety: status, meta: trace } : { safety: status });
+                updateAi(trace ? { safety: status, meta: retracted ? { ...trace, guard: retracted } : trace } : { safety: status });
                 if (request.current() && status !== "unchecked") updateCrisis(status === "crisis" || status === "suicide_concern");
+              } else if (data.type === "retract" && typeof data.text === "string" && ["means", "medication", "diagnosis", "romance"].includes(data.kind)) {
+                retracted = data.kind;
+                answerLength += data.text.length;
+                updateAi((m) => ({ content: data.text, meta: m.meta ? { ...m.meta, guard: data.kind } : m.meta }));
               } else if (data.type === "error") {
                 interrupted = true;
                 fail(typeof data.message === "string" ? data.message : STR[lang].err_connect, data.retryable !== false);
@@ -259,7 +265,7 @@ function ClientApp() {
           }
           else if (char === EVENT_DELIM) { flush(); phase = "event"; }
           else if (phase === "thinking") thinking += char;
-          else answer += char;
+          else if (!retracted) answer += char;
         }
         flush();
       };
@@ -286,8 +292,20 @@ function ClientApp() {
     }
   }
 
+  // 《人工智能拟人化互动服务管理暂行办法》: remind after every two hours of continuous use.
+  // Sending nothing for 30 minutes starts a new stretch. Kept in this browser only.
+  function trackUsage(now: number) {
+    let usage: { last: number; reminded: number } | null = null;
+    try { const value = JSON.parse(localStorage.getItem("js_usage") || "null"); if (Number.isFinite(value?.last) && Number.isFinite(value?.reminded)) usage = value; } catch { /* unreadable storage */ }
+    const stretch = usage && now - usage.last < 30 * 60_000 ? usage : { last: now, reminded: now };
+    const due = now - stretch.reminded >= 2 * 60 * 60_000;
+    if (due) setUsageReminder(true);
+    writeStorage("js_usage", { last: now, reminded: due ? now : stretch.reminded });
+  }
+
   async function send(text: string, media: Media[]) {
     if (!hydrated || !consented || busyRef.current || (!text.trim() && !media.length) || text.length > 4000) return;
+    trackUsage(Date.now());
     invalidateRequests(); setSummarySaved(false); setSummary(""); setNextStep("");
     const userId = uid(), aiId = uid(), now = Date.now();
     const hadImages = media.some((m) => m.type === "image");
@@ -509,6 +527,7 @@ function ClientApp() {
     <main className="chat-wrap">
       {started ? <Stream messages={messages} persona={persona} lang={lang} onRetry={onRetry} onFeedback={onFeedback} onRegenerate={crisis || busy ? undefined : onRegenerate} onDelete={onDeleteMessage} /> : <Welcome key={`${lang}-${ageRange}`} lang={lang} ageRange={ageRange} history={starterHistory} companion={persona} onStart={(text) => void send(text, [])} />}
       {suggestedScale && !scaleId && !crisis && <div className="scale-suggest" role="status"><span className="ss-ico"><Ic.clipboard /></span><span className="ss-text">{STR[lang].scale_suggest}{(lang.startsWith("zh") ? "（{name}）" : " ({name})").replace("{name}", SCALES[suggestedScale].name[contentLanguage(lang)].split(" · ")[1])}</span><button className="ss-cta" onClick={() => { setScaleId(suggestedScale); setSuggestedScale(null); }}>{STR[lang].scale_suggest_cta}</button><button className="ss-dismiss" onClick={() => setSuggestedScale(null)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button></div>}
+      {usageReminder && <div className="scale-suggest" role="status"><span className="ss-ico"><Ic.leaf /></span><span className="ss-text">{STR[lang].usage_reminder}</span><button className="ss-dismiss" onClick={() => setUsageReminder(false)} aria-label={STR[lang].scale_dismiss}><Ic.close /></button></div>}
       <Composer key={draftRevision} lang={lang} pace={pace} busy={busy || !consented || !hydrated} tone={persona.av} onSend={(text, attachments) => void send(text, attachments)} onPace={setPace} thinking={thinking} onThinking={(level) => setThinkingByPace((current) => ({ ...current, [pace]: level }))} onStop={busy ? stopReply : undefined} />
     </main>
     {overlay === "about" && <AboutSheet lang={lang} companion={persona} onClose={() => setOverlay(null)} onExportData={exportData} onImportData={(file) => void importData(file)} dataError={dataError} />}

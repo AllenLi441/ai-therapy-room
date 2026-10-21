@@ -45,6 +45,8 @@ export type TurnTrace = {
   ms?: { judge?: number; evidence?: number };
   /** Written inside an active crisis session (crisis-safety prompt), not an ordinary reply. */
   crisis?: true;
+  /** The output guard withdrew the model's reply and showed a fixed text instead. */
+  guard?: "means" | "medication" | "diagnosis" | "romance";
 };
 
 const CRISIS_ROUTES: DecisionRoute[] = ["lexicon_crisis", "lexicon_suicide_concern", "implicit_crisis", "implicit_suicide_concern", "implicit_fail_safe", "crisis_check_reply"];
@@ -119,6 +121,8 @@ export function parseTurnTrace(value: unknown): TurnTrace | undefined {
     if (judge !== undefined || evidence !== undefined) trace.ms = { ...(judge !== undefined ? { judge } : {}), ...(evidence !== undefined ? { evidence } : {}) };
   }
   if (value.crisis === true) trace.crisis = true;
+  const guard = oneOf(["means", "medication", "diagnosis", "romance"] as const, value.guard);
+  if (guard) trace.guard = guard;
   return trace;
 }
 

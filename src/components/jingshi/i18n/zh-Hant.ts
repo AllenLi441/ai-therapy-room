@@ -11,6 +11,7 @@ export const STR_ZH_HANT: Dict = {
     share_title: "願意讓我們用你的對話來改進靜室嗎？",
     share_desc: "可以隨時在設定裡關閉。",
     share_includes: "上傳內容包括對話、每則回覆的安全識別標籤、訊息時間，以及用「換個說法」換掉的回覆。",
+    usage_reminder: "你已經連續聊了兩個小時。可以起來走走、喝點水，讓眼睛休息一下。靜室是 AI 陪伴，回覆由人工智慧生成，不能取代身邊的人和專業協助。",
     share_yes: "同意", share_no: "不同意", share_14: "我已年滿 14 歲", share_need_age: "選「同意」需要先在上面選年齡範圍。", share_need_14: "未滿 18 歲需要確認已年滿 14 歲，才能選同意。", settings_title: "設定", share_delete: "刪除我已上傳的對話", share_deleted: "已刪除，上傳過的對話已從資料庫移除。", share_delete_failed: "刪除沒有成功，可以稍後再試。", share_none: "還沒有上傳過對話。", starters_refresh: "換一批",
     att_too_many: "最多只能添加 {n} 張圖片", att_not_image: "只能添加圖片", att_too_big: "圖片超過 {mb}MiB，請先縮小或壓縮後重試。", att_read_failed: "圖片讀取失敗，請重新選擇。", att_remove: "移除圖片", att_error_close: "關閉圖片提示",
     placeholder_calm: "如果想說點什麼，我在這裡",

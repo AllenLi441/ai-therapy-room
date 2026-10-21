@@ -270,7 +270,7 @@ export function Bubble({ m, persona, lang, onRetry, onFeedback, onRegenerate, on
   // Only a model-written reply outside any safety intervention can be rewritten;
   // fixed safety texts would come back word for word.
   const canRegenerate = isAI && !m.streaming && !m.errored && m.retryable !== false && !!onRegenerate &&
-    m.meta?.route === "deepseek_normal" && !!m.meta.model && !m.meta.decision?.intercept && !isCrisisSafety && m.safety !== "gentle";
+    m.meta?.route === "deepseek_normal" && !!m.meta.model && !m.meta.decision?.intercept && !m.meta.guard && !isCrisisSafety && m.safety !== "gentle";
   return (
     <div className={"msg " + (isAI ? "ai" : "user")}>
       {isAI ? <Avatar size={34} /> : <div className="avatar user-av" aria-hidden="true"><Ic.user style={{ width: 18, height: 18 }} /></div>}

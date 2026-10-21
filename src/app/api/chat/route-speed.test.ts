@@ -56,3 +56,26 @@ describe("deep mode evidence timing", () => {
     expect(searchAuthoritative).not.toHaveBeenCalled();
   });
 });
+
+describe("output guard in the reply path", () => {
+  const stream = (text: string) => new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(text)); c.close(); } });
+  const send = (pace: "deep" | "fast", extra: Record<string, unknown> = {}) => POST(new Request("http://localhost/api/chat", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: [{ role: "user", content: "最近总是提不起劲" }], language: "zh", pace, ...extra })
+  }));
+
+  it.each(["deep", "fast"] as const)("withdraws a diagnosing reply in %s mode", async (pace) => {
+    vi.mocked(assessImplicitRiskWithLLM).mockResolvedValue(SAFE);
+    vi.mocked(createDeepSeekTextStream).mockImplementationOnce(async () => stream("听起来你这就是抑郁症，需要吃药。"));
+    const text = await (await send(pace)).text();
+    expect(text).toContain('"type":"retract","kind":"diagnosis"');
+    expect(text).not.toContain("需要吃药");
+  });
+
+  it("checks romance only when the person is under 18", async () => {
+    vi.mocked(assessImplicitRiskWithLLM).mockResolvedValue(SAFE);
+    vi.mocked(createDeepSeekTextStream).mockImplementation(async () => stream("好呀，我来做你的男朋友。"));
+    expect(await (await send("deep", { ageRange: "minor" })).text()).toContain('"kind":"romance"');
+    expect(await (await send("deep", { ageRange: "adult" })).text()).not.toContain("retract");
+  });
+});

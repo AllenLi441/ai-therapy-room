@@ -12,6 +12,7 @@ import {
 import { retrieveKnowledge } from "@/lib/knowledge";
 import { buildKnowledgeQuery } from "@/lib/knowledge-query";
 import { searchAuthoritative } from "@/lib/web-search";
+import { guardReplyStream } from "@/lib/output-guard";
 import { createAssistantTextStream, createAssistantTextStreamWithThinking } from "@/lib/output-style";
 import { resolvePersona, type PersonaId } from "@/lib/personas";
 import { buildCounselorSystemPrompt, createProviderErrorFallback, effectiveResponseMode } from "@/lib/prompts";
@@ -482,9 +483,9 @@ export async function POST(request: Request) {
     try {
       const fastThinking = fastEffort !== "none";
       const fastRaw = await createDeepSeekTextStream(fastPayload, { includeReasoning: fastThinking });
-      const answer = fastThinking
+      const answer = guardReplyStream(fastThinking
         ? createAssistantTextStreamWithThinking(fastRaw)
-        : sanitizeReplyStream(createAssistantTextStream(fastRaw));
+        : sanitizeReplyStream(createAssistantTextStream(fastRaw)), { language, minor: productContext.ageRange === "minor" });
       return streamTextResponse(appendParallelSafety(observeReplyStream(answer, language), resolveSafety), fastHeaders);
     } catch {
       recordChatLlmFallback(true);
@@ -738,9 +739,9 @@ export async function POST(request: Request) {
 
   try {
     const raw = await createDeepSeekTextStream(payload, { includeReasoning: wantThinking });
-    const styled = wantThinking
+    const styled = guardReplyStream(wantThinking
       ? createAssistantTextStreamWithThinking(raw)
-      : sanitizeReplyStream(createAssistantTextStream(raw));
+      : sanitizeReplyStream(createAssistantTextStream(raw)), { language, minor: productContext.ageRange === "minor" });
     const withSafety = prependEventToStream(observeReplyStream(styled, language), { type: "safety", status: safetyStatus });
     return streamTextResponse(withSafety, replyHeaders);
   } catch {

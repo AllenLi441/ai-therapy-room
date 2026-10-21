@@ -11,6 +11,7 @@ export const STR_JA: Dict = {
     share_title: "会話を静室の改善に使わせてもらえますか？",
     share_desc: "設定からいつでもオフにできます。",
     share_includes: "送信されるのは、会話、各返信の安全チェックのラベル、メッセージの時刻、「別の返事にする」で置き換えた返信です。",
+    usage_reminder: "2時間続けて話しています。立ち上がって水を飲んだり、目を休めたりしてみてください。静室はAIの話し相手で、返信はAIが生成したものです。身近な人や専門家の助けの代わりにはなりません。",
     share_yes: "同意する", share_no: "同意しない", share_14: "14歳以上です", share_need_age: "同意するには、先に上で年齢を選んでください。", share_need_14: "18歳未満の方は、14歳以上であることを確認すると同意できます。", settings_title: "設定", share_delete: "アップロードした会話を削除", share_deleted: "削除しました。アップロードした会話はデータベースから消えました。", share_delete_failed: "削除できませんでした。しばらくしてからもう一度お試しください。", share_none: "まだアップロードした会話はありません。", starters_refresh: "別の話題",
     att_too_many: "画像は最大 {n} 枚までです", att_not_image: "追加できるのは画像だけです", att_too_big: "画像が {mb}MiB を超えています。縮小または圧縮してからもう一度お試しください。", att_read_failed: "画像を読み込めませんでした。もう一度選んでください。", att_remove: "画像を削除", att_error_close: "画像のお知らせを閉じる",
     placeholder_calm: "何か話したくなったら、ここにいます",
