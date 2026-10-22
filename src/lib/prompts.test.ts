@@ -255,3 +255,24 @@ describe("buildCounselorSystemPrompt", () => {
     expect(prompt).toContain("资料标识：who-depression");
   });
 });
+
+describe("prompt prefix caching", () => {
+  const commonPrefix = (a: string, b: string) => { let i = 0; while (i < a.length && a[i] === b[i]) i++; return i; };
+
+  it("keeps every fixed block ahead of anything that changes between turns", async () => {
+    const persona = resolvePersona("companion");
+    const quiet = buildCounselorSystemPrompt({ risk: assessRisk("今天还行"), knowledge: [], turnPlan: defaultTurnPlan(), persona, pace: "deep" });
+    const busy = buildCounselorSystemPrompt({
+      risk: assessRisk("我好累，不想活了"), knowledge: await retrieveKnowledge("睡眠 失眠", 2), turnPlan: { ...defaultTurnPlan(), emotionRead: "疲惫" },
+      persona, pace: "deep", earlierUserContext: "之前说过工作很忙", caseMap: { ...emptyCaseMap(), presenting: "失眠" }, profile: { nickname: "小林" },
+      scaleResults: [{ id: "PHQ-9", answers: [1, 1, 1, 1, 1, 1, 1, 1, 0], total: 8, severity: "轻度", completedAt: "2026-10-20" }],
+    });
+    const shared = commonPrefix(quiet, busy);
+    for (const fixed of ["【前台虚拟陪伴者风格】", "【情绪精准识别与共情（最优先）】", "【回答质量要求】", "【专业知识的证据边界"]) {
+      expect(quiet.indexOf(fixed)).toBeGreaterThan(-1);
+      expect(quiet.indexOf(fixed)).toBeLessThan(shared);
+    }
+    expect(quiet.indexOf("【安全边界】")).toBeGreaterThan(quiet.indexOf("【回答质量要求】"));
+    expect(quiet.trimEnd().endsWith("禁止：诊断标签、药物建议、承诺疗效、夸张保证、道德评判、替用户做重大决定。")).toBe(true);
+  });
+});
