@@ -147,6 +147,7 @@ function ShareChoice({ lang, age, answer, over14, onAnswer, onOver14 }: {
   return <fieldset className="share-choice">
     <legend>{t.share_title}</legend>
     <p className="support-note">{t.share_desc}</p>
+    <p className="support-note">{t.share_includes}</p>
     <label><input type="radio" name={name} checked={answer === "yes"} onChange={() => onAnswer("yes")} /> {t.share_yes}</label>
     <label><input type="radio" name={name} checked={answer === "no"} onChange={() => onAnswer("no")} /> {t.share_no}</label>
     {answer === "yes" && age === "minor" && <label><input type="checkbox" checked={over14} onChange={(event) => onOver14(event.target.checked)} /> {t.share_14}</label>}

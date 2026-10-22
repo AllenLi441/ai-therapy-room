@@ -3,6 +3,15 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.3.0] - 2026-10-20
+
+- Ask everyone again before sharing continues (consent version 5, sharing consent version 3): the sharing choice now says uploads include each reply's safety-check labels, message times and replies replaced with "换个说法", in all eight languages. Uploads made under the old sharing consent are refused, and nothing is uploaded until the person chooses again.
+
+- Label every reply for the shared dataset: a new `X-Turn` header (and, in 快速, the trailing safety event) says which route produced the reply, which model wrote it (none for fixed safety texts), thinking level, the information or support prompt actually used, whether a crisis session was active, the knowledge card ids in the prompt, the danger judge's structured verdict (severity, form, confidence; never its quotes or rationale) and judge and retrieval times. The browser keeps it with the message and uploads it only when sharing is on.
+- Add "换个说法" under the latest model-written reply (hidden for safety texts, during crisis mode and on a reply whose message was deleted). The replaced reply is kept with its label and feedback as a rejected sample; if the new reply fails or is stopped, the previous one comes back. Shared conversations now also carry message timestamps and which user turns had images, and a 有帮到 / 没帮到 is uploaded right away. Deleting a message now clears feedback only on its own reply.
+- Uploads validate and mask the new fields and fill four new row columns (`schema_version`, `updated_at`, `turn_count`, `had_crisis`, which also counts crisis replies that carry no safety event) from `docs/supabase-donations-v2.sql`, which backfills older rows. Until that SQL is run, the row is stored in the old shape.
+- Add `npm run dataset:export`: reads the shared rows with the secret key and replaces one folder outside the repository (`../datasets/jingshi-donations/`, owner-only permissions) with `conversations.jsonl`, `sft.jsonl` (TRL prompt/completion, only model replies to a text turn on the normal route with a completed clean danger check, outside crisis sessions, without retrieved evidence, not marked 没帮到), `dpo.jsonl` (TRL prompt/chosen/rejected from "换个说法"), blind `safety-review.jsonl` for the dataset studio (every risky or unchecked turn plus 10% of the rest, place names hidden) with a separate mapping file, and `stats.json`. Training files use a hashed conversation id, not the row id. Extra offline masking covers 我姓… and addresses after 住在/家在 or with 号楼/栋; conversations with suspected school, company or hospital names stay out of training until their review key is added to `../datasets/jingshi-donations-pii-cleared.txt`.
+
 ## [v1.2.4] - 2026-10-18
 
 - Skip the file decision log on Vercel: the filesystem there is read-only and per instance, so creating `/var/task/logs` failed and the log switched itself off with a warning. Local and self-hosted runs still log.

@@ -6,6 +6,7 @@
 import { assessRisk } from "@/lib/safety";
 import { suggestScale } from "@/lib/scales";
 import type { AppLanguage, ContentLanguage } from "@/lib/languages";
+import type { ReplyAlternative, TurnTrace } from "@/lib/turn-trace";
 import { STR_ZH_HANT } from "./i18n/zh-Hant";
 import { STR_JA } from "./i18n/ja";
 import { STR_KO } from "./i18n/ko";
@@ -47,7 +48,11 @@ export type Message = {
   thinkingMs?: number; // how long the model thought before answering → "思考了 N 秒"
   pace?: "deep" | "fast"; // which tier produced this reply (for the mode badge)
   safety?: "safe" | "unchecked" | "gentle" | "suicide_concern" | "crisis"; // Kimi danger-check result
-  feedback?: "up" | "down"; // per-turn beta feedback ("有帮到 / 没帮到"), device-local only
+  feedback?: "up" | "down"; // per-turn beta feedback ("有帮到 / 没帮到"), uploaded only when sharing is on
+  ts?: number; // ms timestamp when the message was created
+  meta?: TurnTrace; // how this reply was produced (X-Turn header); uploaded only when sharing is on
+  alternatives?: ReplyAlternative[]; // earlier replies replaced via "换个说法" (rejected samples)
+  regenerating?: boolean; // a "换个说法" request is in flight (transient, not restored from storage)
   replyToId?: string;
   modelContent?: string;
   retryable?: boolean;
@@ -104,6 +109,7 @@ const STR_ZH = {
     voice_start: "语音输入", voice_hint: "用浏览器自带的语音识别转成文字（部分浏览器会把声音交给浏览器厂商的服务器识别）。文字会先放进输入框，确认后再发送。", voice_stop: "停止语音输入", voice_denied: "没有拿到麦克风权限。可以在浏览器设置里允许，或者直接打字。", voice_network: "这个浏览器的语音识别服务暂时连不上，可以换用 Safari 或 Edge，或者直接打字。", voice_failed: "这次没听清，可以再试一次。",
     share_title: "愿意让我们用你的对话来改进静室吗？",
     share_desc: "可以随时在设置里关闭。",
+    share_includes: "上传内容包括对话、每条回复的安全识别标签、消息时间，以及用「换个说法」换掉的回复。",
     share_yes: "同意", share_no: "不同意", share_14: "我已年满 14 岁", share_need_age: "选「同意」需要先在上面选年龄范围。", share_need_14: "未满 18 岁需要确认已年满 14 岁，才能选同意。", settings_title: "设置", share_delete: "删除我已上传的对话", share_deleted: "已删除，上传过的对话已从数据库移除。", share_delete_failed: "删除没有成功，可以稍后再试。", share_none: "还没有上传过对话。", starters_refresh: "换一批",
     att_too_many: "最多只能添加 {n} 张图片", att_not_image: "只能添加图片", att_too_big: "图片超过 {mb}MiB，请先缩小或压缩后重试。", att_read_failed: "图片读取失败，请重新选择。", att_remove: "移除图片", att_error_close: "关闭图片提示",
     placeholder_calm: "如果想说点什么，我在这里",
@@ -173,7 +179,7 @@ const STR_ZH = {
     consent_p3_t: "你的数据如何处理", consent_p3_d: "发送后，文字会经服务器交给 DeepSeek 生成回复并做安全识别（DeepSeek 不可用时由 Kimi 备用识别）；「对你的理解」和图片由 Kimi 处理；需要查资料时，只把话题关键词（不含你的原话）发给检索和联网搜索服务。历史保存在此浏览器。删除本地记录无法撤回服务方已处理的数据。请避免提供姓名、住址等个人身份信息。",
     consent_p4_t: "这是内测版本", consent_p4_d: "当前为内测版本，回复可能不完善；你可以对每条回复标记有没有帮到你。",
     consent_agree: "点击下方按钮，即代表你已阅读并了解以上内容。", consent_enter: "我了解了，开始对话",
-    feedback_up: "有帮到", feedback_down: "没帮到",
+    feedback_up: "有帮到", feedback_down: "没帮到", regenerate: "换个说法",
     msg_delete: "删除这条消息及关联记录", msg_delete_confirm: "确认删除?",
     export_feedback: "导出内测反馈", export_feedback_note: "导出文件包含被评价的对话片段，仅在你主动分享时才会离开设备。",
     about_title: "关于安屿",
@@ -202,6 +208,7 @@ const STR_EN: Dict = {
     voice_start: "Voice input", voice_hint: "Uses your browser's built-in speech recognition (some browsers send the audio to the browser maker's servers). The text goes into the box first so you can check it before sending.", voice_stop: "Stop voice input", voice_denied: "Microphone access was not allowed. You can allow it in browser settings, or just type.", voice_network: "This browser's speech service can't be reached right now. Try Safari or Edge, or just type.", voice_failed: "Didn't catch that. You can try again.",
     share_title: "Will you let us use your conversations to help improve Jingshi?",
     share_desc: "You can turn this off any time in Settings.",
+    share_includes: "Uploads include the conversation, the safety-check labels on each reply, message times, and replies you replaced with “Try another reply”.",
     share_yes: "Agree", share_no: "Don't agree", share_14: "I'm 14 or older", share_need_age: "To agree, first choose your age range above.", share_need_14: "If you're under 18, confirm you're at least 14 to agree.", settings_title: "Settings", share_delete: "Delete my uploaded conversations", share_deleted: "Deleted. Your uploaded conversations were removed from the database.", share_delete_failed: "Deleting didn't work. Please try again later.", share_none: "No conversations uploaded yet.", starters_refresh: "Show others",
     att_too_many: "Up to {n} images", att_not_image: "Images only", att_too_big: "This image exceeds {mb}MiB. Resize or compress it, then try again.",
     placeholder_calm: "If you'd like to say something, I'm here",
@@ -271,7 +278,7 @@ const STR_EN: Dict = {
     consent_p3_t: "How your data is processed", consent_p3_d: "Sent text passes through our server to DeepSeek for replies and safety checks (Kimi checks safety as a backup if DeepSeek is unavailable). Kimi processes images and the \"What I understand\" notes. When something needs looking up, only topic keywords — never your own words — go to retrieval and web-search services. History is saved in this browser. Deleting local records cannot recall data already processed by providers. Avoid names, addresses or other identifying information.",
     consent_p4_t: "This is a beta", consent_p4_d: "This is an early beta — replies may be imperfect. You can mark whether each reply actually helped.",
     consent_agree: "Tapping the button below means you've read and understood the above.", consent_enter: "I understand — let's begin",
-    feedback_up: "Helpful", feedback_down: "Not helpful",
+    feedback_up: "Helpful", feedback_down: "Not helpful", regenerate: "Try another reply",
     msg_delete: "Delete this message and related records", msg_delete_confirm: "Confirm delete?",
     export_feedback: "Export beta feedback", export_feedback_note: "The exported file includes the rated conversation snippets — it only leaves your device if you choose to share it.",
     about_title: "About Anyu",

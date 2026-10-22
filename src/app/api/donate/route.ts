@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { checkRateLimit, rateLimitResponse, readRateLimitEnv } from "@/lib/rate-limit";
-import { DONATION_AGE_BRACKETS, DONATION_CONSENT_VERSION, deleteDonation, donationsConfigured, upsertDonation, type DonatedMessage } from "@/lib/donations";
+import { DONATION_AGE_BRACKETS, DONATION_CONSENT_VERSION, DONATION_SCHEMA_VERSION, deleteDonation, donationsConfigured, upsertDonation, type DonatedMessage } from "@/lib/donations";
+import { isCrisisMessage, parseReplyAlternatives, parseTurnTrace } from "@/lib/turn-trace";
 import { parseLanguage } from "@/lib/languages";
 import { parseSupportRegion } from "@/lib/support-regions";
 import { redactText } from "@/lib/redact";
@@ -25,13 +26,19 @@ function readMessages(value: unknown): DonatedMessage[] | null {
   const messages: DonatedMessage[] = [];
   for (const row of value) {
     if (!row || typeof row !== "object" || Array.isArray(row)) return null;
-    const { role, content, safety, pace, feedback } = row as Record<string, unknown>;
+    const { role, content, safety, pace, feedback, ts, meta, alternatives, hadImages } = row as Record<string, unknown>;
     if ((role !== "user" && role !== "assistant") || typeof content !== "string" || !content.trim() || content.length > 12000) return null;
+    const trace = role === "assistant" ? parseTurnTrace(meta) : undefined;
+    const replaced = role === "assistant" ? parseReplyAlternatives(alternatives) : undefined;
     messages.push({
       role, content: redactText(content.trim()),
       ...(typeof safety === "string" && SAFETY.includes(safety) ? { safety } : {}),
       ...(pace === "deep" || pace === "fast" ? { pace } : {}),
       ...(feedback === "up" || feedback === "down" ? { feedback } : {}),
+      ...(typeof ts === "number" && Number.isFinite(ts) && ts > 0 ? { ts: Math.round(ts) } : {}),
+      ...(trace ? { meta: trace } : {}),
+      ...(role === "user" && hadImages === true ? { hadImages: true as const } : {}),
+      ...(replaced ? { alternatives: replaced.map((alt) => ({ ...alt, content: redactText(alt.content.trim()) })) } : {}),
     });
   }
   return messages.some((message) => message.role === "user") ? messages : null;
@@ -61,6 +68,9 @@ export async function POST(request: Request) {
     await upsertDonation({
       id, consent_version: DONATION_CONSENT_VERSION, age_bracket: body.ageBracket as (typeof DONATION_AGE_BRACKETS)[number],
       language, support_region: supportRegion, app_version: APP_VERSION, messages,
+      schema_version: DONATION_SCHEMA_VERSION, updated_at: new Date().toISOString(),
+      turn_count: messages.filter((message) => message.role === "user").length,
+      had_crisis: messages.some(isCrisisMessage),
     });
   } catch {
     return Response.json({ error: "donation_failed" }, { status: 502 });

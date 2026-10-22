@@ -2,8 +2,9 @@ import { normalizeLanguage } from "@/lib/languages";
 import type { AgeRange, Lang, Message, SupportRegion } from "./data";
 import type { CaseMap, ScaleResult } from "@/lib/types";
 import { normalizeSupportRegion } from "@/lib/support-regions";
+import { parseReplyAlternatives, parseTurnTrace } from "@/lib/turn-trace";
 
-export const CONSENT_VERSION = "4"; // 4: asks whether conversations may be uploaded to improve Jingshi
+export const CONSENT_VERSION = "5"; // 4: asks whether conversations may be uploaded to improve Jingshi; 5: uploads also carry reply labels, times and replaced replies
 export const STORAGE_KEYS = ["js_chat", "js_scales", "js_case", "js_case_edited", "js_consent", "js_feedback", "js_sessions", "js_active_session", "js_continuation", "js_age_range", "js_support_region", "js_draft", "js_share", "js_share_current"] as const;
 // js_share_ids (random ids of uploaded conversations, no content) survives "delete local records"
 // so the uploaded copies can still be deleted from Settings afterwards.
@@ -73,8 +74,23 @@ export function readMessages(value: unknown): Message[] {
       pace: row.pace === "fast" ? "fast" : "deep", streaming: false,
       feedback: row.feedback === "up" || row.feedback === "down" ? row.feedback : undefined,
       safety: ["safe", "unchecked", "gentle", "suicide_concern", "crisis"].includes(String(row.safety)) ? row.safety as Message["safety"] : undefined,
+      ts: typeof row.ts === "number" && Number.isFinite(row.ts) ? row.ts : undefined,
+      meta: row.role === "assistant" ? parseTurnTrace(row.meta) : undefined,
+      alternatives: row.role === "assistant" ? parseReplyAlternatives(row.alternatives) : undefined,
     }];
   });
+}
+
+/** A "换个说法" that failed or was stopped puts the replaced reply back, instead of leaving
+ * an error where the user was reading a reply (and dropping that turn from the context). */
+export function restoreFailedRegenerate(message: Message): Message {
+  if (!message.regenerating || !message.errored || !message.alternatives?.length) return message;
+  const previous = message.alternatives[message.alternatives.length - 1];
+  const rest = message.alternatives.slice(0, -1);
+  return {
+    ...message, content: previous.content, meta: previous.meta, feedback: previous.feedback,
+    alternatives: rest.length ? rest : undefined, errored: false, retryable: true, regenerating: undefined,
+  };
 }
 
 export function storedMessages(messages: Message[]): Message[] {

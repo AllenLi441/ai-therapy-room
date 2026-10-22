@@ -14,7 +14,7 @@ import { buildKnowledgeQuery } from "@/lib/knowledge-query";
 import { searchAuthoritative } from "@/lib/web-search";
 import { createAssistantTextStream, createAssistantTextStreamWithThinking } from "@/lib/output-style";
 import { resolvePersona, type PersonaId } from "@/lib/personas";
-import { buildCounselorSystemPrompt, createProviderErrorFallback } from "@/lib/prompts";
+import { buildCounselorSystemPrompt, createProviderErrorFallback, effectiveResponseMode } from "@/lib/prompts";
 import { stripLeadingPreface } from "@/lib/preface";
 import { takeRecentWithinBudget, buildEarlierUserDigest } from "@/lib/chat-window";
 import { summarizeOlderConversation } from "@/lib/chat-summary";
@@ -52,6 +52,8 @@ import { EVENT_DELIM, REASONING_OPEN, REASONING_CLOSE } from "@/lib/stream-marke
 import { normalizeSupportRegion, parseSupportRegion, type SupportRegionInput } from "@/lib/support-regions";
 import { normalizeLanguage, parseLanguage } from "@/lib/languages";
 import { LOCAL_SAFETY_TEXT } from "@/lib/safety-texts";
+import { encodeTurnTrace, judgeTrace, type TurnTrace } from "@/lib/turn-trace";
+import { APP_VERSION } from "@/lib/version";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -232,6 +234,16 @@ export async function POST(request: Request) {
     rationale: "lexicon path — LLM classifier not invoked"
   };
 
+  // Training-data trace for this reply (see turn-trace.ts): which route and model produced
+  // it. Uploaded only by users who agreed to share their conversations.
+  const pace = resolveSessionPace(body.pace);
+  function turnTrace(route: DecisionRoute, extra: Partial<TurnTrace> = {}): TurnTrace {
+    return { v: 1, app: APP_VERSION, route, pace, ...extra };
+  }
+  function turnHeader(route: DecisionRoute, extra: Partial<TurnTrace> = {}) {
+    return { "X-Turn": encodeTurnTrace(turnTrace(route, extra)) };
+  }
+
   function logFireAndForget(route: DecisionRoute, implicit: ImplicitOutcome, decision: ImplicitDecision) {
     appendDecisionLog(
       buildDecisionLogEntry({
@@ -253,7 +265,9 @@ export async function POST(request: Request) {
   async function respondTailoredCrisis(
     mode: "crisis" | "suicide_concern",
     decisionRisk: RiskAssessment,
-    source: string
+    source: string,
+    route: DecisionRoute,
+    judged?: Pick<TurnTrace, "judge" | "decision" | "ms">
   ): Promise<Response> {
     const headers: Record<string, string> = {
       "Content-Type": "text/plain; charset=utf-8",
@@ -296,14 +310,14 @@ export async function POST(request: Request) {
       const reply = (await generateDeepSeekText(payload)).trim();
       if (!reply) throw new Error("empty crisis reply");
       recordChatLlmFallback(false);
-      return new Response(textStreamFromString(`${reply}${minorLine}`), { headers });
+      return new Response(textStreamFromString(`${reply}${minorLine}`), { headers: { ...headers, ...turnHeader(route, { model: "deepseek-flash", thinking: "off", ...judged }) } });
     } catch {
       recordChatLlmFallback(true);
       const fallback =
         mode === "crisis"
           ? createCrisisResponse(decisionRisk, { language })
           : createSuicideConcernResponse(language);
-      return new Response(textStreamFromString(`${fallback}${minorLine}`), { headers: { ...headers, "X-Reply-Fallback": "safety" } });
+      return new Response(textStreamFromString(`${fallback}${minorLine}`), { headers: { ...headers, ...turnHeader(route, judged), "X-Reply-Fallback": "safety" } });
     }
   }
 
@@ -316,7 +330,7 @@ export async function POST(request: Request) {
   // hotlines one tap away (X-Crisis-Triggered, set on the normal path below).
   if (risk.shouldEscalate && !crisisModeActive) {
     logFireAndForget("lexicon_crisis", stubImplicit, stubDecision);
-    return await respondTailoredCrisis("crisis", risk, "lexicon");
+    return await respondTailoredCrisis("crisis", risk, "lexicon", "lexicon_crisis");
   }
 
   // 危机会话中的 1–4 数字确认回复:确定性解读,不交给模型自由发挥。
@@ -335,7 +349,8 @@ export async function POST(request: Request) {
           "Content-Type": "text/plain; charset=utf-8",
           "Cache-Control": "no-store",
           "X-Crisis-Triggered": "1",
-          "X-Crisis-Source": `check_reply_${check.tier}`
+          "X-Crisis-Source": `check_reply_${check.tier}`,
+          ...turnHeader("crisis_check_reply")
         }
       });
     }
@@ -387,6 +402,7 @@ export async function POST(request: Request) {
     !body.exitedCrisis
   ) {
     const fastCaseMap = body.caseMap ?? null;
+    const evidenceStarted = Date.now();
     const fastKnowledge = infoSeeking
       ? await retrieveKnowledge(
           retrievalQuery.query,
@@ -396,6 +412,7 @@ export async function POST(request: Request) {
           { fastMode: true }
         )
       : [];
+    const evidenceMs = infoSeeking ? Date.now() - evidenceStarted : undefined;
     const fastRecent = takeRecentWithinBudget(messages);
     const fastSystemPrompt = buildCounselorSystemPrompt({
       ...productContext,
@@ -411,7 +428,8 @@ export async function POST(request: Request) {
       earlierUserContext: buildEarlierUserDigest(messages, fastRecent.length),
       responseMode: retrievalQuery.responseMode,
     });
-    const fastEffort = reasoningEffortFor(resolveThinkingLevel(body.thinking));
+    const fastThinkingLevel = resolveThinkingLevel(body.thinking);
+    const fastEffort = reasoningEffortFor(fastThinkingLevel);
     const fastPayload = buildDeepSeekPayload({
       systemPrompt: fastSystemPrompt,
       messages: fastRecent,
@@ -423,30 +441,41 @@ export async function POST(request: Request) {
     // budget (vs 12s in deep mode) so the reply + trailing safety event close within ~6s;
     // if Kimi can't answer that fast the event is "unchecked" (the lexicon floor already
     // cleared explicit danger, and deep mode remains the fully-blocking safe option).
+    const judgeStarted = Date.now();
     const judgePromise = assessImplicitRiskWithLLM(messages, 5_000, 4_000)
-      .then((o) => ({ o, d: decideImplicitIntercept(o, risk) }))
+      .then((o) => ({ o, d: decideImplicitIntercept(o, risk), ms: Date.now() - judgeStarted }))
       .catch(() => ({
         o: { kind: "error", reason: "parallel judge threw" } as ImplicitOutcome,
-        d: { intercept: false, source: "fail_safe_release", rationale: "parallel judge threw" } as ImplicitDecision
+        d: { intercept: false, source: "fail_safe_release", rationale: "parallel judge threw" } as ImplicitDecision,
+        ms: Date.now() - judgeStarted
       }));
+    const fastTrace: Partial<TurnTrace> = {
+      model: "deepseek-flash",
+      thinking: fastThinkingLevel,
+      mode: effectiveResponseMode(retrievalQuery.responseMode, risk),
+      refs: fastKnowledge.map((k) => k.id),
+      ...(evidenceMs !== undefined ? { ms: { evidence: evidenceMs } } : {})
+    };
     const resolveSafety = async () => {
-      const { o, d } = await judgePromise;
+      const { o, d, ms } = await judgePromise;
       logFireAndForget("deepseek_normal", o, d);
+      // The judge answers after the headers went out, so its part of the trace rides here.
+      const trace = turnTrace("deepseek_normal", { ...fastTrace, ...judgeTrace(o, d), ms: { ...fastTrace.ms, judge: ms } });
       if (d.intercept && d.mode === "crisis") {
-        return { event: { type: "safety", status: "crisis" } }; // banner (not text) carries hotlines — owner directive 2026-07-08
+        return { event: { type: "safety", status: "crisis", trace } }; // banner (not text) carries hotlines — owner directive 2026-07-08
       }
       if (d.intercept && d.mode === "suicide_concern") {
-        return { event: { type: "safety", status: "suicide_concern" } };
+        return { event: { type: "safety", status: "suicide_concern", trace } };
       }
       if (d.intercept && d.mode === "gentle_check") {
-        return { event: { type: "safety", status: "gentle" }, intervention: createGentleCheckResponse(undefined, language) };
+        return { event: { type: "safety", status: "gentle", trace }, intervention: createGentleCheckResponse(undefined, language) };
       }
-      return { event: { type: "safety", status: o.kind === "ok" ? "safe" : "unchecked" } };
+      return { event: { type: "safety", status: o.kind === "ok" ? "safe" : "unchecked", trace } };
     };
     const fastRefs = fastKnowledge
       .filter((k) => k.sourceUrl)
       .map((k) => ({ title: k.title, source: k.sourceTitle, url: k.sourceUrl, quote: k.sourceQuote }));
-    const fastHeaders: Record<string, string> = { "X-Pace": "fast", "X-Safety": "parallel" };
+    const fastHeaders: Record<string, string> = { "X-Pace": "fast", "X-Safety": "parallel", ...turnHeader("deepseek_normal", fastTrace) };
     if (fastRefs.length) fastHeaders["X-Knowledge"] = encodeURIComponent(JSON.stringify(fastRefs));
     try {
       const fastThinking = fastEffort !== "none";
@@ -491,16 +520,20 @@ export async function POST(request: Request) {
   // intercepts the first post-exit message with a safety template (the off-by-one
   // "still in safety mode for one more turn"). A genuinely risky current message is
   // still caught because it's the one being classified.
+  const judgeStarted = Date.now();
   const implicitOutcome = await assessImplicitRiskWithLLM(body.exitedCrisis ? [latestUserMessage] : messages);
+  const judgeMs = Date.now() - judgeStarted;
   const implicitDecision = decideImplicitIntercept(implicitOutcome, risk);
   const mergedRisk = mergeImplicitWithLexicon(risk, implicitOutcome);
+  const judged = judgeTrace(implicitOutcome, implicitDecision);
+  const judgedWithMs = { ...judged, ms: { judge: judgeMs } };
 
   // Same first-contact rule as the lexicon branches: don't re-dump a template from
   // the implicit layer while already in an active crisis session — engage in context.
   if (implicitDecision.intercept && !crisisModeActive) {
     if (implicitDecision.mode === "crisis") {
       logFireAndForget("implicit_crisis", implicitOutcome, implicitDecision);
-      return await respondTailoredCrisis("crisis", mergedRisk, implicitDecision.source);
+      return await respondTailoredCrisis("crisis", mergedRisk, implicitDecision.source, "implicit_crisis", judgedWithMs);
     }
     if (implicitDecision.mode === "gentle_check") {
       // Judge-only medium signal on an otherwise-benign message (e.g. it over-triaged
@@ -509,13 +542,13 @@ export async function POST(request: Request) {
       // latency these false positives used to incur). Hotlines stay in the global footer.
       logFireAndForget("implicit_gentle_check", implicitOutcome, implicitDecision);
       return new Response(prependEventToStream(textStreamFromString(createGentleCheckResponse(undefined, language)), { type: "safety", status: "gentle" }), {
-        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...turnHeader("implicit_gentle_check", judgedWithMs) }
       });
     }
     const route: DecisionRoute =
       implicitDecision.source === "fail_safe" ? "implicit_fail_safe" : "implicit_suicide_concern";
     logFireAndForget(route, implicitOutcome, implicitDecision);
-    return await respondTailoredCrisis("suicide_concern", mergedRisk, implicitDecision.source);
+    return await respondTailoredCrisis("suicide_concern", mergedRisk, implicitDecision.source, route, judgedWithMs);
   }
 
   // Lexicon flagged suicide_concern but the implicit judge did NOT intercept above.
@@ -531,11 +564,11 @@ export async function POST(request: Request) {
   if (risk.flags.includes("suicide_concern") && !crisisModeActive) {
     if (implicitOutcome.kind !== "ok") {
       logFireAndForget("lexicon_suicide_concern", implicitOutcome, implicitDecision);
-      return await respondTailoredCrisis("suicide_concern", mergedRisk, "lexicon");
+      return await respondTailoredCrisis("suicide_concern", mergedRisk, "lexicon", "lexicon_suicide_concern", judgedWithMs);
     }
     logFireAndForget("implicit_gentle_check", implicitOutcome, implicitDecision);
     return new Response(prependEventToStream(textStreamFromString(createGentleCheckResponse(undefined, language)), { type: "safety", status: "gentle" }), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...turnHeader("implicit_gentle_check", judgedWithMs) }
     });
   }
 
@@ -547,21 +580,21 @@ export async function POST(request: Request) {
   if (!mergedRisk.shouldEscalate && mergedRisk.flags.includes("medical_red_flag")) {
     logFireAndForget("lexicon_medical_red_flag", implicitOutcome, implicitDecision);
     return new Response(textStreamFromString(createMedicalRedFlagResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...turnHeader("lexicon_medical_red_flag", judgedWithMs) }
     });
   }
 
   if (!mergedRisk.shouldEscalate && risk.flags.includes("medication_request")) {
     logFireAndForget("lexicon_medication", implicitOutcome, implicitDecision);
     return new Response(textStreamFromString(createMedicationBoundaryResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...turnHeader("lexicon_medication", judgedWithMs) }
     });
   }
 
   if (!mergedRisk.shouldEscalate && risk.flags.includes("diagnosis_request")) {
     logFireAndForget("lexicon_diagnosis", implicitOutcome, implicitDecision);
     return new Response(textStreamFromString(createDiagnosisBoundaryResponse(language)), {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", ...turnHeader("lexicon_diagnosis", judgedWithMs) }
     });
   }
 
@@ -578,6 +611,7 @@ export async function POST(request: Request) {
   // grounding mid-crisis (symmetric with the web-search guard below) keeps the reply
   // focused on stabilization instead of pivoting to sourced psychoeducation; the
   // deterministic crisis resources stay attached regardless.
+  const evidenceStarted = Date.now();
   const knowledge =
     infoSeeking && !crisisModeActive
       ? await retrieveKnowledge(
@@ -597,6 +631,7 @@ export async function POST(request: Request) {
     infoSeeking && resolveSessionPace(body.pace) === "deep" && !crisisModeActive && knowledge.length === 0
       ? await searchAuthoritative(knowledgeQuery, 3)
       : [];
+  const evidenceMs = infoSeeking && !crisisModeActive ? Date.now() - evidenceStarted : undefined;
 
   // Long-conversation memory: keep recent turns verbatim within the char budget,
   // and inject a compact digest of the EARLIER user statements (names, facts,
@@ -629,12 +664,14 @@ export async function POST(request: Request) {
 
   // Thinking depth is the user's choice, except during an active crisis (fast,
   // deterministic replies — no deliberation).
-  const effort = crisisModeActive ? "none" : reasoningEffortFor(resolveThinkingLevel(body.thinking));
+  const thinkingLevel = crisisModeActive ? "off" : resolveThinkingLevel(body.thinking);
+  const effort = reasoningEffortFor(thinkingLevel);
+  const apiModel = resolveApiModelForPace(body.pace); // deep→v4-pro, fast→v4-flash
   const payload = buildDeepSeekPayload({
     systemPrompt,
     messages: recentMessages,
     model,
-    apiModel: resolveApiModelForPace(body.pace), // deep→v4-pro, fast→v4-flash
+    apiModel,
     stream: true,
     reasoningEffort: effort
   });
@@ -666,9 +703,21 @@ export async function POST(request: Request) {
 
   // When thinking is on, the stream carries only thinking-phase MARKERS so the client
   // can show "思考了 N 秒"; the reasoning text never leaves the server (deepseek.ts).
-  const pace = resolveSessionPace(body.pace);
   const wantThinking = effort !== "none";
-  const replyHeaders = { ...crisisHeader, ...knowledgeHeader, "X-Pace": pace };
+  const replyHeaders = {
+    ...crisisHeader,
+    ...knowledgeHeader,
+    "X-Pace": pace,
+    ...turnHeader("deepseek_normal", {
+      model: apiModel,
+      thinking: thinkingLevel,
+      mode: effectiveResponseMode(crisisModeActive ? "support" : retrievalQuery.responseMode, promptRisk),
+      refs: [...knowledge.map((k) => k.id), ...webResults.map((w) => `web:${w.url.replace(/^https?:\/\//, "").split("/")[0]}`)],
+      ...judged,
+      ms: { judge: judgeMs, ...(evidenceMs !== undefined ? { evidence: evidenceMs } : {}) },
+      ...(crisisModeActive ? { crisis: true as const } : {})
+    })
+  };
 
   // The danger judge already ran (blocking) above and did NOT intercept, so prepend a
   // leading safety event the client shows as "🛡 安全识别 ✓" (or 未检 if the judge was
