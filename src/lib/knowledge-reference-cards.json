@@ -839,6 +839,94 @@
     "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
   },
   {
+    "id": "ref-sleep-get-up",
+    "title": "躺着睡不着时，可以先起来再回床",
+    "tags": [
+      "睡眠",
+      "失眠"
+    ],
+    "keywords": [
+      "躺着睡不着",
+      "躺在床上睡不着",
+      "躺床上睡不着",
+      "躺了半个小时",
+      "躺了半小时",
+      "躺了一个小时",
+      "躺了很久",
+      "还睡不着",
+      "睡不着要不要起来",
+      "睡不着就起来",
+      "睡不着起床",
+      "lying awake",
+      "still awake",
+      "awake in bed"
+    ],
+    "content": "NHS Every Mind Matters 建议躺着睡不着时不要强迫自己入睡；如果大约 20 分钟后仍然醒着，就起来坐到舒服的地方，做点放松的事，比如轻柔的瑜伽、看书或听安静的音乐，感到困了再回床。也可以把时钟移出视线、手机屏幕朝下放。",
+    "guidance": [],
+    "sourceTitle": "NHS Every Mind Matters — How to fall asleep faster and sleep better",
+    "sourceUrl": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/how-to-fall-asleep-faster-and-sleep-better/",
+    "sourceId": "nhs-emm-sleep",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般睡眠习惯信息；长期失眠、轮班或身体疾病可能需要个别化安排，不提供睡眠限制处方。"
+    ],
+    "evidenceSummary": "来源第 5 条 Try not to force sleep 给出约 20 分钟仍醒着就起身、做放松活动、困了再回床；第 4 条建议时钟移出视线、手机屏幕朝下。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "4. Make your bedroom comfortable for sleep; 5. Try not to force sleep",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-sleep-fixed-wake",
+    "title": "每天固定时间起床，没睡好也不补觉",
+    "tags": [
+      "睡眠",
+      "日常习惯"
+    ],
+    "keywords": [
+      "固定起床时间",
+      "每天同一时间起床",
+      "几点起床",
+      "起床时间",
+      "补觉",
+      "赖床",
+      "睡懒觉",
+      "调作息",
+      "作息怎么调",
+      "wake up at the same time",
+      "wake-up time",
+      "sleeping in"
+    ],
+    "content": "NHS 针对失眠的自助建议包括：困了再上床；每天同一时间醒来并起床；前一晚没睡好，第二天也不要赖床补觉，而是按平常的作息；白天不要小睡。NHS 说明失眠通常可以通过调整睡眠习惯得到改善。",
+    "guidance": [],
+    "sourceTitle": "NHS — Insomnia",
+    "sourceUrl": "https://www.nhs.uk/conditions/insomnia/",
+    "sourceId": "nhs-insomnia",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般睡眠习惯信息；轮班、照护婴幼儿或身体疾病等情况可能需要个别化安排，长期失眠可就医评估。"
+    ],
+    "evidenceSummary": "来源 How you can treat insomnia yourself 的 Do/Don't 清单列出困了再上床、每天同一时间起床、睡差后不补觉和白天不小睡。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "How you can treat insomnia yourself",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
     "id": "ref-grief-variety",
     "title": "哀伤没有必须依次完成的阶段",
     "tags": [
@@ -1050,6 +1138,146 @@
     "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
   },
   {
+    "id": "ref-assertive-request",
+    "title": "想让对方改变时，清楚说出感受和请求",
+    "tags": [
+      "沟通",
+      "自我表达"
+    ],
+    "keywords": [
+      "表达不满",
+      "提要求",
+      "提出要求",
+      "怎么开口",
+      "怎么跟他说",
+      "怎么跟她说",
+      "怎么跟对方说",
+      "说出需求",
+      "表达需求",
+      "希望他改",
+      "希望她改",
+      "让他改",
+      "让她改",
+      "坚定表达",
+      "assertive",
+      "assertiveness",
+      "I statements"
+    ],
+    "content": "NHS inform 的沟通建议：直接说出你的意思，别指望对方猜；用“我”开头说感受、不指责对方，比如说“我有点生气了”而不是“你真烦”；具体说出希望怎样，比如“你临时取消让我很失望，以后希望能早点告诉我”；语气平稳，不提高音量，也听听对方的意思并确认理解。难开口的谈话可以挑不被打扰、双方都不忙的时间单独谈，事先写下要说的话或练一练。",
+    "guidance": [],
+    "sourceTitle": "NHS inform — Problems with anger self-help guide",
+    "sourceUrl": "https://www.nhsinform.scot/illnesses-and-conditions/mental-health/mental-health-self-help-guides/problems-with-anger-self-help-guide/",
+    "sourceId": "nhsinform-anger-guide",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般沟通信息；来源出自愤怒自助指南的沟通部分，不代表用户有愤怒问题。存在暴力、威胁或控制时优先人身安全，不建议独自对质。"
+    ],
+    "evidenceSummary": "来源第 16 节给出清楚表达、用“我”开头、平稳语气、确认理解、提出具体请求，以及选择时间地点和事先准备的示例。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "16. Assertiveness and relationships",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-assertive-no",
+    "title": "拒绝或守住边界时，可以平静地重复",
+    "tags": [
+      "沟通",
+      "自我表达"
+    ],
+    "keywords": [
+      "怎么拒绝",
+      "不会拒绝",
+      "不敢拒绝",
+      "不好意思拒绝",
+      "拒绝别人",
+      "学会说不",
+      "怎么说不",
+      "设立边界",
+      "设边界",
+      "守住边界",
+      "划清界限",
+      "一直劝我",
+      "say no",
+      "saying no",
+      "set boundaries",
+      "setting boundaries"
+    ],
+    "content": "NHS inform 的沟通建议：对方一再施压、要你做不想做的事时，可以用坚定但平静的语气重复自己的回答，这有时叫“破唱片”法；拒绝时不需要道歉或找借口。同时尊重对方：不侮辱、不威胁，也接受对方说“不”或有不同意见。",
+    "guidance": [],
+    "sourceTitle": "NHS inform — Problems with anger self-help guide",
+    "sourceUrl": "https://www.nhsinform.scot/illnesses-and-conditions/mental-health/mental-health-self-help-guides/problems-with-anger-self-help-guide/",
+    "sourceId": "nhsinform-anger-guide",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般沟通信息；来源出自愤怒自助指南的沟通部分，不代表用户有愤怒问题。面对暴力、威胁或人身、经济控制时，优先安全和外部支持。"
+    ],
+    "evidenceSummary": "来源第 16 节说明被施压时平静重复（broken record）、拒绝无需道歉或找借口，以及尊重对方的拒绝和不同意见。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "16. Assertiveness and relationships",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-feelings-naming",
+    "title": "先给情绪起个名字",
+    "tags": [
+      "情绪命名",
+      "自我觉察"
+    ],
+    "keywords": [
+      "给情绪命名",
+      "情绪命名",
+      "命名情绪",
+      "识别情绪",
+      "分辨情绪",
+      "辨认情绪",
+      "说不清自己",
+      "什么情绪",
+      "情绪日记",
+      "表达感受",
+      "name my feelings",
+      "name emotions",
+      "naming emotions",
+      "label emotions"
+    ],
+    "content": "NHS inform 指出，情绪本身没有好坏；学会给情绪命名、留意它在提示什么，是管理情绪的第一步，写情绪日记有助于练习。能叫出并说出感受，也更容易让别人明白你的需要。觉得生气或焦虑在上升时，可以先停一下、吸一口气。",
+    "guidance": [],
+    "sourceTitle": "NHS inform — Problems with anger self-help guide",
+    "sourceUrl": "https://www.nhsinform.scot/illnesses-and-conditions/mental-health/mental-health-self-help-guides/problems-with-anger-self-help-guide/",
+    "sourceId": "nhsinform-anger-guide",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般情绪信息；来源出自愤怒自助指南的情绪管理部分，不代表用户有愤怒问题，也不替用户判定是哪种情绪。"
+    ],
+    "evidenceSummary": "来源第 12 节说明情绪无好坏、命名情绪是管理的第一步、日记可帮助练习，以及生气或焦虑时先停一下、吸口气。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "12. Managing emotions",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
     "id": "ref-panic-concepts",
     "title": "一次惊恐发作与惊恐障碍不同",
     "tags": [
@@ -1130,6 +1358,48 @@
     "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
   },
   {
+    "id": "ref-panic-in-moment",
+    "title": "惊恐发作时可以先这样做",
+    "tags": [
+      "焦虑",
+      "惊恐"
+    ],
+    "keywords": [
+      "惊恐发作时",
+      "惊恐的时候",
+      "惊恐来的时候",
+      "惊恐发作怎么办",
+      "惊恐发作当下",
+      "惊恐发作要来",
+      "恐慌发作时",
+      "惊恐时怎么",
+      "during a panic attack",
+      "in a panic attack",
+      "panic attack coming"
+    ],
+    "content": "NHS 建议感到惊恐发作要来时：尽量待在原地，慢慢地、深深地呼吸，提醒自己发作会过去、它不会危及生命，并把注意力放在积极、平静、让人放松的画面上。NHS 说明多数惊恐发作持续 5 到 20 分钟；类似症状也可能来自其他身体问题，可请医生检查排除。",
+    "guidance": [],
+    "sourceTitle": "NHS — Panic disorder",
+    "sourceUrl": "https://www.nhs.uk/mental-health/conditions/panic-disorder/",
+    "sourceId": "nhs-panic",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般自助信息；不能凭聊天判定胸痛、呼吸困难等身体症状是惊恐，新发或严重症状应走医疗通道。"
+    ],
+    "evidenceSummary": "来源 What to do during a panic attack 列出原地停留、慢而深的呼吸、提醒会过去和平静画面；Panic attacks 部分给出常见时长并提醒症状可能另有原因。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Panic attacks; When to get help; What to do during a panic attack",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
     "id": "ref-social-fear",
     "title": "社交焦虑关注被评价时的强烈不安",
     "tags": [
@@ -1170,6 +1440,54 @@
       "allowedUse": "general_information"
     },
     "sourceSection": "What is social anxiety disorder?; Know when to seek help",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
+    "id": "ref-performance-nerves",
+    "title": "汇报或当众发言紧张时，把注意力放回眼前",
+    "tags": [
+      "焦虑",
+      "社交"
+    ],
+    "keywords": [
+      "汇报前",
+      "汇报紧张",
+      "做汇报",
+      "演讲前",
+      "演讲紧张",
+      "当众讲话",
+      "上台紧张",
+      "上台发言",
+      "发言前",
+      "开会发言",
+      "会议发言",
+      "面试前",
+      "怯场",
+      "presentation nerves",
+      "presentation anxiety",
+      "public speaking",
+      "stage fright"
+    ],
+    "content": "NHS inform 的社交焦虑自助指南建议：在汇报、会议发言等场合，把注意力放回眼前正在发生的事，而不是身体上的紧张反应；当场不要一边讲一边给自己打分。焦虑通常看起来没有感觉上那么明显，紧张也不代表表现差，不需要做到完美。一直回避会让这类场合更可怕，可以从难度较低的场合开始逐步练习。",
+    "guidance": [],
+    "sourceTitle": "NHS inform — Social anxiety self-help guide",
+    "sourceUrl": "https://www.nhsinform.scot/illnesses-and-conditions/mental-health/mental-health-self-help-guides/social-anxiety-self-help-guide/",
+    "sourceId": "nhsinform-social-anxiety-guide",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般自助信息，来源面向轻到中度的社交焦虑；持续回避或明显影响学习工作时可考虑专业支持，不安排系统暴露练习的步骤或时长。"
+    ],
+    "evidenceSummary": "来源第 13 节给出减少对自身反应的关注、不当场评判自己、紧张不等于表现差和不必完美；第 14 节说明回避会加重害怕，并建议从难度最低的情境开始。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "13. Changing how you see yourself in social situations; 14. Facing the things you avoid",
     "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
   },
   {
@@ -1379,6 +1697,48 @@
     "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
   },
   {
+    "id": "ref-feelings-label-mindful",
+    "title": "在心里默默说出“这是焦虑”",
+    "tags": [
+      "正念",
+      "情绪命名"
+    ],
+    "keywords": [
+      "这是焦虑",
+      "默默命名",
+      "给想法命名",
+      "命名想法",
+      "给念头命名",
+      "标记情绪",
+      "觉察念头",
+      "觉察情绪",
+      "naming thoughts",
+      "name thoughts and feelings",
+      "this is anxiety"
+    ],
+    "content": "NHS 的正念页面介绍：为了更清楚地觉察想法和感受，有人会在心里默默给它们命名，比如“这里有个念头：我可能考砸”或“这是焦虑”。正念不是要让这些想法消失，而是把它们看作来来去去的心理活动。",
+    "guidance": [],
+    "sourceTitle": "NHS — Mindfulness",
+    "sourceUrl": "https://www.nhs.uk/mental-health/self-help/tips-and-support/mindfulness/",
+    "sourceId": "nhs-mindfulness",
+    "lang": "zh",
+    "trustTier": "authoritative",
+    "clinicalStatus": "pending",
+    "channel": "grounded_information",
+    "professionalReview": "not_performed",
+    "applicability": [
+      "一般自助信息；不强迫练习，也不替用户判定是哪种情绪。"
+    ],
+    "evidenceSummary": "来源 Name thoughts and feelings 给出默默命名的两个例句，Watch your thoughts 说明正念不是让想法消失。",
+    "sourceReview": {
+      "status": "verified_primary",
+      "verifiedAt": "2026-10-21",
+      "allowedUse": "general_information"
+    },
+    "sourceSection": "Watch your thoughts; Name thoughts and feelings",
+    "authorship": "AI-authored original Chinese paraphrase; not a clinician-authored answer"
+  },
+  {
     "id": "ref-breathing-comfort",
     "title": "呼吸练习强调舒适和轻柔",
     "tags": [
@@ -1396,7 +1756,13 @@
       "深呼吸用力",
       "呼吸数拍",
       "舒适呼吸",
-      "breathing gently"
+      "breathing gently",
+      "平静下来",
+      "冷静下来",
+      "让自己平静",
+      "让自己冷静",
+      "calm down",
+      "calm myself"
     ],
     "content": "NHS 的减压呼吸练习强调舒适的姿势、轻柔规律地吸气和呼气，不强迫呼吸达到某种深度。数拍只是可选辅助，而不是必须达标的考试。",
     "guidance": [],
@@ -1438,7 +1804,9 @@
       "五感定位",
       "54321",
       "观察周围感官",
-      "sensory orientation"
+      "sensory orientation",
+      "焦虑上来",
+      "回到当下"
     ],
     "content": "NHS inform 介绍感官定位：依次留意能看到、触及、听到、闻到和尝到的事物，常以 5、4、3、2、1 提示。目的是把注意力从压倒性的想法或感受移向当下环境。",
     "guidance": [],
@@ -1478,9 +1846,18 @@
       "安排担忧时段",
       "规定担忧时间",
       "记录担心",
-      "scheduled worry"
+      "scheduled worry",
+      "老是担心",
+      "总是担心",
+      "一直担心",
+      "担心个不停",
+      "控制担忧",
+      "控制不住担心",
+      "停止担心",
+      "stop worrying",
+      "worrying all the time"
     ],
-    "content": "NHS 介绍一种可尝试的做法：先把担忧记下来，留一小段固定时间整理，其他时候再把注意力放回当前事情。目的不是保证不再担忧，而是减少它占满整天。",
+    "content": "NHS 介绍“担忧时间”：每天留出一小段时间，比如 10 或 15 分钟，可以在睡前，把担忧写下来并试着找解决办法；其他时候担忧冒出来，就告诉自己“留到担忧时间再想”，把注意力放回当前的事。刚开始可能不容易，养成习惯后通常会容易些。",
     "guidance": [],
     "sourceTitle": "NHS Every Mind Matters — Tackling your worries",
     "sourceUrl": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/tackling-your-worries/",
@@ -1493,10 +1870,10 @@
     "applicability": [
       "一般自助选择；不要求强行压住思想，持续困扰可能需要更多支持。"
     ],
-    "evidenceSummary": "来源的记录、worry time 和重新关注当下支持本卡。",
+    "evidenceSummary": "来源 Set aside worry time 给出 10 或 15 分钟的示例时长，Do not dwell during the day 说明担忧出现时先留到担忧时间。",
     "sourceReview": {
       "status": "verified_primary",
-      "verifiedAt": "2026-09-14",
+      "verifiedAt": "2026-10-21",
       "allowedUse": "general_information"
     },
     "sourceSection": "Write them down; Set aside worry time; Use the worry tree; Make a plan",

@@ -96,3 +96,62 @@ describe("teen knowledge cards (2026-10-05)", () => {
     }
   );
 });
+
+describe("self-help method cards (2026-10-21)", () => {
+  const METHOD_IDS = [
+    "ref-panic-in-moment", "ref-performance-nerves", "ref-sleep-get-up", "ref-sleep-fixed-wake",
+    "ref-assertive-request", "ref-assertive-no", "ref-feelings-naming", "ref-feelings-label-mindful", "ref-worry-time",
+  ];
+
+  it("all method cards pass the local source-verified registry check", () => {
+    for (const id of METHOD_IDS) {
+      const card = KNOWLEDGE_REFERENCE_CARDS.find((c) => c.id === id);
+      expect(card && isLocalSourceVerifiedCard(card), id).toBe(true);
+    }
+  });
+
+  it.each([
+    ["怎么应对汇报前的焦虑", "ref-performance-nerves"],
+    ["上台发言前手抖，有什么方法？", "ref-performance-nerves"],
+    ["面试前很紧张，怎么缓解？", "ref-performance-nerves"],
+    ["惊恐的时候怎么让自己平静？", "ref-panic-in-moment"],
+    ["惊恐发作时该怎么办？", "ref-panic-in-moment"],
+    ["What should I do during a panic attack?", "ref-panic-in-moment"],
+    ["焦虑上来的时候怎么让自己平静下来？", "ref-breathing-comfort"],
+    ["躺了半个小时还睡不着怎么办", "ref-sleep-get-up"],
+    ["睡不着要不要起来？", "ref-sleep-get-up"],
+    ["失眠的第二天要不要补觉？", "ref-sleep-fixed-wake"],
+    ["每天几点起床比较好？作息怎么调", "ref-sleep-fixed-wake"],
+    ["老是担心，有什么方法控制担忧？", "ref-worry-time"],
+    ["室友太吵了，该怎么跟他说？", "ref-assertive-request"],
+    ["对象总是迟到，我想表达不满又不想吵架，该怎么说？", "ref-assertive-request"],
+    ["怎么拒绝同事又不伤关系？", "ref-assertive-no"],
+    ["怎么跟父母设立边界？", "ref-assertive-no"],
+    ["我说不清自己是什么情绪，怎么办？", "ref-feelings-naming"],
+    ["How can I name my feelings?", "ref-feelings-naming"],
+  ])("method request %s retrieves %s through the route's query builder", async (query, expected) => {
+    const { query: topicQuery } = buildKnowledgeQuery([{ role: "user", content: query }]);
+    expect(topicQuery).not.toBe("");
+    const ids = (await retrieveKnowledge(topicQuery, 4)).map((card) => card.id);
+    expect(ids).toContain(expected);
+  });
+
+  it.each([
+    ["惊恐发作和惊恐障碍有什么区别？", "ref-panic-concepts"],
+    ["社交焦虑是什么？", "ref-social-fear"],
+    ["担忧时间是什么？", "ref-worry-time"],
+  ])("concept question %s still leads with %s", async (query, expected) => {
+    const { query: topicQuery } = buildKnowledgeQuery([{ role: "user", content: query }]);
+    const ids = (await retrieveKnowledge(topicQuery, 4)).map((card) => card.id);
+    expect(ids[0]).toBe(expected);
+  });
+
+  it.each([
+    ["恋爱中经常吵架怎么办？", "ref-assertive-no"],
+    ["情绪低落怎么办？", "ref-feelings-naming"],
+  ])("broad question %s does not pull in %s", async (query, unexpected) => {
+    const { query: topicQuery } = buildKnowledgeQuery([{ role: "user", content: query }]);
+    const ids = topicQuery ? (await retrieveKnowledge(topicQuery, 4)).map((card) => card.id) : [];
+    expect(ids).not.toContain(unexpected);
+  });
+});
