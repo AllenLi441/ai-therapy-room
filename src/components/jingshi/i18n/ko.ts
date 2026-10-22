@@ -11,6 +11,7 @@ export const STR_KO: Dict = {
     share_title: "대화를 Jingshi 개선에 써도 될까요?",
     share_desc: "설정에서 언제든 끌 수 있어요.",
     share_includes: "대화와 함께 각 답변의 안전 확인 라벨, 메시지 시간, ‘다르게 답해 줘’로 바꾼 답변도 올라가요.",
+    usage_reminder: "두 시간째 계속 대화하고 있어요. 잠깐 일어나 물도 마시고 눈도 쉬어 주세요. Jingshi는 AI 대화 상대이고 답변은 AI가 만든 것이라, 주변 사람이나 전문가의 도움을 대신할 수 없어요.",
     share_yes: "동의", share_no: "동의하지 않음", share_14: "14세 이상이에요", share_need_age: "동의하려면 먼저 위에서 연령대를 선택해 주세요.", share_need_14: "18세 미만이라면 14세 이상임을 확인해야 동의할 수 있어요.", settings_title: "설정", share_delete: "업로드한 대화 삭제", share_deleted: "삭제했어요. 업로드한 대화가 데이터베이스에서 지워졌어요.", share_delete_failed: "삭제하지 못했어요. 잠시 후 다시 시도해 주세요.", share_none: "아직 업로드한 대화가 없어요.", starters_refresh: "다른 주제 보기",
     att_too_many: "이미지는 최대 {n}장까지예요", att_not_image: "이미지만 추가할 수 있어요", att_too_big: "이미지가 {mb}MiB를 넘어요. 크기를 줄이거나 압축한 뒤 다시 시도해 주세요.", att_read_failed: "이미지를 읽지 못했어요. 다시 선택해 주세요.", att_remove: "이미지 삭제", att_error_close: "이미지 안내 닫기",
     placeholder_calm: "하고 싶은 말이 생기면, 여기 있을게요",

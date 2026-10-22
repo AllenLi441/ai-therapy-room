@@ -79,6 +79,39 @@ describe("App reply regeneration", () => {
     });
   });
 
+  it("replaces a withdrawn reply with the fixed text and offers no rewrite", async () => {
+    localStorage.setItem("js_consent", CONSENT_VERSION);
+    const retract = { type: "retract", kind: "diagnosis", text: "固定的诊断边界说明。" };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      `${EVENT_DELIM}${JSON.stringify({ type: "safety", status: "safe" })}${EVENT_DELIM}听起来你这就是${EVENT_DELIM}${JSON.stringify(retract)}${EVENT_DELIM}`,
+      { headers: { "Content-Type": "text/plain; charset=utf-8", "X-Turn": encodeURIComponent(JSON.stringify(modelTrace)) } })));
+    render(<App />);
+    await send("最近总是睡不好");
+    expect(await screen.findByText("固定的诊断边界说明。")).toBeInTheDocument();
+    expect(screen.queryByText(/听起来你这就是/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: STR.zh.regenerate })).not.toBeInTheDocument();
+    await waitFor(() => {
+      const ai = JSON.parse(localStorage.getItem("js_chat") || "[]").find((m: { content: string }) => m.content === "固定的诊断边界说明。");
+      expect(ai.meta).toEqual({ ...modelTrace, guard: "diagnosis" });
+    });
+  });
+
+  it("reminds after two hours of continuous use, but not after a break", async () => {
+    localStorage.setItem("js_consent", CONSENT_VERSION);
+    vi.stubGlobal("fetch", vi.fn(async () => traced("合成回复。", modelTrace)));
+    const now = Date.now();
+    localStorage.setItem("js_usage", JSON.stringify({ last: now - 60_000, reminded: now - 2 * 60 * 60_000 - 1 }));
+    const first = render(<App />);
+    await send("最近总是睡不好");
+    expect(await screen.findByText(STR.zh.usage_reminder)).toBeInTheDocument();
+    first.unmount();
+    localStorage.setItem("js_usage", JSON.stringify({ last: now - 40 * 60_000, reminded: now - 3 * 60 * 60_000 }));
+    render(<App />);
+    await send("最近总是睡不好");
+    expect(await screen.findAllByText("合成回复。")).not.toHaveLength(0);
+    expect(screen.queryByText(STR.zh.usage_reminder)).not.toBeInTheDocument();
+  });
+
   it("offers no rewrite for a fixed safety text", async () => {
     localStorage.setItem("js_consent", CONSENT_VERSION);
     vi.stubGlobal("fetch", vi.fn(async () => traced("这是一段固定的边界说明。", { ...modelTrace, route: "lexicon_medication", model: undefined })));

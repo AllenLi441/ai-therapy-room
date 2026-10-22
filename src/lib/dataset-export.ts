@@ -130,7 +130,7 @@ const usable = (conversation: ExportConversation) => !conversation.pii_suspects.
  * unchecked, or risky, and goes to the safety review instead. */
 export function isTrainableReply(message: DonatedMessage, trace: TurnTrace | undefined = message.meta): boolean {
   return message.role === "assistant" && !!trace?.model && trace.route === "deepseek_normal" &&
-    !trace.decision?.intercept && !trace.crisis && !trace.refs?.length &&
+    !trace.decision?.intercept && !trace.crisis && !trace.guard && !trace.refs?.length &&
     trace.judge?.kind === "ok" && (trace.judge.severity ?? "none") === "none" &&
     message.safety === "safe" && message.feedback !== "down";
 }
@@ -178,7 +178,7 @@ export function buildDpo(conversation: ExportConversation) {
   if (!usable(conversation)) return [];
   return conversation.messages.flatMap((message, index) => {
     if (!message.alternatives?.length || !isTrainableReply(message) || !answersUser(conversation.messages, index)) return [];
-    return message.alternatives.flatMap((alt, altIndex) => alt.feedback === "up" ? [] : [{
+    return message.alternatives.flatMap((alt, altIndex) => alt.feedback === "up" || alt.meta?.guard ? [] : [{
       id: `${conversation.anon_id}:${index}:${altIndex}`,
       conversation: conversation.anon_id,
       language: conversation.language,
@@ -217,7 +217,7 @@ export function buildSafetyReview(conversations: ExportConversation[]) {
     if (message.role !== "user") return [];
     const reply = conversation.messages[index + 1]?.role === "assistant" ? conversation.messages[index + 1] : undefined;
     const trace = reply?.meta;
-    const flagged = !reply || !trace || trace.route !== "deepseek_normal" || trace.decision?.intercept || trace.crisis ||
+    const flagged = !reply || !trace || trace.route !== "deepseek_normal" || trace.decision?.intercept || trace.crisis || trace.guard ||
       trace.judge?.kind !== "ok" || (trace.judge.severity ?? "none") !== "none" || reply.safety !== "safe";
     return flagged || stableHash(`${conversation.id}:${index}`) % 10 === 0 ? [{ conversation, userIndex: index, reply }] : [];
   }));

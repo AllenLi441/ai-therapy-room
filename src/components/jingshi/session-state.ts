@@ -5,7 +5,7 @@ import { normalizeSupportRegion } from "@/lib/support-regions";
 import { parseReplyAlternatives, parseTurnTrace } from "@/lib/turn-trace";
 
 export const CONSENT_VERSION = "5"; // 4: asks whether conversations may be uploaded to improve Jingshi; 5: uploads also carry reply labels, times and replaced replies
-export const STORAGE_KEYS = ["js_chat", "js_scales", "js_case", "js_case_edited", "js_consent", "js_feedback", "js_sessions", "js_active_session", "js_continuation", "js_age_range", "js_support_region", "js_draft", "js_share", "js_share_current"] as const;
+export const STORAGE_KEYS = ["js_chat", "js_scales", "js_case", "js_case_edited", "js_consent", "js_feedback", "js_sessions", "js_active_session", "js_continuation", "js_age_range", "js_support_region", "js_draft", "js_share", "js_share_current", "js_usage"] as const;
 // js_share_ids (random ids of uploaded conversations, no content) survives "delete local records"
 // so the uploaded copies can still be deleted from Settings afterwards.
 

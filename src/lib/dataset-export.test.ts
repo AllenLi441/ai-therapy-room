@@ -75,6 +75,7 @@ describe("dataset export", () => {
       { role: "user", content: "后来呢" }, reply("危机会话里的回复", { meta: { ...model, crisis: true } }),
       { role: "user", content: "CBT 是什么" }, reply("带资料的回复", { meta: { ...model, refs: ["ref-cbt"] } }),
       { role: "user", content: "你看这张图", hadImages: true }, reply("图里的房间很乱"),
+      { role: "user", content: "我是不是抑郁症" }, reply("固定的诊断边界说明", { meta: { ...model, guard: "diagnosis" } }),
     ]);
     const sft = buildSft(conversation);
     expect(sft.map((s) => s.completion[0].content)).toEqual(["睡不好的时候，夜里会很难熬。"]);
@@ -91,7 +92,7 @@ describe("dataset export", () => {
   it("pairs the kept reply against each replaced one in TRL's conversational format", () => {
     const conversation = conv([
       { role: "user", content: "考试很焦虑" },
-      reply("最后保留的回复", { alternatives: [{ content: "第一次的回复", meta: model, feedback: "down" }, { content: "用户其实喜欢的回复", meta: model, feedback: "up" }] }),
+      reply("最后保留的回复", { alternatives: [{ content: "第一次的回复", meta: model, feedback: "down" }, { content: "用户其实喜欢的回复", meta: model, feedback: "up" }, { content: "被撤回后换上的固定说明", meta: { ...model, guard: "medication" } }] }),
     ]);
     expect(buildDpo(conversation)).toEqual([expect.objectContaining({
       prompt: [{ role: "user", content: "考试很焦虑" }],

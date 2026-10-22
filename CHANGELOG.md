@@ -3,6 +3,11 @@
 This file records every version that can be verified from the repository's
 original commit history. Versions that were never released are not backfilled.
 
+## [v1.4.0] - 2026-10-21
+
+- Check the model's own reply before it is shown. The reply streams with its last 24 characters held back; if it gives method or lethal-dose detail, a drug dose or a dose change, a definite diagnosis (hedged, negated, conditional or questioning mentions are fine), or, for someone under 18, romantic role-play, the rest is dropped and the reply is replaced by the matching fixed text (suicide-concern support, the medication or diagnosis boundary, or a short "I can't play a partner" line in all eight languages). Method detail also raises the crisis banner. If the model disconnects, the held text is still shown when it is clean. Withdrawn replies are labelled, get no "换个说法", and never enter the training files.
+- After every two hours of continuous use (a 30-minute break starts over), show a dismissible reminder above the input to take a break, saying replies are AI-generated and are no substitute for people nearby or professional help, as the 拟人化互动服务 rules require. Kept in this browser only.
+
 ## [v1.3.1] - 2026-10-21
 
 - In 深度, look up knowledge cards and web sources while the danger judge decides, instead of after it, on turns with no danger signal (no word-list flag, no soft cue, not in or just out of a crisis). The wait before the reply is now the longer of the two, not their sum. Turns with any signal keep the old order and are never searched; if the judge intercepts a turn that had no signal, the early result is discarded.

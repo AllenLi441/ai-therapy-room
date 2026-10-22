@@ -11,6 +11,7 @@ export const STR_ES: Dict = {
     share_title: "¿Nos dejas usar tus conversaciones para mejorar Jingshi?",
     share_desc: "Puedes desactivarlo cuando quieras en Ajustes.",
     share_includes: "Se suben la conversación, las etiquetas de la revisión de seguridad de cada respuesta, la hora de los mensajes y las respuestas que cambiaste con «Otra respuesta».",
+    usage_reminder: "Llevas dos horas seguidas conversando. Quizá te venga bien levantarte, beber agua y descansar la vista. Jingshi es un acompañante de IA: sus respuestas las genera una IA y no sustituyen a las personas de tu entorno ni la ayuda profesional.",
     share_yes: "Acepto", share_no: "No acepto", share_14: "Tengo 14 años o más", share_need_age: "Para aceptar, elige primero tu edad arriba.", share_need_14: "Si tienes menos de 18 años, confirma que tienes al menos 14 para aceptar.", settings_title: "Ajustes", share_delete: "Borrar mis conversaciones subidas", share_deleted: "Borrado. Tus conversaciones subidas se eliminaron de la base de datos.", share_delete_failed: "No se pudo borrar. Inténtalo más tarde.", share_none: "Todavía no se ha subido ninguna conversación.", starters_refresh: "Ver otros",
     att_too_many: "Máximo {n} imágenes", att_not_image: "Solo se pueden añadir imágenes", att_too_big: "Esta imagen supera {mb}MiB. Redúcela o comprímela e inténtalo de nuevo.", att_read_failed: "No se pudo leer la imagen. Selecciónala de nuevo.", att_remove: "Quitar imagen", att_error_close: "Cerrar aviso de imagen",
     placeholder_calm: "Si quieres decir algo, aquí estoy",
